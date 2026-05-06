@@ -1,0 +1,8 @@
+[package]
+name = "connector"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+bytes = { workspace = true }

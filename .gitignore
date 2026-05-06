@@ -1,0 +1,30 @@
+# Build artifacts
+/target/
+/.cargo/
+
+# Rust documentation
+/doc/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Cargo
+.cargo/config
+.cargo/credentials
+
+# Dependencies
+Cargo.lock
+
+# Tests
+*.out
