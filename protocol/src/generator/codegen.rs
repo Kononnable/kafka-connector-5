@@ -1,0 +1,740 @@
+//! Code generator that emits Rust structs from parsed Kafka protocol schemas.
+//!
+//! The generated code lives in `src/generated/` — one `.rs` file per JSON schema file.
+//! A companion test using `expect_test::expect_file![]` verifies the output and can
+//! cleanly regenerate it when schemas or the codegen logic change.
+
+use super::structs::{Field, MessageStruct, MessageType};
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/// All generated files keyed by their relative output path (e.g.
+/// `"src/generated/create_acls_request.rs"`).
+pub type GeneratedFiles = BTreeMap<PathBuf, String>;
+
+/// Run the full codegen pipeline: parse all JSON schemas and produce
+/// the Rust source files that should land in `src/generated/`.
+pub fn generate_all() -> GeneratedFiles {
+    let mut files = GeneratedFiles::new();
+
+    // Read and parse every JSON file in the messages directory.
+    let messages_dir = Path::new("messages/");
+    if !messages_dir.is_dir() {
+        return files;
+    }
+
+    let mut entries: Vec<_> = std::fs::read_dir(messages_dir)
+        .into_iter()
+        .flat_map(|rd| rd.flatten())
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "json"))
+        .collect();
+    entries.sort_by_key(|e| e.path());
+
+    let mut module_names = Vec::new();
+
+    // First pass: parse all messages into a vector so we can build
+    // the request↔response pairing map before generating output.
+    let mut parsed: Vec<MessageStruct> = Vec::new();
+    for entry in &entries {
+        let path = entry.path();
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let cleaned: String = content
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        if let Ok(msg) = serde_json::from_str::<MessageStruct>(&cleaned) {
+            parsed.push(msg);
+        }
+    }
+
+    // Build apiKey → (request_name, response_name) pairing.
+    let mut pairs: std::collections::HashMap<i16, (String, String)> =
+        std::collections::HashMap::new();
+    for msg in &parsed {
+        if let Some(ak) = msg.api_key {
+            let entry = pairs
+                .entry(ak)
+                .or_insert_with(|| (String::new(), String::new()));
+            match msg.message_type {
+                MessageType::Request => entry.0 = msg.name.clone(),
+                MessageType::Response => entry.1 = msg.name.clone(),
+                MessageType::Header => {}
+            }
+        }
+    }
+
+    // Second pass: generate file content with pairing info available.
+    for msg in &parsed {
+        let file_name = message_file_name(&msg.name);
+        let module_name = file_name
+            .strip_suffix(".rs")
+            .unwrap_or(&file_name)
+            .to_string();
+        let output_path = PathBuf::from("src/generated").join(&file_name);
+
+        let pair_names = msg.api_key.and_then(|ak| pairs.get(&ak).cloned());
+        let source = generate_file(msg, pair_names.as_ref());
+
+        module_names.push((module_name.clone(), msg.name.clone()));
+        files.insert(output_path, source);
+    }
+
+    // Generate mod.rs
+    let mut mod_rs = String::new();
+    mod_rs.push_str("//! Auto-generated Kafka protocol structs.\n");
+    mod_rs.push_str("//!\n");
+    mod_rs.push_str("//! **Do not edit by hand.** Regenerate by running:\n");
+    mod_rs.push_str("//! ```text\n");
+    mod_rs.push_str("//! cargo test test_codegen_generated_structs -- --nocapture\n");
+    mod_rs
+        .push_str("//! UPDATE_EXPECT=1 cargo test test_codegen_generated_structs -- --nocapture\n");
+    mod_rs.push_str("//! ```\n");
+    mod_rs.push('\n');
+
+    for (module_name, _struct_name) in &module_names {
+        mod_rs.push_str(&format!("pub mod {};\n", module_name));
+    }
+    mod_rs.push('\n');
+    // Re-export all top-level structs
+    mod_rs.push_str("// Re-exports\n");
+    for (module_name, _struct_name) in &module_names {
+        mod_rs.push_str(&format!("pub use {}::{};\n", module_name, _struct_name));
+    }
+
+    files.insert(PathBuf::from("src/generated/mod.rs"), mod_rs);
+
+    files
+}
+
+// ---------------------------------------------------------------------------
+// File-level generation
+// ---------------------------------------------------------------------------
+
+/// Derive the snake-case file name from a PascalCase message name.
+fn message_file_name(name: &str) -> String {
+    let mut out = String::new();
+    for (i, ch) in name.chars().enumerate() {
+        if ch.is_uppercase() && i > 0 {
+            out.push('_');
+        }
+        out.push(ch.to_ascii_lowercase());
+    }
+    out.push_str(".rs");
+    out
+}
+
+/// Generate the complete source text for one schema file.
+///
+/// `pair_names` is `Some((request_name, response_name))` when this message
+/// has a known apiKey, so we can emit the `ApiRequest` / `ApiResponse` impl.
+fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> String {
+    let mut code = String::new();
+
+    // Module-level allow for unused imports (not all traits are used in every file).
+    code.push_str("#![allow(unused_imports, unused_variables)]\n");
+    code.push_str("use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};\n");
+    code.push_str(
+        "use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};\n",
+    );
+    code.push_str("use bytes::{Buf, BufMut, Bytes, BytesMut};\n");
+    code.push('\n');
+
+    // Collect all nested structs that need to be emitted.
+    let mut nested = BTreeMap::new();
+    collect_nested_structs(&msg.fields, &mut nested);
+
+    // Main struct
+    code.push_str("// -------------------------------------------------------\n");
+    code.push_str(&format!("// {}\n", msg.name));
+    code.push_str("// -------------------------------------------------------\n");
+    code.push_str(&generate_struct(
+        &msg.name,
+        &msg.fields,
+        &msg.valid_versions,
+    ));
+    code.push('\n');
+
+    // Nested structs
+    for (struct_name, struct_fields) in &nested {
+        code.push_str(&generate_struct(struct_name, struct_fields, ""));
+        code.push('\n');
+    }
+
+    // --- Trait implementation (only for request/response, not headers) ---
+    if msg.api_key.is_none() {
+        return code; // header messages have no apiKey
+    }
+    let ak = msg.api_key.unwrap();
+
+    let (min_v, max_v) = parse_version_range(&msg.valid_versions);
+
+    match msg.message_type {
+        MessageType::Request => {
+            let resp_name = pair_names
+                .and_then(|p| {
+                    if p.0 == msg.name {
+                        Some(p.1.as_str())
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or("UNKNOWN_RESPONSE");
+
+            code.push_str(&format!("impl ApiRequest for {} {{\n", msg.name));
+            code.push_str(&format!(
+                "    type Response = crate::generated::{};\n",
+                resp_name
+            ));
+            code.push_str(&format!(
+                "    fn get_api_key() -> ApiKey {{ ApiKey::new({}) }}\n",
+                ak
+            ));
+            code.push_str(&format!(
+                "    fn get_min_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                min_v
+            ));
+            code.push_str(&format!(
+                "    fn get_max_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                max_v
+            ));
+
+            // serialize
+            code.push_str("    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+            code.push_str("        assert!((");
+            code.push_str(&format!(
+                "{}) <= version.0 && version.0 <= ({})",
+                min_v, max_v
+            ));
+            code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+            for field in &msg.fields {
+                code.push_str(&generate_serialize_field(field, field));
+            }
+            code.push_str("        Ok(())\n");
+            code.push_str("    }\n");
+
+            // deserialize
+            code.push_str("    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+            for field in &msg.fields {
+                code.push_str(&generate_deserialize_field(field));
+            }
+            code.push_str(&format!(
+                "        Ok(Self {{ {} }})\n",
+                msg.fields
+                    .iter()
+                    .map(|f| escape_field_name(&camel_to_snake(&f.name)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+            code.push_str("    }\n");
+            code.push_str("}\n");
+
+            // Generate KafkaSerialize/KafkaDeserialize impls for this struct.
+            code.push_str(&generate_kafka_serialize_impl(&msg.name, &msg.fields));
+            code.push('\n');
+            code.push_str(&generate_kafka_deserialize_impl(&msg.name, &msg.fields));
+            code.push('\n');
+            // And for nested structs.
+            for (struct_name, struct_fields) in &nested {
+                code.push_str(&generate_kafka_serialize_impl(struct_name, struct_fields));
+                code.push('\n');
+                code.push_str(&generate_kafka_deserialize_impl(struct_name, struct_fields));
+                code.push('\n');
+            }
+        }
+        MessageType::Response => {
+            let req_name = pair_names
+                .and_then(|p| {
+                    if p.1 == msg.name {
+                        Some(p.0.as_str())
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or("UNKNOWN_REQUEST");
+
+            code.push_str(&format!("impl ApiResponse for {} {{\n", msg.name));
+            code.push_str(&format!(
+                "    type Request = crate::generated::{};\n",
+                req_name
+            ));
+            code.push_str(&format!(
+                "    fn get_api_key() -> ApiKey {{ ApiKey::new({}) }}\n",
+                ak
+            ));
+            code.push_str(&format!(
+                "    fn get_min_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                min_v
+            ));
+            code.push_str(&format!(
+                "    fn get_max_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                max_v
+            ));
+
+            // serialize
+            code.push_str("    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+            code.push_str("        assert!((");
+            code.push_str(&format!(
+                "{}) <= version.0 && version.0 <= ({})",
+                min_v, max_v
+            ));
+            code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+            for field in &msg.fields {
+                code.push_str(&generate_serialize_field(field, field));
+            }
+            code.push_str("        Ok(())\n");
+            code.push_str("    }\n");
+
+            // deserialize
+            code.push_str("    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+            for field in &msg.fields {
+                code.push_str(&generate_deserialize_field(field));
+            }
+            code.push_str(&format!(
+                "        Ok(Self {{ {} }})\n",
+                msg.fields
+                    .iter()
+                    .map(|f| escape_field_name(&camel_to_snake(&f.name)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+            code.push_str("    }\n");
+            code.push_str("}\n");
+
+            // Generate KafkaSerialize/KafkaDeserialize impls for this struct.
+            code.push_str(&generate_kafka_serialize_impl(&msg.name, &msg.fields));
+            code.push('\n');
+            code.push_str(&generate_kafka_deserialize_impl(&msg.name, &msg.fields));
+            code.push('\n');
+            // And for nested structs.
+            for (struct_name, struct_fields) in &nested {
+                code.push_str(&generate_kafka_serialize_impl(struct_name, struct_fields));
+                code.push('\n');
+                code.push_str(&generate_kafka_deserialize_impl(struct_name, struct_fields));
+                code.push('\n');
+            }
+        }
+        MessageType::Header => {}
+    }
+
+    code
+}
+
+/// Parse a `validVersions` string like `"0-7"` or `"0+"` into (min, max).
+fn parse_version_range(versions: &str) -> (i16, i16) {
+    let v = versions.trim();
+    if let Some(range) = v.split_once('-') {
+        let min = range.0.trim().parse::<i16>().unwrap_or(0);
+        let max = range.1.trim().parse::<i16>().unwrap_or(i16::MAX);
+        (min, max)
+    } else if let Some(base) = v.strip_suffix('+') {
+        let min = base.trim().parse::<i16>().unwrap_or(0);
+        (min, i16::MAX)
+    } else if let Ok(single) = v.parse::<i16>() {
+        (single, single)
+    } else {
+        (0, i16::MAX)
+    }
+}
+
+/// Generate a version-guard **condition** for a field, or `None` if the field
+/// is available in all versions.  The caller wraps it with `if ...`.
+fn field_version_condition(field: &Field) -> Option<String> {
+    let v = field.versions.trim();
+    if v == "0+" || v.is_empty() {
+        return None;
+    }
+    if let Some(range) = v.split_once('-') {
+        let min = range.0.trim();
+        let max = range.1.trim();
+        Some(format!("({}) <= version.0 && version.0 <= ({})", min, max))
+    } else if let Some(base) = v.strip_suffix('+') {
+        Some(format!("({}) <= version.0", base.trim()))
+    } else if let Ok(single) = v.parse::<i16>() {
+        Some(format!("version.0 == ({})", single))
+    } else {
+        None
+    }
+}
+
+/// Generate one field's serialization code.
+fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
+    let rust_name = escape_field_name(&camel_to_snake(&field.name));
+    let cond = field_version_condition(field);
+    let mut code = String::new();
+    if let Some(c) = cond {
+        code.push_str(&format!("        if {} {{\n", c));
+        code.push_str(&format!("            self.{}.encode(buf).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", rust_name, field.name));
+        code.push_str("        }\n");
+    } else {
+        code.push_str(&format!("        self.{}.encode(buf).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", rust_name, field.name));
+    }
+    code
+}
+
+/// Generate one field's deserialization code, returning the local variable name.
+fn generate_deserialize_field(field: &Field) -> String {
+    let rust_name = escape_field_name(&camel_to_snake(&field.name));
+    let rust_type = map_field_type(field);
+    let cond = field_version_condition(field);
+    let mut code = String::new();
+    if let Some(c) = cond {
+        code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
+        code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
+        code.push_str("        } else {\n");
+        code.push_str("            Default::default()\n");
+        code.push_str("        };\n");
+    } else {
+        code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode(buf).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?;\n", rust_name, rust_type, field.name));
+    }
+    code
+}
+
+/// Generate a `KafkaSerialize` impl for a struct (main or nested).
+fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String {
+    let mut code = String::new();
+    code.push_str(&format!("impl KafkaSerialize for {} {{\n", struct_name));
+    code.push_str("    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {\n");
+    for f in fields {
+        let rust_name = escape_field_name(&camel_to_snake(&f.name));
+        code.push_str(&format!("        self.{}.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", rust_name, f.name));
+    }
+    code.push_str("        Ok(())\n");
+    code.push_str("    }\n");
+    code.push_str("}\n");
+    code
+}
+
+/// Generate a `KafkaDeserialize` impl for a struct (main or nested).
+fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> String {
+    let mut code = String::new();
+    code.push_str(&format!("impl KafkaDeserialize for {} {{\n", struct_name));
+    code.push_str("    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {\n");
+    for f in fields {
+        let rust_name = escape_field_name(&camel_to_snake(&f.name));
+        let rust_type = map_field_type(f);
+        code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?;\n", rust_name, rust_type, f.name));
+    }
+    code.push_str(&format!(
+        "        Ok(Self {{ {} }})\n",
+        fields
+            .iter()
+            .map(|f| escape_field_name(&camel_to_snake(&f.name)))
+            .collect::<Vec<_>>()
+            .join(", ")
+    ));
+    code.push_str("    }\n");
+    code.push_str("}\n");
+    code
+}
+
+/// Recursively collect nested struct definitions from fields.
+/// Key = struct name (PascalCase), value = list of fields.
+fn collect_nested_structs(fields: &[Field], out: &mut BTreeMap<String, Vec<Field>>) {
+    for field in fields {
+        if !field.fields.is_empty() {
+            let struct_name = array_inner_type(&field.field_type)
+                .unwrap_or_else(|| field_type_to_struct_name(&field.field_type));
+            out.entry(struct_name.clone())
+                .or_insert_with(|| field.fields.clone());
+            // Recurse into nested fields
+            collect_nested_structs(&field.fields, out);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Struct generation
+// ---------------------------------------------------------------------------
+
+fn generate_struct(struct_name: &str, fields: &[Field], _versions: &str) -> String {
+    let mut code = String::new();
+
+    code.push_str("#[derive(Clone, Debug, Default, PartialEq)]\n");
+    code.push_str(&format!("pub struct {} {{\n", struct_name));
+
+    for field in fields {
+        // Doc comment from the `about` field
+        if let Some(about) = &field.about {
+            code.push_str(&format!("    /// {}\n", about));
+        } else {
+            // Fallback doc: show name + type
+            code.push_str(&format!(
+                "    /// {}. Type: {}.\n",
+                field.name, field.field_type
+            ));
+        }
+
+        // Optional version note
+        if !field.versions.is_empty() && field.versions != "0+" {
+            code.push_str(&format!(
+                "    /// Available in version {}.\n",
+                field.versions
+            ));
+        }
+
+        let rust_name = escape_field_name(&camel_to_snake(&field.name));
+        let rust_type = map_field_type(field);
+        code.push_str(&format!("    pub {}: {},\n", rust_name, rust_type));
+    }
+
+    code.push_str("}\n");
+    code
+}
+
+// ---------------------------------------------------------------------------
+// Type mapping
+// ---------------------------------------------------------------------------
+
+/// Map a Kafka field definition to a Rust type string.
+fn map_field_type(field: &Field) -> String {
+    let base_type = resolve_type(&field.field_type);
+    let is_nullable = field.nullable_versions.is_some();
+    if is_nullable {
+        format!("Option<{}>", base_type)
+    } else {
+        base_type
+    }
+}
+
+/// Resolve a Kafka type string to its Rust representation.
+fn resolve_type(t: &str) -> String {
+    // Array types: []InnerType
+    if let Some(inner) = t.strip_prefix("[]") {
+        let inner_rust = resolve_type(inner);
+        return format!("Vec<{}>", inner_rust);
+    }
+
+    match t {
+        "int8" => "i8".into(),
+        "int16" => "i16".into(),
+        "int32" => "i32".into(),
+        "int64" => "i64".into(),
+        "uint32" => "u32".into(),
+        "bool" => "bool".into(),
+        "string" => "String".into(),
+        "bytes" | "records" => "Vec<u8>".into(),
+        "uuid" => "[u8; 16]".into(),
+        // Any other type name is treated as a nested struct name
+        other => other.to_string(),
+    }
+}
+
+/// For `[]Foo` return `Some("Foo")`, otherwise `None`.
+fn array_inner_type(t: &str) -> Option<String> {
+    t.strip_prefix("[]").map(|s| s.to_string())
+}
+
+/// Convert a Kafka type like `FetchableTopicResponse` into a struct name.
+fn field_type_to_struct_name(t: &str) -> String {
+    // Strip array prefix first
+    let clean = t.strip_prefix("[]").unwrap_or(t);
+    clean.to_string()
+}
+
+// ---------------------------------------------------------------------------
+// Naming helpers
+// ---------------------------------------------------------------------------
+
+/// Convert `camelCase` or `PascalCase` to `snake_case`.
+fn camel_to_snake(name: &str) -> String {
+    let mut out = String::new();
+    let chars: Vec<char> = name.chars().collect();
+    for (i, ch) in chars.iter().enumerate() {
+        if ch.is_uppercase() && i > 0 {
+            // Insert underscore unless preceded by an underscore or uppercase run
+            let prev = chars[i - 1];
+            if prev != '_' && !prev.is_uppercase() {
+                out.push('_');
+            } else if i + 1 < chars.len() && !chars[i + 1].is_uppercase() && prev.is_uppercase() {
+                // End of an uppercase run — insert underscore before this char
+                // (e.g. "APIVersion" → "api_version", not "apiversion")
+                if out.len() > 1 {
+                    out.push('_');
+                }
+            } else if prev == '_' {
+                // already has underscore
+            }
+        }
+        out.push(ch.to_ascii_lowercase());
+    }
+    // Cleanup: collapse multiple underscores, strip leading/trailing
+    let out = out.replace("__", "_");
+    let out = out.trim_matches('_').to_string();
+    if out.is_empty() {
+        name.to_lowercase()
+    } else {
+        out
+    }
+}
+
+/// Escape a field name if it is a Rust keyword.
+fn escape_field_name(name: &str) -> String {
+    // Rust 2021 edition keywords that could plausibly appear as Kafka field names.
+    match name {
+        "type" | "ref" | "mut" | "move" | "abstract" | "async" | "await" | "become" | "box"
+        | "do" | "dyn" | "enum" | "extern" | "final" | "for" | "impl" | "in" | "let" | "loop"
+        | "macro" | "match" | "override" | "priv" | "pub" | "return" | "self" | "static"
+        | "struct" | "super" | "trait" | "try" | "typeof" | "unsafe" | "unsized" | "use"
+        | "virtual" | "where" | "while" | "yield" => format!("r#{}", name),
+        _ => name.to_string(),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_camel_to_snake() {
+        assert_eq!(camel_to_snake("throttleTimeMs"), "throttle_time_ms");
+        assert_eq!(camel_to_snake("errorCode"), "error_code");
+        assert_eq!(camel_to_snake("partitionIndex"), "partition_index");
+        assert_eq!(camel_to_snake("APIVersion"), "api_version");
+        assert_eq!(camel_to_snake("logStartOffset"), "log_start_offset");
+        assert_eq!(camel_to_snake("TopicName"), "topic_name");
+        assert_eq!(camel_to_snake("Name"), "name");
+        assert_eq!(camel_to_snake("Host"), "host");
+    }
+
+    #[test]
+    fn test_message_file_name() {
+        assert_eq!(
+            message_file_name("CreateAclsRequest"),
+            "create_acls_request.rs"
+        );
+        assert_eq!(message_file_name("FetchResponse"), "fetch_response.rs");
+        assert_eq!(message_file_name("MetadataRequest"), "metadata_request.rs");
+    }
+
+    #[test]
+    fn test_resolve_type_primitives() {
+        assert_eq!(resolve_type("int8"), "i8");
+        assert_eq!(resolve_type("int16"), "i16");
+        assert_eq!(resolve_type("int32"), "i32");
+        assert_eq!(resolve_type("int64"), "i64");
+        assert_eq!(resolve_type("uint32"), "u32");
+        assert_eq!(resolve_type("bool"), "bool");
+        assert_eq!(resolve_type("string"), "String");
+        assert_eq!(resolve_type("bytes"), "Vec<u8>");
+        assert_eq!(resolve_type("records"), "Vec<u8>");
+        assert_eq!(resolve_type("uuid"), "[u8; 16]");
+    }
+
+    #[test]
+    fn test_resolve_type_array() {
+        assert_eq!(resolve_type("[]string"), "Vec<String>");
+        assert_eq!(resolve_type("[]int32"), "Vec<i32>");
+        assert_eq!(
+            resolve_type("[]FetchableTopicResponse"),
+            "Vec<FetchableTopicResponse>"
+        );
+        assert_eq!(
+            resolve_type("[]CreatableAclResult"),
+            "Vec<CreatableAclResult>"
+        );
+    }
+
+    #[test]
+    fn test_field_type_to_struct_name() {
+        assert_eq!(
+            field_type_to_struct_name("FetchableTopicResponse"),
+            "FetchableTopicResponse"
+        );
+        assert_eq!(
+            field_type_to_struct_name("[]CreatableAclResult"),
+            "CreatableAclResult"
+        );
+    }
+
+    #[test]
+    fn test_array_inner_type() {
+        assert_eq!(array_inner_type("[]string"), Some("string".into()));
+        assert_eq!(array_inner_type("[]int32"), Some("int32".into()));
+        assert_eq!(array_inner_type("int32"), None);
+    }
+
+    #[test]
+    fn test_generate_simple_struct() {
+        let fields = vec![
+            Field::new("throttleTimeMs".into(), "int32".into(), "0+".into()),
+            Field::new("errorCode".into(), "int16".into(), "0+".into()),
+        ];
+        let code = generate_struct("SimpleResponse", &fields, "0-1");
+        assert!(code.contains("pub struct SimpleResponse {"));
+        assert!(code.contains("pub throttle_time_ms: i32,"));
+        assert!(code.contains("pub error_code: i16,"));
+        assert!(code.contains("#[derive(Clone, Debug, Default, PartialEq)]"));
+    }
+
+    #[test]
+    fn test_generate_with_nullable() {
+        let mut field = Field::new("errorMessage".into(), "string".into(), "0+".into());
+        field.nullable_versions = Some("0+".into());
+        let code = generate_struct("Test", &[field], "0+");
+        assert!(code.contains("pub error_message: Option<String>,"));
+    }
+
+    #[test]
+    fn test_generate_with_nested() {
+        let inner = Field::new("name".into(), "string".into(), "0+".into());
+        let mut outer = Field::new("topics".into(), "[]TopicStruct".into(), "0+".into());
+        outer.fields = vec![inner];
+        let code = generate_struct("Outer", &[outer], "0+");
+        assert!(code.contains("pub struct Outer {"));
+        assert!(code.contains("pub topics: Vec<TopicStruct>,"));
+    }
+
+    #[test]
+    fn test_collect_nested_structs() {
+        let inner = Field::new("name".into(), "string".into(), "0+".into());
+        let mut outer = Field::new("topics".into(), "[]TopicStruct".into(), "0+".into());
+        outer.fields = vec![inner];
+
+        let mut nested = BTreeMap::new();
+        collect_nested_structs(&[outer], &mut nested);
+        assert!(nested.contains_key("TopicStruct"));
+        assert_eq!(nested["TopicStruct"].len(), 1);
+    }
+
+    #[test]
+    fn test_generate_file_contains_both_structs() {
+        let inner = Field::new("partitionIndex".into(), "int32".into(), "0+".into());
+        let mut outer = Field::new("partitions".into(), "[]PartitionData".into(), "0+".into());
+        outer.fields = vec![inner.clone()];
+        outer.about = Some("The partitions.".into());
+
+        let msg = MessageStruct {
+            api_key: Some(1),
+            message_type: MessageType::Response,
+            name: "TestResponse".into(),
+            valid_versions: "0-1".into(),
+            fields: vec![Field::new(
+                "throttleTimeMs".into(),
+                "int32".into(),
+                "0+".into(),
+            )],
+        };
+
+        // Add a field with nested data
+        let mut msg = msg;
+        msg.fields.push(outer);
+
+        let source = generate_file(&msg, None);
+        assert!(source.contains("pub struct TestResponse"));
+        assert!(source.contains("pub struct PartitionData"));
+        assert!(source.contains("pub throttle_time_ms: i32"));
+        assert!(source.contains("pub partition_index: i32"));
+    }
+}

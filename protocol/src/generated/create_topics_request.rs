@@ -1,0 +1,270 @@
+#![allow(unused_imports, unused_variables)]
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
+// -------------------------------------------------------
+// CreateTopicsRequest
+// -------------------------------------------------------
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CreateTopicsRequest {
+    /// The topics to create.
+    pub topics: Vec<CreatableTopic>,
+    /// How long to wait in milliseconds before timing out the request.
+    pub timeout_ms: i32,
+    /// If true, check that the topics can be created as specified, but don't create anything.
+    /// Available in version 1+.
+    pub validate_only: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CreatableReplicaAssignment {
+    /// The partition index.
+    pub partition_index: i32,
+    /// The brokers to place the partition on.
+    pub broker_ids: Vec<i32>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CreatableTopic {
+    /// The topic name.
+    pub name: String,
+    /// The number of partitions to create in the topic, or -1 if we are specifying a manual partition assignment.
+    pub num_partitions: i32,
+    /// The number of replicas to create for each partition in the topic, or -1 if we are specifying a manual partition assignment.
+    pub replication_factor: i16,
+    /// The manual partition assignment, or the empty array if we are using automatic assignment.
+    pub assignments: Vec<CreatableReplicaAssignment>,
+    /// The custom topic configurations to set.
+    pub configs: Vec<CreateableTopicConfig>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CreateableTopicConfig {
+    /// The configuration name.
+    pub name: String,
+    /// The configuration value.
+    pub value: Option<String>,
+}
+
+impl ApiRequest for CreateTopicsRequest {
+    type Response = crate::generated::CreateTopicsResponse;
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(19)
+    }
+    fn get_min_supported_version() -> ApiVersion {
+        ApiVersion::new(0)
+    }
+    fn get_max_supported_version() -> ApiVersion {
+        ApiVersion::new(3)
+    }
+    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+        assert!(
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
+            version.0,
+            stringify!(Self)
+        );
+        self.topics
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        self.timeout_ms
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode timeoutMs"))?;
+        if (1) <= version.0 {
+            self.validate_only
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode validateOnly"))?;
+        }
+        Ok(())
+    }
+    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+        let topics = <Vec<CreatableTopic> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode timeoutMs"))?;
+        let validate_only = if (1) <= version.0 {
+            <bool as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode validateOnly"))?
+        } else {
+            Default::default()
+        };
+        Ok(Self {
+            topics,
+            timeout_ms,
+            validate_only,
+        })
+    }
+}
+impl KafkaSerialize for CreateTopicsRequest {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.topics
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topics".into(),
+            })?;
+        self.timeout_ms
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode timeoutMs".into(),
+            })?;
+        self.validate_only
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode validateOnly".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for CreateTopicsRequest {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let topics = <Vec<CreatableTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            }
+        })?;
+        let timeout_ms =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode timeoutMs".into(),
+            })?;
+        let validate_only =
+            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode validateOnly".into(),
+            })?;
+        Ok(Self {
+            topics,
+            timeout_ms,
+            validate_only,
+        })
+    }
+}
+
+impl KafkaSerialize for CreatableReplicaAssignment {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.partition_index
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndex".into(),
+            })?;
+        self.broker_ids
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode BrokerIds".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for CreatableReplicaAssignment {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let partition_index =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionIndex".into(),
+            })?;
+        let broker_ids =
+            <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode BrokerIds".into(),
+            })?;
+        Ok(Self {
+            partition_index,
+            broker_ids,
+        })
+    }
+}
+
+impl KafkaSerialize for CreatableTopic {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.name
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Name".into(),
+            })?;
+        self.num_partitions
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode NumPartitions".into(),
+            })?;
+        self.replication_factor
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ReplicationFactor".into(),
+            })?;
+        self.assignments
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Assignments".into(),
+            })?;
+        self.configs
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Configs".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for CreatableTopic {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let name =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
+            })?;
+        let num_partitions =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode NumPartitions".into(),
+            })?;
+        let replication_factor =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ReplicationFactor".into(),
+            })?;
+        let assignments = <Vec<CreatableReplicaAssignment> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Assignments".into(),
+            })?;
+        let configs =
+            <Vec<CreateableTopicConfig> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Configs".into(),
+                }
+            })?;
+        Ok(Self {
+            name,
+            num_partitions,
+            replication_factor,
+            assignments,
+            configs,
+        })
+    }
+}
+
+impl KafkaSerialize for CreateableTopicConfig {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.name
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Name".into(),
+            })?;
+        self.value
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Value".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for CreateableTopicConfig {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let name =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
+            })?;
+        let value = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Value".into(),
+            }
+        })?;
+        Ok(Self { name, value })
+    }
+}

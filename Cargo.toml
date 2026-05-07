@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "connector",
-    "protocol"
+    "protocol",
+    "proxy"
 ]
 resolver = "3"
 

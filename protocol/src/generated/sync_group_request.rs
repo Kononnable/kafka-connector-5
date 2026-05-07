@@ -1,0 +1,162 @@
+#![allow(unused_imports, unused_variables)]
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
+// -------------------------------------------------------
+// SyncGroupRequest
+// -------------------------------------------------------
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SyncGroupRequest {
+    /// The unique group identifier.
+    pub group_id: String,
+    /// The generation of the group.
+    pub generation_id: i32,
+    /// The member ID assigned by the group.
+    pub member_id: String,
+    /// Each assignment.
+    pub assignments: Vec<SyncGroupRequestAssignment>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SyncGroupRequestAssignment {
+    /// The ID of the member to assign.
+    pub member_id: String,
+    /// The member assignment.
+    pub assignment: Vec<u8>,
+}
+
+impl ApiRequest for SyncGroupRequest {
+    type Response = crate::generated::SyncGroupResponse;
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(14)
+    }
+    fn get_min_supported_version() -> ApiVersion {
+        ApiVersion::new(0)
+    }
+    fn get_max_supported_version() -> ApiVersion {
+        ApiVersion::new(2)
+    }
+    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+        assert!(
+            (0) <= version.0 && version.0 <= (2),
+            "version {} is not supported by {} (supported: 0-2)",
+            version.0,
+            stringify!(Self)
+        );
+        self.group_id
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
+        self.generation_id
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode GenerationId"))?;
+        self.member_id
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        self.assignments
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode Assignments"))?;
+        Ok(())
+    }
+    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+        let group_id = <String as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
+        let generation_id = <i32 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode GenerationId"))?;
+        let member_id = <String as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
+        let assignments = <Vec<SyncGroupRequestAssignment> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Assignments"))?;
+        Ok(Self {
+            group_id,
+            generation_id,
+            member_id,
+            assignments,
+        })
+    }
+}
+impl KafkaSerialize for SyncGroupRequest {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.group_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupId".into(),
+            })?;
+        self.generation_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GenerationId".into(),
+            })?;
+        self.member_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberId".into(),
+            })?;
+        self.assignments
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Assignments".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for SyncGroupRequest {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let group_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GroupId".into(),
+            })?;
+        let generation_id =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GenerationId".into(),
+            })?;
+        let member_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
+            })?;
+        let assignments = <Vec<SyncGroupRequestAssignment> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Assignments".into(),
+            })?;
+        Ok(Self {
+            group_id,
+            generation_id,
+            member_id,
+            assignments,
+        })
+    }
+}
+
+impl KafkaSerialize for SyncGroupRequestAssignment {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.member_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberId".into(),
+            })?;
+        self.assignment
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Assignment".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for SyncGroupRequestAssignment {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let member_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
+            })?;
+        let assignment =
+            <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Assignment".into(),
+            })?;
+        Ok(Self {
+            member_id,
+            assignment,
+        })
+    }
+}

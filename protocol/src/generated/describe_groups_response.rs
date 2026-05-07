@@ -1,0 +1,261 @@
+#![allow(unused_imports, unused_variables)]
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
+// -------------------------------------------------------
+// DescribeGroupsResponse
+// -------------------------------------------------------
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DescribeGroupsResponse {
+    /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
+    /// Available in version 1+.
+    pub throttle_time_ms: i32,
+    /// Each described group.
+    pub groups: Vec<DescribedGroup>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DescribedGroup {
+    /// The describe error, or 0 if there was no error.
+    pub error_code: i16,
+    /// The group ID string.
+    pub group_id: String,
+    /// The group state string, or the empty string.
+    pub group_state: String,
+    /// The group protocol type, or the empty string.
+    pub protocol_type: String,
+    /// The group protocol data, or the empty string.
+    pub protocol_data: String,
+    /// The group members.
+    pub members: Vec<DescribedGroupMember>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DescribedGroupMember {
+    /// The member ID assigned by the group coordinator.
+    pub member_id: String,
+    /// The client ID used in the member's latest join group request.
+    pub client_id: String,
+    /// The client host.
+    pub client_host: String,
+    /// The metadata corresponding to the current group protocol in use.
+    pub member_metadata: Vec<u8>,
+    /// The current assignment provided by the group leader.
+    pub member_assignment: Vec<u8>,
+}
+
+impl ApiResponse for DescribeGroupsResponse {
+    type Request = crate::generated::DescribeGroupsRequest;
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(15)
+    }
+    fn get_min_supported_version() -> ApiVersion {
+        ApiVersion::new(0)
+    }
+    fn get_max_supported_version() -> ApiVersion {
+        ApiVersion::new(2)
+    }
+    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+        assert!(
+            (0) <= version.0 && version.0 <= (2),
+            "version {} is not supported by {} (supported: 0-2)",
+            version.0,
+            stringify!(Self)
+        );
+        if (1) <= version.0 {
+            self.throttle_time_ms
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        }
+        self.groups
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode Groups"))?;
+        Ok(())
+    }
+    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+        let throttle_time_ms = if (1) <= version.0 {
+            <i32 as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
+        } else {
+            Default::default()
+        };
+        let groups = <Vec<DescribedGroup> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Groups"))?;
+        Ok(Self {
+            throttle_time_ms,
+            groups,
+        })
+    }
+}
+impl KafkaSerialize for DescribeGroupsResponse {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.throttle_time_ms
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
+        self.groups
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Groups".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for DescribeGroupsResponse {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        let groups = <Vec<DescribedGroup> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Groups".into(),
+            }
+        })?;
+        Ok(Self {
+            throttle_time_ms,
+            groups,
+        })
+    }
+}
+
+impl KafkaSerialize for DescribedGroup {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.error_code
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.group_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupId".into(),
+            })?;
+        self.group_state
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupState".into(),
+            })?;
+        self.protocol_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProtocolType".into(),
+            })?;
+        self.protocol_data
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProtocolData".into(),
+            })?;
+        self.members
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Members".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for DescribedGroup {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
+            })?;
+        let group_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GroupId".into(),
+            })?;
+        let group_state =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GroupState".into(),
+            })?;
+        let protocol_type =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ProtocolType".into(),
+            })?;
+        let protocol_data =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ProtocolData".into(),
+            })?;
+        let members =
+            <Vec<DescribedGroupMember> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Members".into(),
+                }
+            })?;
+        Ok(Self {
+            error_code,
+            group_id,
+            group_state,
+            protocol_type,
+            protocol_data,
+            members,
+        })
+    }
+}
+
+impl KafkaSerialize for DescribedGroupMember {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.member_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberId".into(),
+            })?;
+        self.client_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClientId".into(),
+            })?;
+        self.client_host
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClientHost".into(),
+            })?;
+        self.member_metadata
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberMetadata".into(),
+            })?;
+        self.member_assignment
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberAssignment".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for DescribedGroupMember {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let member_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
+            })?;
+        let client_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ClientId".into(),
+            })?;
+        let client_host =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ClientHost".into(),
+            })?;
+        let member_metadata =
+            <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberMetadata".into(),
+            })?;
+        let member_assignment =
+            <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberAssignment".into(),
+            })?;
+        Ok(Self {
+            member_id,
+            client_id,
+            client_host,
+            member_metadata,
+            member_assignment,
+        })
+    }
+}
