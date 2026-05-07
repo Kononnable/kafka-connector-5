@@ -174,12 +174,40 @@ pub fn parse_request_header(data: &[u8]) -> Result<ParsedRequestHeader, DecodeEr
 
 /// Parse a `ResponseHeader` from raw bytes (after the 4-byte size prefix).
 ///
-/// Wire format (v0):
-///   correlation_id: int32
+/// Wire format:
+///   v0:             correlation_id (i32)
+///   v1+ (flexible): correlation_id (i32) + tag_buffer (unsigned varint)
 pub fn parse_response_header(data: &[u8]) -> Result<ParsedResponseHeader, DecodeError> {
     let mut buf: &[u8] = data;
     let correlation_id = i32::decode(&mut buf)?;
     Ok(ParsedResponseHeader { correlation_id })
+}
+
+/// Return the byte offset where the response body starts after the response header.
+///
+/// For non-flexible (v0): correlation_id is 4 bytes → offset 4.
+/// For flexible (v1+):     correlation_id (4) + tag_buffer varint → 4 + varint bytes.
+pub fn response_body_offset(data: &[u8], is_flexible: bool) -> usize {
+    if data.len() < 4 {
+        return 4;
+    }
+    if !is_flexible {
+        return 4; // just correlation_id
+    }
+    // correlation_id (i32) = 4 bytes
+    // Then tag_buffer as unsigned varint — for v1 response headers
+    // this is always varint(0) = 1 byte, but parse properly to be robust.
+    let cursor = &data[4..];
+    // We don't care about the value, just how many bytes the varint consumes.
+    // Scan bytes until we find one with MSB=0.
+    let mut varint_bytes: usize = 0;
+    for &b in cursor.iter() {
+        varint_bytes += 1;
+        if b & 0x80 == 0 {
+            break;
+        }
+    }
+    4 + varint_bytes
 }
 
 /// Parse a complete frame from `buf`, returning the parsed info and the

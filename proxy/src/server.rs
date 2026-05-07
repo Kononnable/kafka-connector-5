@@ -243,10 +243,10 @@ fn rewrite_metadata_in_buf(
 ) -> Result<(), ProxyError> {
     // Frame layout: [4-byte size] [ResponseHeader] [ResponseBody]
     // ResponseHeader v0:  correlation_id (i32) = 4 bytes
-    // ResponseHeader v1+: correlation_id (i32) + tag_buffer (varint) = 5+ bytes
+    // ResponseHeader v1+: correlation_id (i32) + tag_buffer (unsigned varint)
     let is_flexible = api_version >= 9;
     let frame_body = &buf[offset + 4..offset + frame_size];
-    let header_len = if is_flexible { 5 } else { 4 };
+    let header_len = frame::response_body_offset(frame_body, is_flexible);
     let body_bytes = &frame_body[header_len..];
 
     let version = ApiVersion::new(api_version);
