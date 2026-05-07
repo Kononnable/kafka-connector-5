@@ -75,12 +75,15 @@ impl ApiRequest for CreatePartitionsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = (2) <= version.0;
-        let topics =
-            <Vec<CreatePartitionsTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let topics = <Vec<CreatePartitionsTopic> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode TimeoutMs"))?;
-        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ValidateOnly"))?;
         Ok(Self {
             topics,
@@ -173,38 +176,41 @@ impl KafkaDeserialize for CreatePartitionsRequest {
             validate_only,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Topics` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let topics =
-            <Vec<CreatePartitionsTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                })?;
+        let topics = <Vec<CreatePartitionsTopic> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Topics".into(),
+        })?;
         tracing::trace!(
             "  [{}] decoding field `TimeoutMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let timeout_ms =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TimeoutMs".into(),
-                }
+        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TimeoutMs".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `ValidateOnly` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let validate_only =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ValidateOnly".into(),
-                }
+        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ValidateOnly".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)
@@ -258,13 +264,17 @@ impl KafkaDeserialize for CreatePartitionsAssignment {
             })?;
         Ok(Self { broker_ids })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `BrokerIds` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let broker_ids = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let broker_ids = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode BrokerIds".into(),
             })?;
@@ -372,28 +382,30 @@ impl KafkaDeserialize for CreatePartitionsTopic {
             assignments,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Name` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let name =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
+        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `Count` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let count = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
+        let count = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+            |_| DecodeError::Protocol {
                 message: "failed to decode Count".into(),
-            }
-        })?;
+            },
+        )?;
         tracing::trace!(
             "  [{}] decoding field `Assignments` ({} bytes remaining)",
             stringify!(Self),
@@ -401,7 +413,7 @@ impl KafkaDeserialize for CreatePartitionsTopic {
         );
         let assignments = if is_flexible {
             <Option<Vec<CreatePartitionsAssignment>> as KafkaDeserialize>::decode_flexible(
-                buf, true,
+                buf, version, true,
             )
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Assignments".into(),

@@ -105,33 +105,39 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
-        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode MemberEpoch"))?;
-        let instance_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode InstanceId"))?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RackId"))?;
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RebalanceTimeoutMs"))?;
+        let instance_id =
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode InstanceId"))?;
+        let rack_id =
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode RackId"))?;
+        let rebalance_timeout_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode RebalanceTimeoutMs"))?;
         let subscribed_topic_names =
-            <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode SubscribedTopicNames"))?;
         let subscribed_topic_regex = if (1) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode SubscribedTopicRegex"))?
         } else {
             Default::default()
         };
         let server_assignor =
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ServerAssignor"))?;
-        let topic_partitions =
-            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TopicPartitions"))?;
+        let topic_partitions = <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode TopicPartitions"))?;
         Ok(Self {
             group_id,
             member_id,
@@ -451,39 +457,37 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
             topic_partitions,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `GroupId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let group_id =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GroupId".into(),
-                }
+        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GroupId".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `MemberId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let member_id =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
+        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `MemberEpoch` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let member_epoch =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberEpoch".into(),
-                }
+        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberEpoch".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `InstanceId` ({} bytes remaining)",
@@ -491,11 +495,11 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
             buf.remaining()
         );
         let instance_id = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode InstanceId".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -509,11 +513,11 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
             buf.remaining()
         );
         let rack_id = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode RackId".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -526,21 +530,23 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
             stringify!(Self),
             buf.remaining()
         );
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RebalanceTimeoutMs".into(),
-            })?;
+        let rebalance_timeout_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode RebalanceTimeoutMs".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `SubscribedTopicNames` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let subscribed_topic_names = if is_flexible {
-            <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode SubscribedTopicNames".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<Vec<String>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -554,11 +560,11 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
             buf.remaining()
         );
         let subscribed_topic_regex = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode SubscribedTopicRegex".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -572,11 +578,11 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
             buf.remaining()
         );
         let server_assignor = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ServerAssignor".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -590,11 +596,10 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
             buf.remaining()
         );
         let topic_partitions = if is_flexible {
-            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                |_| DecodeError::Protocol {
+            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode_flexible(buf, version, true)
+                .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode TopicPartitions".into(),
-                },
-            )?
+                })?
         } else {
             <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -683,24 +688,26 @@ impl KafkaDeserialize for TopicPartitions {
             partitions,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `TopicId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let topic_id =
-            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?;
+        let topic_id = <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode TopicId".into(),
+        })?;
         tracing::trace!(
             "  [{}] decoding field `Partitions` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
             })?;

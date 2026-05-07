@@ -49,7 +49,7 @@ impl ApiRequest for SaslAuthenticateRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = (2) <= version.0;
-        let auth_bytes = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let auth_bytes = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode AuthBytes"))?;
         Ok(Self { auth_bytes })
     }
@@ -94,17 +94,19 @@ impl KafkaDeserialize for SaslAuthenticateRequest {
             })?;
         Ok(Self { auth_bytes })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `AuthBytes` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let auth_bytes =
-            <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode AuthBytes".into(),
-                }
+        let auth_bytes = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode AuthBytes".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)

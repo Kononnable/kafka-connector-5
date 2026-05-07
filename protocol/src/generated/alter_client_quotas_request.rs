@@ -80,9 +80,10 @@ impl ApiRequest for AlterClientQuotasRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = (1) <= version.0;
-        let entries = <Vec<EntryData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Entries"))?;
-        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let entries =
+            <Vec<EntryData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Entries"))?;
+        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ValidateOnly"))?;
         Ok(Self {
             entries,
@@ -153,26 +154,29 @@ impl KafkaDeserialize for AlterClientQuotasRequest {
             validate_only,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Entries` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let entries = <Vec<EntryData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Entries".into(),
-            })?;
+        let entries =
+            <Vec<EntryData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Entries".into(),
+                })?;
         tracing::trace!(
             "  [{}] decoding field `ValidateOnly` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let validate_only =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ValidateOnly".into(),
-                }
+        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ValidateOnly".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)
@@ -261,17 +265,19 @@ impl KafkaDeserialize for EntityData {
             entity_name,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `EntityType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let entity_type =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode EntityType".into(),
-                }
+        let entity_type = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode EntityType".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `EntityName` ({} bytes remaining)",
@@ -279,11 +285,11 @@ impl KafkaDeserialize for EntityData {
             buf.remaining()
         );
         let entity_name = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode EntityName".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -362,26 +368,29 @@ impl KafkaDeserialize for EntryData {
             })?;
         Ok(Self { entity, ops })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Entity` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let entity = <Vec<EntityData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Entity".into(),
-            })?;
+        let entity =
+            <Vec<EntityData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Entity".into(),
+                })?;
         tracing::trace!(
             "  [{}] decoding field `Ops` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let ops =
-            <Vec<OpData> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Ops".into(),
-                }
+        let ops = <Vec<OpData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Ops".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)
@@ -467,38 +476,38 @@ impl KafkaDeserialize for OpData {
             })?;
         Ok(Self { key, value, remove })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Key` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let key =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Key".into(),
-                }
+        let key = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Key".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `Value` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let value = <f64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
+        let value = <f64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+            |_| DecodeError::Protocol {
                 message: "failed to decode Value".into(),
-            }
-        })?;
+            },
+        )?;
         tracing::trace!(
             "  [{}] decoding field `Remove` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let remove =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Remove".into(),
-                }
+        let remove = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Remove".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)

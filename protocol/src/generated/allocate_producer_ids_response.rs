@@ -64,13 +64,15 @@ impl ApiResponse for AllocateProducerIdsResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let producer_id_start = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProducerIdStart"))?;
-        let producer_id_len = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let producer_id_start =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ProducerIdStart"))?;
+        let producer_id_len = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ProducerIdLen"))?;
         Ok(Self {
             throttle_time_ms,
@@ -182,42 +184,48 @@ impl KafkaDeserialize for AllocateProducerIdsResponse {
             producer_id_len,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ThrottleTimeMs".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `ProducerIdStart` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let producer_id_start = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerIdStart".into(),
-            })?;
+        let producer_id_start =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ProducerIdStart".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `ProducerIdLen` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let producer_id_len = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let producer_id_len = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerIdLen".into(),
             })?;

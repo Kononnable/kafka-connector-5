@@ -122,32 +122,38 @@ pub struct ParsedResponseHeader {
 // ---------------------------------------------------------------------------
 /// Return the byte offset where the request body starts after the request header.
 ///
-/// RequestHeader v0:  api_key (i16) + api_version (i16) + correlation_id (i32)
-///                    + client_id (nullable string) = variable
-/// RequestHeader v1+ (flexible): same but client_id is compact nullable string
-///                               + tag_buffer (unsigned varint).
-/// The tag buffer is always varint(0) = 1 byte for request headers (no tagged
-/// fields defined). We assume 1 byte rather than iterating, to avoid bleeding
-/// into the body bytes when the body happens to start with a non-zero byte.
+/// Wire format (all versions):
+///   request_api_key:    int16
+///   request_api_version: int16
+///   correlation_id:     int32
+///   client_id:          NULLABLE_STRING (2-byte i16 length, -1 = null)
+///                       Per Kafka spec: ALWAYS classic, even in flexible mode!
+///                       Older brokers need to parse ApiVersionsRequest.
+///
+/// Flexible (v2+) additionally has:
+///   _tag_buffer:        unsigned varint count + tagged field entries
 pub fn request_body_offset(data: &[u8], is_flexible: bool) -> usize {
     use protocol::protocol::serialization::KafkaDeserialize;
     let mut cur: &[u8] = data;
     let _ = cur.get_i16(); // api_key
     let _ = cur.get_i16(); // api_version
     let _ = cur.get_i32(); // correlation_id
+    // Per Kafka protocol spec: ClientId is ALWAYS a classic nullable string
+    // (2-byte i16 length prefix, -1 = null), even in flexible mode.
+    // This is because older brokers must be able to parse the request header
+    // from newer clients before they negotiate the version range.
+    let _: Option<String> = match KafkaDeserialize::decode(&mut cur) {
+        Ok(v) => v,
+        Err(_) => return data.len(),
+    };
     if is_flexible {
-        // client_id as compact nullable string
-        let _: Option<String> = match KafkaDeserialize::decode_flexible(&mut cur, true) {
-            Ok(v) => v,
-            Err(_) => return data.len(),
-        };
-        // tag_buffer: read and skip the varint (always 0 for request headers)
-        let (_tag_count, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
-    } else {
-        let _: String = match KafkaDeserialize::decode(&mut cur) {
-            Ok(v) => v,
-            Err(_) => return data.len(),
-        };
+        // tag_buffer: read and skip the varint
+        let (tag_count, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
+        for _ in 0..tag_count {
+            let (_, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
+            let (len, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
+            cur.advance(len as usize);
+        }
     }
     data.len() - cur.len()
 }
@@ -191,28 +197,32 @@ pub fn try_parse_size(data: &[u8]) -> Option<usize> {
 ///   request_api_key:    int16
 ///   request_api_version: int16
 ///   correlation_id:     int32
-///   client_id:          COMPACT_NULLABLE_STRING (unsigned varint + UTF-8; 0 = null → "")
+///   client_id:          NULLABLE_STRING (2-byte length + UTF-8 — always classic!)
 ///   _tag_buffer:        unsigned varint count [+ tagged fields]
+///
+/// Per Kafka spec: ClientId is ALWAYS a classic nullable string (2-byte i16 length),
+/// even in flexible mode. This is so older brokers can parse ApiVersionsRequest
+/// from newer clients before version negotiation.
 pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequestHeader, DecodeError> {
     let mut buf: &[u8] = data;
     let api_key = i16::decode(&mut buf)?;
     let api_version = i16::decode(&mut buf)?;
     let correlation_id = i32::decode(&mut buf)?;
-    let client_id = if is_flexible {
-        // COMPACT_NULLABLE_STRING: unsigned varint, 0 = null
-        match Option::<String>::decode_flexible(&mut buf, true) {
-            Ok(Some(s)) => s,
-            Ok(None) => String::new(),
-            Err(e) => return Err(e),
-        }
-    } else {
-        // NULLABLE_STRING: i16 length, -1 = null
-        match String::decode(&mut buf) {
-            Ok(s) => s,
-            Err(DecodeError::UnexpectedNull) => String::new(),
-            Err(e) => return Err(e),
-        }
+    // ClientId is ALWAYS classic NULLABLE_STRING (i16 length prefix), not compact!
+    let client_id = match String::decode(&mut buf) {
+        Ok(s) => s,
+        Err(DecodeError::UnexpectedNull) => String::new(),
+        Err(e) => return Err(e),
     };
+    // For flexible v2, skip the tag buffer
+    if is_flexible {
+        let (tag_count, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut buf).unwrap_or((0, 0));
+        for _ in 0..tag_count {
+            let (_, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut buf).unwrap_or((0, 0));
+            let (len, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut buf).unwrap_or((0, 0));
+            buf.advance(len as usize);
+        }
+    }
     Ok(ParsedRequestHeader {
         api_key,
         api_version,

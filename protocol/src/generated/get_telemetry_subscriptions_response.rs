@@ -89,26 +89,31 @@ impl ApiResponse for GetTelemetrySubscriptionsResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ClientInstanceId"))?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let client_instance_id =
+            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ClientInstanceId"))?;
+        let subscription_id = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode SubscriptionId"))?;
         let accepted_compression_types =
-            <Vec<i8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode AcceptedCompressionTypes")
-            })?;
-        let push_interval_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode PushIntervalMs"))?;
-        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode TelemetryMaxBytes"))?;
-        let delta_temporality = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode DeltaTemporality"))?;
+            <Vec<i8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| SerializationError::Decode("failed to decode AcceptedCompressionTypes"),
+            )?;
+        let push_interval_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode PushIntervalMs"))?;
+        let telemetry_max_bytes =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode TelemetryMaxBytes"))?;
+        let delta_temporality =
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode DeltaTemporality"))?;
         let requested_metrics =
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode RequestedMetrics"))?;
         Ok(Self {
             throttle_time_ms,
@@ -325,42 +330,48 @@ impl KafkaDeserialize for GetTelemetrySubscriptionsResponse {
             requested_metrics,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ThrottleTimeMs".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `ClientInstanceId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ClientInstanceId".into(),
-            })?;
+        let client_instance_id =
+            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ClientInstanceId".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `SubscriptionId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let subscription_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let subscription_id = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SubscriptionId".into(),
             })?;
@@ -370,49 +381,55 @@ impl KafkaDeserialize for GetTelemetrySubscriptionsResponse {
             buf.remaining()
         );
         let accepted_compression_types =
-            <Vec<i8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+            <Vec<i8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode AcceptedCompressionTypes".into(),
-                }
-            })?;
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `PushIntervalMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let push_interval_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PushIntervalMs".into(),
-            })?;
+        let push_interval_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode PushIntervalMs".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `TelemetryMaxBytes` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TelemetryMaxBytes".into(),
-            })?;
+        let telemetry_max_bytes =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode TelemetryMaxBytes".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `DeltaTemporality` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let delta_temporality = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode DeltaTemporality".into(),
-            })?;
+        let delta_temporality =
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode DeltaTemporality".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `RequestedMetrics` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let requested_metrics =
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode RequestedMetrics".into(),
-                }
-            })?;
+                },
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

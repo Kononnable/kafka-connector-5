@@ -63,8 +63,9 @@ impl ApiRequest for DescribeQuorumRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topics =
+            <Vec<TopicData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         Ok(Self { topics })
     }
 }
@@ -109,16 +110,21 @@ impl KafkaDeserialize for DescribeQuorumRequest {
         })?;
         Ok(Self { topics })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Topics` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            })?;
+        let topics =
+            <Vec<TopicData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Topics".into(),
+                })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -167,13 +173,17 @@ impl KafkaDeserialize for PartitionData {
             })?;
         Ok(Self { partition_index })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
@@ -248,29 +258,30 @@ impl KafkaDeserialize for TopicData {
             partitions,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `TopicName` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let topic_name =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicName".into(),
-                }
-            })?;
+        let topic_name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode TopicName".into(),
+        })?;
         tracing::trace!(
             "  [{}] decoding field `Partitions` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let partitions =
-            <Vec<PartitionData> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <Vec<PartitionData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode Partitions".into(),
-                },
-            )?;
+                })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

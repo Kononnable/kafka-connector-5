@@ -123,43 +123,43 @@ impl ApiResponse for FindCoordinatorResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = (3) <= version.0;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
         } else {
             Default::default()
         };
         let error_code = if (0) <= version.0 && version.0 <= (3) {
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?
         } else {
             Default::default()
         };
         let error_message = if (1) <= version.0 && version.0 <= (3) {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?
         } else {
             Default::default()
         };
         let node_id = if (0) <= version.0 && version.0 <= (3) {
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode NodeId"))?
         } else {
             Default::default()
         };
         let host = if (0) <= version.0 && version.0 <= (3) {
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode Host"))?
         } else {
             Default::default()
         };
         let port = if (0) <= version.0 && version.0 <= (3) {
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode Port"))?
         } else {
             Default::default()
         };
         let coordinators = if (4) <= version.0 {
-            <Vec<Coordinator> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<Coordinator> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode Coordinators"))?
         } else {
             Default::default()
@@ -351,38 +351,50 @@ impl KafkaDeserialize for FindCoordinatorResponse {
             coordinators,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
+        let throttle_time_ms = if (1) <= version.0 {
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ThrottleTimeMs".into(),
+                }
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let error_code = if (0) <= version.0 && version.0 <= (3) {
+            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let error_message = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ErrorMessage".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -395,44 +407,56 @@ impl KafkaDeserialize for FindCoordinatorResponse {
             stringify!(Self),
             buf.remaining()
         );
-        let node_id =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let node_id = if (0) <= version.0 && version.0 <= (3) {
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode NodeId".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `Host` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let host =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let host = if (0) <= version.0 && version.0 <= (3) {
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode Host".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `Port` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let port = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Port".into(),
-            }
-        })?;
+        let port = if (0) <= version.0 && version.0 <= (3) {
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Port".into(),
+                }
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `Coordinators` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let coordinators =
-            <Vec<Coordinator> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+        let coordinators = if (4) <= version.0 {
+            <Vec<Coordinator> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode Coordinators".into(),
-                },
-            )?;
+                })?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -603,72 +627,92 @@ impl KafkaDeserialize for Coordinator {
             error_message,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Key` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let key =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let key = if (4) <= version.0 {
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode Key".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `NodeId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let node_id =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let node_id = if (4) <= version.0 {
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode NodeId".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `Host` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let host =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let host = if (4) <= version.0 {
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode Host".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `Port` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let port = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Port".into(),
-            }
-        })?;
+        let port = if (4) <= version.0 {
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Port".into(),
+                }
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let error_code = if (4) <= version.0 {
+            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let error_message = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ErrorMessage".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

@@ -69,19 +69,19 @@ impl ApiRequest for FindCoordinatorRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = (3) <= version.0;
         let key = if (0) <= version.0 && version.0 <= (3) {
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode Key"))?
         } else {
             Default::default()
         };
         let key_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode KeyType"))?
         } else {
             Default::default()
         };
         let coordinator_keys = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode CoordinatorKeys"))?
         } else {
             Default::default()
@@ -174,38 +174,53 @@ impl KafkaDeserialize for FindCoordinatorRequest {
             coordinator_keys,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Key` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let key =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let key = if (0) <= version.0 && version.0 <= (3) {
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode Key".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `KeyType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let key_type =
-            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let key_type = if (1) <= version.0 {
+            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode KeyType".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `CoordinatorKeys` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let coordinator_keys = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CoordinatorKeys".into(),
-            })?;
+        let coordinator_keys = if (4) <= version.0 {
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode CoordinatorKeys".into(),
+                },
+            )?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

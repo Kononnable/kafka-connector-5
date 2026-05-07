@@ -92,22 +92,27 @@ impl ApiResponse for AlterPartitionReassignmentsResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
         let allow_replication_factor_change = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode AllowReplicationFactorChange")
-            })?
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| SerializationError::Decode("failed to decode AllowReplicationFactorChange"),
+            )?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let error_message = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?;
-        let responses =
-            <Vec<ReassignableTopicResponse> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Responses"))?;
+        let error_message =
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?;
+        let responses = <Vec<ReassignableTopicResponse> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode Responses"))?;
         Ok(Self {
             throttle_time_ms,
             allow_replication_factor_change,
@@ -255,37 +260,44 @@ impl KafkaDeserialize for AlterPartitionReassignmentsResponse {
             responses,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ThrottleTimeMs".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `AllowReplicationFactorChange` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let allow_replication_factor_change =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let allow_replication_factor_change = if (1) <= version.0 {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode AllowReplicationFactorChange".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
@@ -293,11 +305,11 @@ impl KafkaDeserialize for AlterPartitionReassignmentsResponse {
             buf.remaining()
         );
         let error_message = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ErrorMessage".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -310,11 +322,14 @@ impl KafkaDeserialize for AlterPartitionReassignmentsResponse {
             stringify!(Self),
             buf.remaining()
         );
-        let responses =
-            <Vec<ReassignableTopicResponse> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Responses".into(),
-                })?;
+        let responses = <Vec<ReassignableTopicResponse> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Responses".into(),
+        })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -425,13 +440,17 @@ impl KafkaDeserialize for ReassignablePartitionResponse {
             error_message,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
@@ -440,11 +459,9 @@ impl KafkaDeserialize for ReassignablePartitionResponse {
             stringify!(Self),
             buf.remaining()
         );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
@@ -452,11 +469,11 @@ impl KafkaDeserialize for ReassignablePartitionResponse {
             buf.remaining()
         );
         let error_message = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ErrorMessage".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -535,17 +552,19 @@ impl KafkaDeserialize for ReassignableTopicResponse {
             })?;
         Ok(Self { name, partitions })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Name` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let name =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
+        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `Partitions` ({} bytes remaining)",
@@ -554,6 +573,7 @@ impl KafkaDeserialize for ReassignableTopicResponse {
         );
         let partitions = <Vec<ReassignablePartitionResponse> as KafkaDeserialize>::decode_flexible(
             buf,
+            version,
             is_flexible,
         )
         .map_err(|_| DecodeError::Protocol {

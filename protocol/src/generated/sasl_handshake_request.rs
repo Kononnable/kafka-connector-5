@@ -49,7 +49,7 @@ impl ApiRequest for SaslHandshakeRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = false;
-        let mechanism = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let mechanism = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Mechanism"))?;
         Ok(Self { mechanism })
     }
@@ -94,17 +94,19 @@ impl KafkaDeserialize for SaslHandshakeRequest {
             })?;
         Ok(Self { mechanism })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Mechanism` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let mechanism =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Mechanism".into(),
-                }
+        let mechanism = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Mechanism".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)

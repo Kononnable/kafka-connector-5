@@ -72,10 +72,13 @@ impl ApiRequest for AlterConfigsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = (2) <= version.0;
-        let resources =
-            <Vec<AlterConfigsResource> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Resources"))?;
-        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let resources = <Vec<AlterConfigsResource> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode Resources"))?;
+        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ValidateOnly"))?;
         Ok(Self {
             resources,
@@ -147,27 +150,32 @@ impl KafkaDeserialize for AlterConfigsRequest {
             validate_only,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Resources` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let resources =
-            <Vec<AlterConfigsResource> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Resources".into(),
-                })?;
+        let resources = <Vec<AlterConfigsResource> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Resources".into(),
+        })?;
         tracing::trace!(
             "  [{}] decoding field `ValidateOnly` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let validate_only =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ValidateOnly".into(),
-                }
+        let validate_only = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ValidateOnly".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)
@@ -263,36 +271,41 @@ impl KafkaDeserialize for AlterConfigsResource {
             configs,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `ResourceType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let resource_type =
-            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ResourceType".into(),
-                }
+        let resource_type = <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ResourceType".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `ResourceName` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let resource_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResourceName".into(),
-            })?;
+        let resource_name =
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ResourceName".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `Configs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let configs = <Vec<AlterableConfig> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Configs".into(),
-            })?;
+        let configs =
+            <Vec<AlterableConfig> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Configs".into(),
+                })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -378,17 +391,19 @@ impl KafkaDeserialize for AlterableConfig {
         })?;
         Ok(Self { name, value })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Name` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let name =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
+        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `Value` ({} bytes remaining)",
@@ -396,11 +411,11 @@ impl KafkaDeserialize for AlterableConfig {
             buf.remaining()
         );
         let value = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode Value".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

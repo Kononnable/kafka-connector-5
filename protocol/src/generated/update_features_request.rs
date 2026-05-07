@@ -76,13 +76,13 @@ impl ApiRequest for UpdateFeaturesRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode timeoutMs"))?;
         let feature_updates =
-            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode FeatureUpdates"))?;
         let validate_only = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ValidateOnly"))?
         } else {
             Default::default()
@@ -178,17 +178,19 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
             validate_only,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `timeoutMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let timeout_ms =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode timeoutMs".into(),
-                }
+        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode timeoutMs".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `FeatureUpdates` ({} bytes remaining)",
@@ -196,7 +198,7 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
             buf.remaining()
         );
         let feature_updates =
-            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode FeatureUpdates".into(),
                 })?;
@@ -205,12 +207,15 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
             stringify!(Self),
             buf.remaining()
         );
-        let validate_only =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let validate_only = if (1) <= version.0 {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ValidateOnly".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -325,47 +330,59 @@ impl KafkaDeserialize for FeatureUpdateKey {
             upgrade_type,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Feature` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let feature =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Feature".into(),
-                }
+        let feature = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Feature".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `MaxVersionLevel` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let max_version_level = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MaxVersionLevel".into(),
-            })?;
+        let max_version_level =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode MaxVersionLevel".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `AllowDowngrade` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let allow_downgrade = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode AllowDowngrade".into(),
-            })?;
+        let allow_downgrade = if version.0 == (0) {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode AllowDowngrade".into(),
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `UpgradeType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let upgrade_type =
-            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let upgrade_type = if (1) <= version.0 {
+            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode UpgradeType".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

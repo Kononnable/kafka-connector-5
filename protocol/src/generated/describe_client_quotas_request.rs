@@ -65,9 +65,9 @@ impl ApiRequest for DescribeClientQuotasRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = (1) <= version.0;
         let components =
-            <Vec<ComponentData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<ComponentData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode Components"))?;
-        let strict = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let strict = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Strict"))?;
         Ok(Self { components, strict })
     }
@@ -132,28 +132,29 @@ impl KafkaDeserialize for DescribeClientQuotasRequest {
             })?;
         Ok(Self { components, strict })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Components` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let components =
-            <Vec<ComponentData> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <Vec<ComponentData> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode Components".into(),
-                },
-            )?;
+                })?;
         tracing::trace!(
             "  [{}] decoding field `Strict` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let strict =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Strict".into(),
-                }
+        let strict = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Strict".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)
@@ -259,28 +260,28 @@ impl KafkaDeserialize for ComponentData {
             r#match,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `EntityType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let entity_type =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode EntityType".into(),
-                }
+        let entity_type = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode EntityType".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `MatchType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let match_type =
-            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MatchType".into(),
-                }
+        let match_type = <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MatchType".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `Match` ({} bytes remaining)",
@@ -288,11 +289,11 @@ impl KafkaDeserialize for ComponentData {
             buf.remaining()
         );
         let r#match = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode Match".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

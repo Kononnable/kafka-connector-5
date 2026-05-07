@@ -110,36 +110,41 @@ impl ApiResponse for JoinGroupResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = (6) <= version.0;
         let throttle_time_ms = if (2) <= version.0 {
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let generation_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GenerationId"))?;
+        let generation_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode GenerationId"))?;
         let protocol_type = if (7) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ProtocolType"))?
         } else {
             Default::default()
         };
-        let protocol_name = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProtocolName"))?;
-        let leader = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let protocol_name =
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ProtocolName"))?;
+        let leader = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Leader"))?;
         let skip_assignment = if (9) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode SkipAssignment"))?
         } else {
             Default::default()
         };
-        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
-        let members =
-            <Vec<JoinGroupResponseMember> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Members"))?;
+        let members = <Vec<JoinGroupResponseMember> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode Members"))?;
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -385,49 +390,54 @@ impl KafkaDeserialize for JoinGroupResponse {
             members,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
+        let throttle_time_ms = if (2) <= version.0 {
+            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ThrottleTimeMs".into(),
+                }
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `GenerationId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let generation_id =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GenerationId".into(),
-                }
-            })?;
+        let generation_id = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode GenerationId".into(),
+        })?;
         tracing::trace!(
             "  [{}] decoding field `ProtocolType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let protocol_type = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ProtocolType".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -441,11 +451,11 @@ impl KafkaDeserialize for JoinGroupResponse {
             buf.remaining()
         );
         let protocol_name = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ProtocolName".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -458,42 +468,46 @@ impl KafkaDeserialize for JoinGroupResponse {
             stringify!(Self),
             buf.remaining()
         );
-        let leader =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Leader".into(),
-                }
+        let leader = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Leader".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `SkipAssignment` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let skip_assignment = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SkipAssignment".into(),
-            })?;
+        let skip_assignment = if (9) <= version.0 {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode SkipAssignment".into(),
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `MemberId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let member_id =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
+        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `Members` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let members =
-            <Vec<JoinGroupResponseMember> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Members".into(),
-            })?;
+        let members = <Vec<JoinGroupResponseMember> as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Members".into(),
+        })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -609,17 +623,19 @@ impl KafkaDeserialize for JoinGroupResponseMember {
             metadata,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `MemberId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let member_id =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
+        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `GroupInstanceId` ({} bytes remaining)",
@@ -627,11 +643,11 @@ impl KafkaDeserialize for JoinGroupResponseMember {
             buf.remaining()
         );
         let group_instance_id = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode GroupInstanceId".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -644,11 +660,9 @@ impl KafkaDeserialize for JoinGroupResponseMember {
             stringify!(Self),
             buf.remaining()
         );
-        let metadata =
-            <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Metadata".into(),
-                }
+        let metadata = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Metadata".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)

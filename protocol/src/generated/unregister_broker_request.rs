@@ -49,7 +49,7 @@ impl ApiRequest for UnregisterBrokerRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let broker_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let broker_id = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode BrokerId"))?;
         Ok(Self { broker_id })
     }
@@ -94,17 +94,19 @@ impl KafkaDeserialize for UnregisterBrokerRequest {
             })?;
         Ok(Self { broker_id })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `BrokerId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let broker_id =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode BrokerId".into(),
-                }
+        let broker_id = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode BrokerId".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)

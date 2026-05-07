@@ -54,9 +54,9 @@ impl ApiRequest for RenewDelegationTokenRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = (2) <= version.0;
-        let hmac = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let hmac = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Hmac"))?;
-        let renew_period_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let renew_period_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode RenewPeriodMs"))?;
         Ok(Self {
             hmac,
@@ -126,24 +126,26 @@ impl KafkaDeserialize for RenewDelegationTokenRequest {
             renew_period_ms,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Hmac` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let hmac =
-            <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Hmac".into(),
-                }
+        let hmac = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Hmac".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `RenewPeriodMs` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let renew_period_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let renew_period_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RenewPeriodMs".into(),
             })?;

@@ -251,16 +251,6 @@ fn log_response_body(api_key: i16, version: i16, body: &[u8]) {
     }
 }
 
-fn hex_dump(data: &[u8], max: usize) -> String {
-    let take = data.len().min(max);
-    let hex: String = data[..take].iter().map(|b| format!("{:02x}", b)).collect();
-    if take < data.len() {
-        format!("{}... ({} bytes total)", hex, data.len())
-    } else {
-        hex
-    }
-}
-
 async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) {
     let mut offset = 0;
     loop {
@@ -396,15 +386,16 @@ fn rewrite_broker_port_in_metadata(
     let proxy_host = config.proxy_host();
     let proxy_port = config.proxy_port();
 
-    // Collect port offsets by parsing with a separate Bytes cursor (no borrow on buf)
+    // Collect port offsets by parsing with proper version (not dummy 0)
     let patches: Vec<usize> = {
         let mut cursor = Bytes::copy_from_slice(body_slice);
         let mut offsets = Vec::new();
         let body_total = body_slice.len();
+        let ver = protocol::traits::ApiVersion::new(api_version);
 
         // Skip throttle_time_ms (v3+)
         if api_version >= 3 {
-            let _: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+            let _: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
@@ -431,20 +422,20 @@ fn rewrite_broker_port_in_metadata(
         };
 
         for _ in 0..broker_count {
-            let _: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+            let _: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
-            let host: String = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+            let host: String = match KafkaDeserialize::decode_flexible(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
             let port_offset = body_total - cursor.len();
-            let port: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+            let port: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
-            let _: Option<String> = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+            let _: Option<String> = match KafkaDeserialize::decode_flexible(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
@@ -466,7 +457,6 @@ fn rewrite_broker_port_in_metadata(
         }
         offsets
     };
-    // body_slice borrow is now released
 
     for &port_offset in &patches {
         let abs_offset = body_start + port_offset;

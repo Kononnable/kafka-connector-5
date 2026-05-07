@@ -72,20 +72,23 @@ impl ApiRequest for ListTransactionsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let state_filters = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode StateFilters"))?;
-        let producer_id_filters = <Vec<i64> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProducerIdFilters"))?;
+        let state_filters =
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode StateFilters"))?;
+        let producer_id_filters =
+            <Vec<i64> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode ProducerIdFilters"))?;
         let duration_filter = if (1) <= version.0 {
-            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode DurationFilter"))?
         } else {
             Default::default()
         };
         let transactional_id_pattern = if (2) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
-                |_| SerializationError::Decode("failed to decode TransactionalIdPattern"),
-            )?
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| {
+                    SerializationError::Decode("failed to decode TransactionalIdPattern")
+                })?
         } else {
             Default::default()
         };
@@ -214,45 +217,58 @@ impl KafkaDeserialize for ListTransactionsRequest {
             transactional_id_pattern,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `StateFilters` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let state_filters = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode StateFilters".into(),
-            })?;
+        let state_filters =
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode StateFilters".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `ProducerIdFilters` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let producer_id_filters = <Vec<i64> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerIdFilters".into(),
-            })?;
+        let producer_id_filters =
+            <Vec<i64> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ProducerIdFilters".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `DurationFilter` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let duration_filter = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode DurationFilter".into(),
-            })?;
+        let duration_filter = if (1) <= version.0 {
+            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode DurationFilter".into(),
+                }
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `TransactionalIdPattern` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let transactional_id_pattern = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode TransactionalIdPattern".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

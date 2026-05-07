@@ -55,8 +55,9 @@ impl ApiRequest for DescribeUserScramCredentialsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let users = <Option<Vec<UserName>> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Users"))?;
+        let users =
+            <Option<Vec<UserName>> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Users"))?;
         Ok(Self { users })
     }
 }
@@ -114,18 +115,21 @@ impl KafkaDeserialize for DescribeUserScramCredentialsRequest {
         })?;
         Ok(Self { users })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Users` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let users = if is_flexible {
-            <Option<Vec<UserName>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                |_| DecodeError::Protocol {
+            <Option<Vec<UserName>> as KafkaDeserialize>::decode_flexible(buf, version, true)
+                .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode Users".into(),
-                },
-            )?
+                })?
         } else {
             <Option<Vec<UserName>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -181,17 +185,19 @@ impl KafkaDeserialize for UserName {
             })?;
         Ok(Self { name })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Name` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let name =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
+        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)

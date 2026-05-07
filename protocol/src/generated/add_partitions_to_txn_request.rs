@@ -118,6 +118,7 @@ impl ApiRequest for AddPartitionsToTxnRequest {
         let transactions = if (4) <= version.0 {
             <Vec<AddPartitionsToTxnTransaction> as KafkaDeserialize>::decode_flexible(
                 buf,
+                version,
                 is_flexible,
             )
             .map_err(|_| SerializationError::Decode("failed to decode Transactions"))?
@@ -125,28 +126,32 @@ impl ApiRequest for AddPartitionsToTxnRequest {
             Default::default()
         };
         let v3_and_below_transactional_id = if (0) <= version.0 && version.0 <= (3) {
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode V3AndBelowTransactionalId")
-            })?
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| SerializationError::Decode("failed to decode V3AndBelowTransactionalId"),
+            )?
         } else {
             Default::default()
         };
         let v3_and_below_producer_id = if (0) <= version.0 && version.0 <= (3) {
-            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode V3AndBelowProducerId"))?
         } else {
             Default::default()
         };
         let v3_and_below_producer_epoch = if (0) <= version.0 && version.0 <= (3) {
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 SerializationError::Decode("failed to decode V3AndBelowProducerEpoch")
             })?
         } else {
             Default::default()
         };
         let v3_and_below_topics = if (0) <= version.0 && version.0 <= (3) {
-            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode V3AndBelowTopics"))?
+            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode_flexible(
+                buf,
+                version,
+                is_flexible,
+            )
+            .map_err(|_| SerializationError::Decode("failed to decode V3AndBelowTopics"))?
         } else {
             Default::default()
         };
@@ -281,61 +286,87 @@ impl KafkaDeserialize for AddPartitionsToTxnRequest {
             v3_and_below_topics,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Transactions` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let transactions =
+        let transactions = if (4) <= version.0 {
             <Vec<AddPartitionsToTxnTransaction> as KafkaDeserialize>::decode_flexible(
                 buf,
+                version,
                 is_flexible,
             )
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Transactions".into(),
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `V3AndBelowTransactionalId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let v3_and_below_transactional_id =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let v3_and_below_transactional_id = if (0) <= version.0 && version.0 <= (3) {
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode V3AndBelowTransactionalId".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `V3AndBelowProducerId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let v3_and_below_producer_id = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode V3AndBelowProducerId".into(),
-            })?;
+        let v3_and_below_producer_id = if (0) <= version.0 && version.0 <= (3) {
+            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode V3AndBelowProducerId".into(),
+                }
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `V3AndBelowProducerEpoch` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let v3_and_below_producer_epoch =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let v3_and_below_producer_epoch = if (0) <= version.0 && version.0 <= (3) {
+            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode V3AndBelowProducerEpoch".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `V3AndBelowTopics` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let v3_and_below_topics =
-            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
+        let v3_and_below_topics = if (0) <= version.0 && version.0 <= (3) {
+            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode_flexible(
+                buf,
+                version,
+                is_flexible,
+            )
+            .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode V3AndBelowTopics".into(),
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -409,24 +440,26 @@ impl KafkaDeserialize for AddPartitionsToTxnTopic {
             })?;
         Ok(Self { name, partitions })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Name` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let name =
-            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
+        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
             })?;
         tracing::trace!(
             "  [{}] decoding field `Partitions` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
             })?;
@@ -562,59 +595,84 @@ impl KafkaDeserialize for AddPartitionsToTxnTransaction {
             topics,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `TransactionalId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let transactional_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TransactionalId".into(),
-            })?;
+        let transactional_id = if (4) <= version.0 {
+            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode TransactionalId".into(),
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ProducerId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let producer_id =
-            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let producer_id = if (4) <= version.0 {
+            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerId".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `ProducerEpoch` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let producer_epoch =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let producer_epoch = if (4) <= version.0 {
+            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerEpoch".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `VerifyOnly` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let verify_only =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let verify_only = if (4) <= version.0 {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode VerifyOnly".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `Topics` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let topics =
-            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
+        let topics = if (4) <= version.0 {
+            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode_flexible(
+                buf,
+                version,
+                is_flexible,
+            )
+            .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topics".into(),
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

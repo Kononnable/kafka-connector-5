@@ -56,12 +56,13 @@ impl ApiRequest for ShareGroupDescribeRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let group_ids = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupIds"))?;
+        let group_ids =
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode GroupIds"))?;
         let include_authorized_operations =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode IncludeAuthorizedOperations")
-            })?;
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| SerializationError::Decode("failed to decode IncludeAuthorizedOperations"),
+            )?;
         Ok(Self {
             group_ids,
             include_authorized_operations,
@@ -130,27 +131,33 @@ impl KafkaDeserialize for ShareGroupDescribeRequest {
             include_authorized_operations,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `GroupIds` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let group_ids = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode GroupIds".into(),
-            })?;
+        let group_ids =
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode GroupIds".into(),
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `IncludeAuthorizedOperations` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let include_authorized_operations =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode IncludeAuthorizedOperations".into(),
-                }
-            })?;
+                },
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

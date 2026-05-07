@@ -67,18 +67,22 @@ impl ApiRequest for DescribeClusterRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let include_cluster_authorized_operations =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
-            })?;
+        let include_cluster_authorized_operations = <bool as KafkaDeserialize>::decode_flexible(
+            buf,
+            version,
+            is_flexible,
+        )
+        .map_err(|_| {
+            SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
+        })?;
         let endpoint_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode EndpointType"))?
         } else {
             Default::default()
         };
         let include_fenced_brokers = if (2) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode IncludeFencedBrokers"))?
         } else {
             Default::default()
@@ -172,38 +176,50 @@ impl KafkaDeserialize for DescribeClusterRequest {
             include_fenced_brokers,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `IncludeClusterAuthorizedOperations` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let include_cluster_authorized_operations =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode IncludeClusterAuthorizedOperations".into(),
-                }
-            })?;
+                },
+            )?;
         tracing::trace!(
             "  [{}] decoding field `EndpointType` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let endpoint_type =
-            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+        let endpoint_type = if (1) <= version.0 {
+            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode EndpointType".into(),
                 }
-            })?;
+            })?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `IncludeFencedBrokers` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let include_fenced_brokers = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IncludeFencedBrokers".into(),
-            })?;
+        let include_fenced_brokers = if (2) <= version.0 {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode IncludeFencedBrokers".into(),
+                },
+            )?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

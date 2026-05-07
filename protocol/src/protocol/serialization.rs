@@ -134,10 +134,15 @@ pub trait KafkaDeserialize: Sized {
     /// Decode an instance of `Self` from `buf` using classic encoding.
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError>;
 
-    /// Decode an instance of `Self` from `buf`, switching between classic and
-    /// flexible (unsigned varint) encoding based on `is_flexible`.
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let _ = is_flexible;
+    /// Decode an instance of `Self` from `buf` with version-aware field handling.
+    /// `version` is the API version (for conditional field decoding).
+    /// `is_flexible` selects compact vs classic encoding for strings/bytes/arrays.
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        _version: crate::traits::ApiVersion,
+        _is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
+        let _ = (_version, _is_flexible);
         Self::decode(buf)
     }
 }
@@ -376,7 +381,11 @@ impl KafkaDeserialize for String {
         }
     }
 
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        _version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         if is_flexible {
             // Compact string: unsigned varint, value 0 = null, otherwise length = value - 1
             let (raw_len, _) = decode_unsigned_varint(buf)?;
@@ -453,7 +462,11 @@ impl KafkaDeserialize for Option<String> {
         }
     }
 
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        _version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         if is_flexible {
             let (raw_len, _) = decode_unsigned_varint(buf)?;
             if raw_len == 0 {
@@ -525,7 +538,11 @@ impl KafkaDeserialize for Vec<u8> {
         }
     }
 
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        _version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         if is_flexible {
             let (raw_len, _) = decode_unsigned_varint(buf)?;
             if raw_len == 0 {
@@ -598,7 +615,11 @@ impl KafkaDeserialize for Option<Vec<u8>> {
         }
     }
 
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        _version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         if is_flexible {
             let (raw_len, _) = decode_unsigned_varint(buf)?;
             if raw_len == 0 {
@@ -673,7 +694,11 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Vec<T> {
         }
     }
 
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        _version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         if is_flexible {
             let (raw_count, _) = decode_unsigned_varint(buf)?;
             if raw_count == 0 {
@@ -682,7 +707,7 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Vec<T> {
             let n = (raw_count - 1) as usize;
             let mut items = Vec::with_capacity(n);
             for _ in 0..n {
-                items.push(T::decode_flexible(buf, true)?);
+                items.push(T::decode_flexible(buf, _version, true)?);
             }
             Ok(items)
         } else {
@@ -752,7 +777,11 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Option<Vec<T>> {
         }
     }
 
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        _version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         if is_flexible {
             let (raw_count, _) = decode_unsigned_varint(buf)?;
             if raw_count == 0 {
@@ -761,7 +790,7 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Option<Vec<T>> {
             let n = (raw_count - 1) as usize;
             let mut items = Vec::with_capacity(n);
             for _ in 0..n {
-                items.push(T::decode_flexible(buf, true)?);
+                items.push(T::decode_flexible(buf, _version, true)?);
             }
             Ok(Some(items))
         } else {

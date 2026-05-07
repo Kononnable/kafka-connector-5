@@ -50,7 +50,7 @@ impl ApiRequest for DescribeTransactionsRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = true;
         let transactional_ids =
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode TransactionalIds"))?;
         Ok(Self { transactional_ids })
     }
@@ -95,18 +95,22 @@ impl KafkaDeserialize for DescribeTransactionsRequest {
             })?;
         Ok(Self { transactional_ids })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `TransactionalIds` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let transactional_ids =
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode TransactionalIds".into(),
-                }
-            })?;
+                },
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

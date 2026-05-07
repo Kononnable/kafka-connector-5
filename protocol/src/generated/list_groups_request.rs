@@ -61,13 +61,13 @@ impl ApiRequest for ListGroupsRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = (3) <= version.0;
         let states_filter = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode StatesFilter"))?
         } else {
             Default::default()
         };
         let types_filter = if (5) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode TypesFilter"))?
         } else {
             Default::default()
@@ -140,25 +140,39 @@ impl KafkaDeserialize for ListGroupsRequest {
             types_filter,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `StatesFilter` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let states_filter = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode StatesFilter".into(),
-            })?;
+        let states_filter = if (4) <= version.0 {
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode StatesFilter".into(),
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `TypesFilter` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let types_filter = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TypesFilter".into(),
-            })?;
+        let types_filter = if (5) <= version.0 {
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode TypesFilter".into(),
+                },
+            )?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

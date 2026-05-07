@@ -92,27 +92,32 @@ impl ApiRequest for MetadataRequest {
         let is_flexible = (9) <= version.0;
         let topics = <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode_flexible(
             buf,
+            version,
             is_flexible,
         )
         .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         let allow_auto_topic_creation = if (4) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode AllowAutoTopicCreation")
-            })?
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| SerializationError::Decode("failed to decode AllowAutoTopicCreation"),
+            )?
         } else {
             Default::default()
         };
         let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
-            })?
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| {
+                    SerializationError::Decode(
+                        "failed to decode IncludeClusterAuthorizedOperations",
+                    )
+                },
+            )?
         } else {
             Default::default()
         };
         let include_topic_authorized_operations = if (8) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode IncludeTopicAuthorizedOperations")
-            })?
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| SerializationError::Decode("failed to decode IncludeTopicAuthorizedOperations"),
+            )?
         } else {
             Default::default()
         };
@@ -241,17 +246,23 @@ impl KafkaDeserialize for MetadataRequest {
             include_topic_authorized_operations,
         })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `Topics` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let topics = if is_flexible {
-            <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode_flexible(buf, true)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                })?
+            <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode_flexible(
+                buf, version, true,
+            )
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            })?
         } else {
             <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -264,34 +275,43 @@ impl KafkaDeserialize for MetadataRequest {
             stringify!(Self),
             buf.remaining()
         );
-        let allow_auto_topic_creation =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let allow_auto_topic_creation = if (4) <= version.0 {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode AllowAutoTopicCreation".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `IncludeClusterAuthorizedOperations` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let include_cluster_authorized_operations =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode IncludeClusterAuthorizedOperations".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `IncludeTopicAuthorizedOperations` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let include_topic_authorized_operations =
-            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let include_topic_authorized_operations = if (8) <= version.0 {
+            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode IncludeTopicAuthorizedOperations".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -378,29 +398,36 @@ impl KafkaDeserialize for MetadataRequestTopic {
         })?;
         Ok(Self { topic_id, name })
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         tracing::trace!(
             "  [{}] decoding field `TopicId` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
-        let topic_id =
-            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
+        let topic_id = if (10) <= version.0 {
+            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode TopicId".into(),
-                }
-            })?;
+                },
+            )?
+        } else {
+            Default::default()
+        };
         tracing::trace!(
             "  [{}] decoding field `Name` ({} bytes remaining)",
             stringify!(Self),
             buf.remaining()
         );
         let name = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                DecodeError::Protocol {
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode Name".into(),
-                }
-            })?
+                },
+            )?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

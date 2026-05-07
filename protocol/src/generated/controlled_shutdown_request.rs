@@ -61,7 +61,11 @@ impl KafkaDeserialize for ControlledShutdownRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         Ok(Self {})
     }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+    fn decode_flexible<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, DecodeError> {
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
