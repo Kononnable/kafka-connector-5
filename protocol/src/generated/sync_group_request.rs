@@ -17,6 +17,12 @@ pub struct SyncGroupRequest {
     /// The unique identifier of the consumer instance provided by end user.
     /// Available in version 3+.
     pub group_instance_id: Option<String>,
+    /// The group protocol type.
+    /// Available in version 5+.
+    pub protocol_type: Option<String>,
+    /// The group protocol name.
+    /// Available in version 5+.
+    pub protocol_name: Option<String>,
     /// Each assignment.
     pub assignments: Vec<SyncGroupRequestAssignment>,
 }
@@ -38,12 +44,12 @@ impl ApiRequest for SyncGroupRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(4)
+        ApiVersion::new(5)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
-            "version {} is not supported by {} (supported: 0-4)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
@@ -60,6 +66,16 @@ impl ApiRequest for SyncGroupRequest {
             self.group_instance_id
                 .encode(buf)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        }
+        if (5) <= version.0 {
+            self.protocol_type
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
+        }
+        if (5) <= version.0 {
+            self.protocol_name
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ProtocolName"))?;
         }
         self.assignments
             .encode(buf)
@@ -79,6 +95,18 @@ impl ApiRequest for SyncGroupRequest {
         } else {
             Default::default()
         };
+        let protocol_type = if (5) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ProtocolType"))?
+        } else {
+            Default::default()
+        };
+        let protocol_name = if (5) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ProtocolName"))?
+        } else {
+            Default::default()
+        };
         let assignments = <Vec<SyncGroupRequestAssignment> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Assignments"))?;
         Ok(Self {
@@ -86,6 +114,8 @@ impl ApiRequest for SyncGroupRequest {
             generation_id,
             member_id,
             group_instance_id,
+            protocol_type,
+            protocol_name,
             assignments,
         })
     }
@@ -111,6 +141,16 @@ impl KafkaSerialize for SyncGroupRequest {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode GroupInstanceId".into(),
+            })?;
+        self.protocol_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProtocolType".into(),
+            })?;
+        self.protocol_name
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProtocolName".into(),
             })?;
         self.assignments
             .encode(buf)
@@ -141,6 +181,16 @@ impl KafkaDeserialize for SyncGroupRequest {
                     message: "failed to decode GroupInstanceId".into(),
                 }
             })?;
+        let protocol_type = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ProtocolType".into(),
+            }
+        })?;
+        let protocol_name = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ProtocolName".into(),
+            }
+        })?;
         let assignments = <Vec<SyncGroupRequestAssignment> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Assignments".into(),
@@ -150,6 +200,8 @@ impl KafkaDeserialize for SyncGroupRequest {
             generation_id,
             member_id,
             group_instance_id,
+            protocol_type,
+            protocol_name,
             assignments,
         })
     }

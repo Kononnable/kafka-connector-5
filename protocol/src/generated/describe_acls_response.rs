@@ -33,9 +33,9 @@ pub struct AclDescription {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DescribeAclsResource {
     /// The resource type.
-    pub r#type: i8,
+    pub resource_type: i8,
     /// The resource name.
-    pub name: String,
+    pub resource_name: String,
     /// The resource pattern type.
     /// Available in version 1+.
     pub pattern_type: i8,
@@ -52,12 +52,12 @@ impl ApiResponse for DescribeAclsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(1)
+        ApiVersion::new(2)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
-            "version {} is not supported by {} (supported: 0-1)",
+            (0) <= version.0 && version.0 <= (2),
+            "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
@@ -203,15 +203,15 @@ impl KafkaDeserialize for AclDescription {
 
 impl KafkaSerialize for DescribeAclsResource {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.r#type
+        self.resource_type
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Type".into(),
+                message: "failed to encode ResourceType".into(),
             })?;
-        self.name
+        self.resource_name
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+                message: "failed to encode ResourceName".into(),
             })?;
         self.pattern_type
             .encode(buf)
@@ -229,12 +229,13 @@ impl KafkaSerialize for DescribeAclsResource {
 
 impl KafkaDeserialize for DescribeAclsResource {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let r#type = <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Type".into(),
-        })?;
-        let name =
+        let resource_type =
+            <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ResourceType".into(),
+            })?;
+        let resource_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+                message: "failed to decode ResourceName".into(),
             })?;
         let pattern_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -246,8 +247,8 @@ impl KafkaDeserialize for DescribeAclsResource {
             }
         })?;
         Ok(Self {
-            r#type,
-            name,
+            resource_type,
+            resource_name,
             pattern_type,
             acls,
         })

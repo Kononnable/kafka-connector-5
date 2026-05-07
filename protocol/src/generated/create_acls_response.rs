@@ -11,11 +11,11 @@ pub struct CreateAclsResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
     /// The results for each ACL creation.
-    pub results: Vec<CreatableAclResult>,
+    pub results: Vec<AclCreationResult>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct CreatableAclResult {
+pub struct AclCreationResult {
     /// The result error, or zero if there was no error.
     pub error_code: i16,
     /// The result message, or null if there was no error.
@@ -31,12 +31,12 @@ impl ApiResponse for CreateAclsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(1)
+        ApiVersion::new(2)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
-            "version {} is not supported by {} (supported: 0-1)",
+            (0) <= version.0 && version.0 <= (2),
+            "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
@@ -51,7 +51,7 @@ impl ApiResponse for CreateAclsResponse {
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let results = <Vec<CreatableAclResult> as KafkaDeserialize>::decode(buf)
+        let results = <Vec<AclCreationResult> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Results"))?;
         Ok(Self {
             throttle_time_ms,
@@ -81,7 +81,7 @@ impl KafkaDeserialize for CreateAclsResponse {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
-        let results = <Vec<CreatableAclResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
+        let results = <Vec<AclCreationResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Results".into(),
             }
@@ -93,7 +93,7 @@ impl KafkaDeserialize for CreateAclsResponse {
     }
 }
 
-impl KafkaSerialize for CreatableAclResult {
+impl KafkaSerialize for AclCreationResult {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.error_code
             .encode(buf)
@@ -109,7 +109,7 @@ impl KafkaSerialize for CreatableAclResult {
     }
 }
 
-impl KafkaDeserialize for CreatableAclResult {
+impl KafkaDeserialize for AclCreationResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {

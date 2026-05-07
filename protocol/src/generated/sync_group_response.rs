@@ -13,6 +13,12 @@ pub struct SyncGroupResponse {
     pub throttle_time_ms: i32,
     /// The error code, or 0 if there was no error.
     pub error_code: i16,
+    /// The group protocol type.
+    /// Available in version 5+.
+    pub protocol_type: Option<String>,
+    /// The group protocol name.
+    /// Available in version 5+.
+    pub protocol_name: Option<String>,
     /// The member assignment.
     pub assignment: Vec<u8>,
 }
@@ -26,12 +32,12 @@ impl ApiResponse for SyncGroupResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(4)
+        ApiVersion::new(5)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
-            "version {} is not supported by {} (supported: 0-4)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
@@ -43,6 +49,16 @@ impl ApiResponse for SyncGroupResponse {
         self.error_code
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        if (5) <= version.0 {
+            self.protocol_type
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
+        }
+        if (5) <= version.0 {
+            self.protocol_name
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ProtocolName"))?;
+        }
         self.assignment
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode Assignment"))?;
@@ -57,11 +73,25 @@ impl ApiResponse for SyncGroupResponse {
         };
         let error_code = <i16 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        let protocol_type = if (5) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ProtocolType"))?
+        } else {
+            Default::default()
+        };
+        let protocol_name = if (5) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ProtocolName"))?
+        } else {
+            Default::default()
+        };
         let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Assignment"))?;
         Ok(Self {
             throttle_time_ms,
             error_code,
+            protocol_type,
+            protocol_name,
             assignment,
         })
     }
@@ -77,6 +107,16 @@ impl KafkaSerialize for SyncGroupResponse {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ErrorCode".into(),
+            })?;
+        self.protocol_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProtocolType".into(),
+            })?;
+        self.protocol_name
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProtocolName".into(),
             })?;
         self.assignment
             .encode(buf)
@@ -97,6 +137,16 @@ impl KafkaDeserialize for SyncGroupResponse {
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        let protocol_type = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ProtocolType".into(),
+            }
+        })?;
+        let protocol_name = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ProtocolName".into(),
+            }
+        })?;
         let assignment =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Assignment".into(),
@@ -104,6 +154,8 @@ impl KafkaDeserialize for SyncGroupResponse {
         Ok(Self {
             throttle_time_ms,
             error_code,
+            protocol_type,
+            protocol_name,
             assignment,
         })
     }

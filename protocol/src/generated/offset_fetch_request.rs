@@ -12,6 +12,9 @@ pub struct OffsetFetchRequest {
     pub group_id: String,
     /// Each topic we would like to fetch offsets for, or null to fetch offsets for all topics.
     pub topics: Option<Vec<OffsetFetchRequestTopic>>,
+    /// Whether broker should hold on returning unstable offsets but set a retriable error code for the partition.
+    /// Available in version 7+.
+    pub require_stable: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -31,12 +34,12 @@ impl ApiRequest for OffsetFetchRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(6)
+        ApiVersion::new(7)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
-            "version {} is not supported by {} (supported: 0-6)",
+            (0) <= version.0 && version.0 <= (7),
+            "version {} is not supported by {} (supported: 0-7)",
             version.0,
             stringify!(Self)
         );
@@ -46,6 +49,11 @@ impl ApiRequest for OffsetFetchRequest {
         self.topics
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        if (7) <= version.0 {
+            self.require_stable
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode RequireStable"))?;
+        }
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
@@ -53,7 +61,17 @@ impl ApiRequest for OffsetFetchRequest {
             .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
         let topics = <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
-        Ok(Self { group_id, topics })
+        let require_stable = if (7) <= version.0 {
+            <bool as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode RequireStable"))?
+        } else {
+            Default::default()
+        };
+        Ok(Self {
+            group_id,
+            topics,
+            require_stable,
+        })
     }
 }
 impl KafkaSerialize for OffsetFetchRequest {
@@ -67,6 +85,11 @@ impl KafkaSerialize for OffsetFetchRequest {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topics".into(),
+            })?;
+        self.require_stable
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode RequireStable".into(),
             })?;
         Ok(())
     }
@@ -82,7 +105,15 @@ impl KafkaDeserialize for OffsetFetchRequest {
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topics".into(),
             })?;
-        Ok(Self { group_id, topics })
+        let require_stable =
+            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode RequireStable".into(),
+            })?;
+        Ok(Self {
+            group_id,
+            topics,
+            require_stable,
+        })
     }
 }
 

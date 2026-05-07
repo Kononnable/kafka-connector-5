@@ -16,7 +16,7 @@ pub struct TxnOffsetCommitResponse {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TxnOffsetCommitResponsePartition {
-    /// The partitition index.
+    /// The partition index.
     pub partition_index: i32,
     /// The error code, or 0 if there was no error.
     pub error_code: i16,
@@ -39,12 +39,12 @@ impl ApiResponse for TxnOffsetCommitResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(3)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)
         );

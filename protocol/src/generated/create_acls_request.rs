@@ -9,11 +9,11 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreateAclsRequest {
     /// The ACLs that we want to create.
-    pub creations: Vec<CreatableAcl>,
+    pub creations: Vec<AclCreation>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct CreatableAcl {
+pub struct AclCreation {
     /// The type of the resource.
     pub resource_type: i8,
     /// The resource name for the ACL.
@@ -40,12 +40,12 @@ impl ApiRequest for CreateAclsRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(1)
+        ApiVersion::new(2)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
-            "version {} is not supported by {} (supported: 0-1)",
+            (0) <= version.0 && version.0 <= (2),
+            "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
@@ -55,7 +55,7 @@ impl ApiRequest for CreateAclsRequest {
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
-        let creations = <Vec<CreatableAcl> as KafkaDeserialize>::decode(buf)
+        let creations = <Vec<AclCreation> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Creations"))?;
         Ok(Self { creations })
     }
@@ -73,7 +73,7 @@ impl KafkaSerialize for CreateAclsRequest {
 
 impl KafkaDeserialize for CreateAclsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let creations = <Vec<CreatableAcl> as KafkaDeserialize>::decode(buf).map_err(|_| {
+        let creations = <Vec<AclCreation> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Creations".into(),
             }
@@ -82,7 +82,7 @@ impl KafkaDeserialize for CreateAclsRequest {
     }
 }
 
-impl KafkaSerialize for CreatableAcl {
+impl KafkaSerialize for AclCreation {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.resource_type
             .encode(buf)
@@ -123,7 +123,7 @@ impl KafkaSerialize for CreatableAcl {
     }
 }
 
-impl KafkaDeserialize for CreatableAcl {
+impl KafkaDeserialize for AclCreation {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let resource_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {

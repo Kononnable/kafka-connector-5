@@ -16,7 +16,16 @@ pub struct TxnOffsetCommitRequest {
     pub producer_id: i64,
     /// The current epoch associated with the producer ID.
     pub producer_epoch: i16,
-    /// Each topic that we want to committ offsets for.
+    /// The generation of the consumer.
+    /// Available in version 3+.
+    pub generation_id: i32,
+    /// The member ID assigned by the group coordinator.
+    /// Available in version 3+.
+    pub member_id: String,
+    /// The unique identifier of the consumer instance provided by end user.
+    /// Available in version 3+.
+    pub group_instance_id: Option<String>,
+    /// Each topic that we want to commit offsets for.
     pub topics: Vec<TxnOffsetCommitRequestTopic>,
 }
 
@@ -50,12 +59,12 @@ impl ApiRequest for TxnOffsetCommitRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(3)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)
         );
@@ -71,6 +80,21 @@ impl ApiRequest for TxnOffsetCommitRequest {
         self.producer_epoch
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ProducerEpoch"))?;
+        if (3) <= version.0 {
+            self.generation_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode GenerationId"))?;
+        }
+        if (3) <= version.0 {
+            self.member_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        }
+        if (3) <= version.0 {
+            self.group_instance_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        }
         self.topics
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
@@ -85,6 +109,24 @@ impl ApiRequest for TxnOffsetCommitRequest {
             .map_err(|_| SerializationError::Decode("failed to decode ProducerId"))?;
         let producer_epoch = <i16 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ProducerEpoch"))?;
+        let generation_id = if (3) <= version.0 {
+            <i32 as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode GenerationId"))?
+        } else {
+            Default::default()
+        };
+        let member_id = if (3) <= version.0 {
+            <String as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?
+        } else {
+            Default::default()
+        };
+        let group_instance_id = if (3) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode GroupInstanceId"))?
+        } else {
+            Default::default()
+        };
         let topics = <Vec<TxnOffsetCommitRequestTopic> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         Ok(Self {
@@ -92,6 +134,9 @@ impl ApiRequest for TxnOffsetCommitRequest {
             group_id,
             producer_id,
             producer_epoch,
+            generation_id,
+            member_id,
+            group_instance_id,
             topics,
         })
     }
@@ -117,6 +162,21 @@ impl KafkaSerialize for TxnOffsetCommitRequest {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ProducerEpoch".into(),
+            })?;
+        self.generation_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GenerationId".into(),
+            })?;
+        self.member_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberId".into(),
+            })?;
+        self.group_instance_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupInstanceId".into(),
             })?;
         self.topics
             .encode(buf)
@@ -145,6 +205,20 @@ impl KafkaDeserialize for TxnOffsetCommitRequest {
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerEpoch".into(),
             })?;
+        let generation_id =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GenerationId".into(),
+            })?;
+        let member_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
+            })?;
+        let group_instance_id =
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupInstanceId".into(),
+                }
+            })?;
         let topics =
             <Vec<TxnOffsetCommitRequestTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -156,6 +230,9 @@ impl KafkaDeserialize for TxnOffsetCommitRequest {
             group_id,
             producer_id,
             producer_epoch,
+            generation_id,
+            member_id,
+            group_instance_id,
             topics,
         })
     }

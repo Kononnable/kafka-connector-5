@@ -9,12 +9,12 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DescribeAclsRequest {
     /// The resource type.
-    pub resource_type: i8,
+    pub resource_type_filter: i8,
     /// The resource name, or null to match any resource name.
     pub resource_name_filter: Option<String>,
     /// The resource pattern to match.
     /// Available in version 1+.
-    pub resource_pattern_type: i8,
+    pub pattern_type_filter: i8,
     /// The principal to match, or null to match any principal.
     pub principal_filter: Option<String>,
     /// The host to match, or null to match any host.
@@ -34,25 +34,25 @@ impl ApiRequest for DescribeAclsRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(1)
+        ApiVersion::new(2)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
-            "version {} is not supported by {} (supported: 0-1)",
+            (0) <= version.0 && version.0 <= (2),
+            "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
-        self.resource_type
+        self.resource_type_filter
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode ResourceType"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode ResourceTypeFilter"))?;
         self.resource_name_filter
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ResourceNameFilter"))?;
         if (1) <= version.0 {
-            self.resource_pattern_type
+            self.pattern_type_filter
                 .encode(buf)
-                .map_err(|_| SerializationError::Encode("failed to encode ResourcePatternType"))?;
+                .map_err(|_| SerializationError::Encode("failed to encode PatternTypeFilter"))?;
         }
         self.principal_filter
             .encode(buf)
@@ -69,13 +69,13 @@ impl ApiRequest for DescribeAclsRequest {
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
-        let resource_type = <i8 as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode ResourceType"))?;
+        let resource_type_filter = <i8 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ResourceTypeFilter"))?;
         let resource_name_filter = <Option<String> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ResourceNameFilter"))?;
-        let resource_pattern_type = if (1) <= version.0 {
+        let pattern_type_filter = if (1) <= version.0 {
             <i8 as KafkaDeserialize>::decode(buf)
-                .map_err(|_| SerializationError::Decode("failed to decode ResourcePatternType"))?
+                .map_err(|_| SerializationError::Decode("failed to decode PatternTypeFilter"))?
         } else {
             Default::default()
         };
@@ -88,9 +88,9 @@ impl ApiRequest for DescribeAclsRequest {
         let permission_type = <i8 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode PermissionType"))?;
         Ok(Self {
-            resource_type,
+            resource_type_filter,
             resource_name_filter,
-            resource_pattern_type,
+            pattern_type_filter,
             principal_filter,
             host_filter,
             operation,
@@ -100,20 +100,20 @@ impl ApiRequest for DescribeAclsRequest {
 }
 impl KafkaSerialize for DescribeAclsRequest {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.resource_type
+        self.resource_type_filter
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResourceType".into(),
+                message: "failed to encode ResourceTypeFilter".into(),
             })?;
         self.resource_name_filter
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ResourceNameFilter".into(),
             })?;
-        self.resource_pattern_type
+        self.pattern_type_filter
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResourcePatternType".into(),
+                message: "failed to encode PatternTypeFilter".into(),
             })?;
         self.principal_filter
             .encode(buf)
@@ -141,9 +141,9 @@ impl KafkaSerialize for DescribeAclsRequest {
 
 impl KafkaDeserialize for DescribeAclsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let resource_type =
+        let resource_type_filter =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResourceType".into(),
+                message: "failed to decode ResourceTypeFilter".into(),
             })?;
         let resource_name_filter =
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
@@ -151,9 +151,9 @@ impl KafkaDeserialize for DescribeAclsRequest {
                     message: "failed to decode ResourceNameFilter".into(),
                 }
             })?;
-        let resource_pattern_type =
+        let pattern_type_filter =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResourcePatternType".into(),
+                message: "failed to decode PatternTypeFilter".into(),
             })?;
         let principal_filter = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
@@ -174,9 +174,9 @@ impl KafkaDeserialize for DescribeAclsRequest {
                 message: "failed to decode PermissionType".into(),
             })?;
         Ok(Self {
-            resource_type,
+            resource_type_filter,
             resource_name_filter,
-            resource_pattern_type,
+            pattern_type_filter,
             principal_filter,
             host_filter,
             operation,

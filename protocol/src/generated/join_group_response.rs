@@ -15,8 +15,11 @@ pub struct JoinGroupResponse {
     pub error_code: i16,
     /// The generation ID of the group.
     pub generation_id: i32,
+    /// The group protocol name.
+    /// Available in version 7+.
+    pub protocol_type: Option<String>,
     /// The group protocol selected by the coordinator.
-    pub protocol_name: String,
+    pub protocol_name: Option<String>,
     /// The leader of the group.
     pub leader: String,
     /// The member ID assigned by the group coordinator.
@@ -45,12 +48,12 @@ impl ApiResponse for JoinGroupResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(6)
+        ApiVersion::new(7)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
-            "version {} is not supported by {} (supported: 0-6)",
+            (0) <= version.0 && version.0 <= (7),
+            "version {} is not supported by {} (supported: 0-7)",
             version.0,
             stringify!(Self)
         );
@@ -65,6 +68,11 @@ impl ApiResponse for JoinGroupResponse {
         self.generation_id
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode GenerationId"))?;
+        if (7) <= version.0 {
+            self.protocol_type
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
+        }
         self.protocol_name
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ProtocolName"))?;
@@ -90,7 +98,13 @@ impl ApiResponse for JoinGroupResponse {
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
         let generation_id = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode GenerationId"))?;
-        let protocol_name = <String as KafkaDeserialize>::decode(buf)
+        let protocol_type = if (7) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ProtocolType"))?
+        } else {
+            Default::default()
+        };
+        let protocol_name = <Option<String> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ProtocolName"))?;
         let leader = <String as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Leader"))?;
@@ -102,6 +116,7 @@ impl ApiResponse for JoinGroupResponse {
             throttle_time_ms,
             error_code,
             generation_id,
+            protocol_type,
             protocol_name,
             leader,
             member_id,
@@ -125,6 +140,11 @@ impl KafkaSerialize for JoinGroupResponse {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode GenerationId".into(),
+            })?;
+        self.protocol_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProtocolType".into(),
             })?;
         self.protocol_name
             .encode(buf)
@@ -164,10 +184,16 @@ impl KafkaDeserialize for JoinGroupResponse {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GenerationId".into(),
             })?;
-        let protocol_name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+        let protocol_type = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ProtocolType".into(),
+            }
+        })?;
+        let protocol_name = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
                 message: "failed to decode ProtocolName".into(),
-            })?;
+            }
+        })?;
         let leader =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Leader".into(),
@@ -186,6 +212,7 @@ impl KafkaDeserialize for JoinGroupResponse {
             throttle_time_ms,
             error_code,
             generation_id,
+            protocol_type,
             protocol_name,
             leader,
             member_id,
