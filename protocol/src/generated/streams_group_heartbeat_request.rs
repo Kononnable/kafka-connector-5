@@ -793,18 +793,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
                 }
             })?;
         let instance_id = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode InstanceId".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode InstanceId".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -813,18 +806,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?
         };
         let rack_id = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode RackId".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode RackId".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -857,18 +843,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?)
         };
         let active_tasks = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskIds> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode ActiveTasks".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ActiveTasks".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -877,18 +856,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?
         };
         let standby_tasks = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskIds> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode StandbyTasks".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode StandbyTasks".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -897,18 +869,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?
         };
         let warmup_tasks = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskIds> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode WarmupTasks".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode WarmupTasks".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -917,18 +882,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?
         };
         let process_id = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode ProcessId".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ProcessId".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -957,18 +915,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?)
         };
         let client_tags = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<KeyValue> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode ClientTags".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<KeyValue>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ClientTags".into(),
+                },
+            )?
         } else {
             <Option<Vec<KeyValue>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -977,18 +928,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?
         };
         let task_offsets = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskOffset> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode TaskOffsets".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode TaskOffsets".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -997,18 +941,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
             })?
         };
         let task_end_offsets = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskOffset> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode TaskEndOffsets".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode TaskEndOffsets".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

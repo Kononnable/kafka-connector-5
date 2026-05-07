@@ -311,18 +311,11 @@ impl KafkaDeserialize for CreatableTopicConfigs {
                 }
             })?;
         let value = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Value".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Value".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -551,18 +544,11 @@ impl KafkaDeserialize for CreatableTopicResult {
                 }
             })?;
         let error_message = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode ErrorMessage".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorMessage".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -585,17 +571,10 @@ impl KafkaDeserialize for CreatableTopicResult {
                 message: "failed to decode ReplicationFactor".into(),
             })?;
         let configs = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<CreatableTopicConfigs> as KafkaDeserialize>::decode_flexible(buf, true)
-                        .map_err(|_| DecodeError::Protocol {
-                            message: "failed to decode Configs".into(),
-                        })?,
-                )
-            }
+            <Option<Vec<CreatableTopicConfigs>> as KafkaDeserialize>::decode_flexible(buf, true)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Configs".into(),
+                })?
         } else {
             <Option<Vec<CreatableTopicConfigs>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

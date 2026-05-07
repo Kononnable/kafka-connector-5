@@ -255,17 +255,10 @@ impl KafkaDeserialize for OffsetFetchRequest {
                 }
             })?;
         let topics = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<OffsetFetchRequestTopic> as KafkaDeserialize>::decode_flexible(buf, true)
-                        .map_err(|_| DecodeError::Protocol {
-                            message: "failed to decode Topics".into(),
-                        })?,
-                )
-            }
+            <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode_flexible(buf, true)
+                .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            })?
         } else {
             <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode(buf).map_err(
                 |_| DecodeError::Protocol {
@@ -412,18 +405,11 @@ impl KafkaDeserialize for OffsetFetchRequestGroup {
                 }
             })?;
         let member_id = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode MemberId".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MemberId".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -438,17 +424,10 @@ impl KafkaDeserialize for OffsetFetchRequestGroup {
                 }
             })?;
         let topics = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<OffsetFetchRequestTopics> as KafkaDeserialize>::decode_flexible(buf, true)
-                        .map_err(|_| DecodeError::Protocol {
-                            message: "failed to decode Topics".into(),
-                        })?,
-                )
-            }
+            <Option<Vec<OffsetFetchRequestTopics>> as KafkaDeserialize>::decode_flexible(buf, true)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Topics".into(),
+                })?
         } else {
             <Option<Vec<OffsetFetchRequestTopics>> as KafkaDeserialize>::decode(buf).map_err(
                 |_| DecodeError::Protocol {

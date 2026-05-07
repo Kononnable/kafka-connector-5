@@ -111,18 +111,11 @@ impl KafkaDeserialize for DescribeUserScramCredentialsRequest {
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
         let users = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<UserName> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode Users".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<UserName>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode Users".into(),
+                },
+            )?
         } else {
             <Option<Vec<UserName>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

@@ -352,18 +352,11 @@ impl KafkaDeserialize for MetadataResponse {
                     message: "failed to decode Brokers".into(),
                 })?;
         let cluster_id = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode ClusterId".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ClusterId".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -524,18 +517,11 @@ impl KafkaDeserialize for MetadataResponseBroker {
             }
         })?;
         let rack = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Rack".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Rack".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -870,18 +856,11 @@ impl KafkaDeserialize for MetadataResponseTopic {
                 }
             })?;
         let name = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Name".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

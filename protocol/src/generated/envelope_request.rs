@@ -161,18 +161,11 @@ impl KafkaDeserialize for EnvelopeRequest {
                 message: "failed to decode RequestData".into(),
             })?;
         let request_principal = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode RequestPrincipal".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<Vec<u8>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode RequestPrincipal".into(),
+                }
+            })?
         } else {
             <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

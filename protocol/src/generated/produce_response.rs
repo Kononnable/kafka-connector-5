@@ -334,18 +334,11 @@ impl KafkaDeserialize for BatchIndexAndErrorMessage {
                 }
             })?;
         let batch_index_error_message = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode BatchIndexErrorMessage".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode BatchIndexErrorMessage".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -554,18 +547,11 @@ impl KafkaDeserialize for NodeEndpoint {
             }
         })?;
         let rack = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Rack".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Rack".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -774,18 +760,11 @@ impl KafkaDeserialize for PartitionProduceResponse {
                     message: "failed to decode RecordErrors".into(),
                 })?;
         let error_message = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode ErrorMessage".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorMessage".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

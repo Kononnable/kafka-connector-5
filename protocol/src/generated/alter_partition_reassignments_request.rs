@@ -269,18 +269,11 @@ impl KafkaDeserialize for ReassignablePartition {
                 message: "failed to decode PartitionIndex".into(),
             })?;
         let replicas = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Replicas".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<Vec<i32>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Replicas".into(),
+                }
+            })?
         } else {
             <Option<Vec<i32>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

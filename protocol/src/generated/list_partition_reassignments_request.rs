@@ -144,19 +144,12 @@ impl KafkaDeserialize for ListPartitionReassignmentsRequest {
                 }
             })?;
         let topics = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<ListPartitionReassignmentsTopics> as KafkaDeserialize>::decode_flexible(
-                        buf, true,
-                    )
-                    .map_err(|_| DecodeError::Protocol {
-                        message: "failed to decode Topics".into(),
-                    })?,
-                )
-            }
+            <Option<Vec<ListPartitionReassignmentsTopics>> as KafkaDeserialize>::decode_flexible(
+                buf, true,
+            )
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            })?
         } else {
             <Option<Vec<ListPartitionReassignmentsTopics>> as KafkaDeserialize>::decode(buf)
                 .map_err(|_| DecodeError::Protocol {

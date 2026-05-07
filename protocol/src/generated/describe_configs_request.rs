@@ -286,18 +286,11 @@ impl KafkaDeserialize for DescribeConfigsResource {
                 message: "failed to decode ResourceName".into(),
             })?;
         let configuration_keys = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode ConfigurationKeys".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ConfigurationKeys".into(),
+                }
+            })?
         } else {
             <Option<Vec<String>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

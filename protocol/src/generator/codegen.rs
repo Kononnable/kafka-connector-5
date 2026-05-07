@@ -619,16 +619,23 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
         if f.nullable_versions.is_some() {
-            // Nullable field: use presence marker in flexible mode
+            // Nullable field
             let inner_type = strip_option_wrapper(&rust_type);
             let has_builtin = nullable_has_builtin_flex(f);
             code.push_str(&format!("        let {} = if is_flexible {{\n", rust_name));
-            code.push_str("            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
-            code.push_str("            if __present == 0 {\n");
-            code.push_str("                None\n");
-            code.push_str("            } else {\n");
-            code.push_str(&format!("                Some(<{} as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?)\n", inner_type, f.name));
-            code.push_str("            }\n");
+            if has_builtin {
+                // Types with built-in flexible encoding (string, bytes, array)
+                // use their own Option<T>::decode_flexible directly
+                code.push_str(&format!("            <{} as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));
+            } else {
+                // Nullable struct fields: presence marker + sub-message
+                code.push_str("            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+                code.push_str("            if __present == 0 {\n");
+                code.push_str("                None\n");
+                code.push_str("            } else {\n");
+                code.push_str(&format!("                Some(<{} as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?)\n", inner_type, f.name));
+                code.push_str("            }\n");
+            }
             code.push_str("        } else {\n");
             if has_builtin {
                 code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));

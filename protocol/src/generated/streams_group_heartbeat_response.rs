@@ -543,18 +543,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
                 }
             })?;
         let error_message = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode ErrorMessage".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorMessage".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -587,18 +580,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
                 message: "failed to decode TaskOffsetIntervalMs".into(),
             })?;
         let status = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<Status> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode Status".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<Status>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Status".into(),
+                }
+            })?
         } else {
             <Option<Vec<Status>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -607,18 +593,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
             })?
         };
         let active_tasks = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskIds> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode ActiveTasks".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ActiveTasks".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -627,18 +606,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
             })?
         };
         let standby_tasks = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskIds> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode StandbyTasks".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode StandbyTasks".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -647,18 +619,11 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
             })?
         };
         let warmup_tasks = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<TaskIds> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
-                        |_| DecodeError::Protocol {
-                            message: "failed to decode WarmupTasks".into(),
-                        },
-                    )?,
-                )
-            }
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode WarmupTasks".into(),
+                },
+            )?
         } else {
             <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -673,17 +638,10 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
                 }
             })?;
         let partitions_by_user_endpoint = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<EndpointToPartitions> as KafkaDeserialize>::decode_flexible(buf, true)
-                        .map_err(|_| DecodeError::Protocol {
-                            message: "failed to decode PartitionsByUserEndpoint".into(),
-                        })?,
-                )
-            }
+            <Option<Vec<EndpointToPartitions>> as KafkaDeserialize>::decode_flexible(buf, true)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode PartitionsByUserEndpoint".into(),
+                })?
         } else {
             <Option<Vec<EndpointToPartitions>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {

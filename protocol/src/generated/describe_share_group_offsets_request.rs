@@ -197,12 +197,7 @@ impl KafkaDeserialize for DescribeShareGroupOffsetsRequestGroup {
                 }
             })?;
         let topics = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(<Vec<DescribeShareGroupOffsetsRequestTopic> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol { message: "failed to decode Topics".into() })?)
-            }
+            <Option<Vec<DescribeShareGroupOffsetsRequestTopic>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol { message: "failed to decode Topics".into() })?
         } else {
             <Option<Vec<DescribeShareGroupOffsetsRequestTopic>> as KafkaDeserialize>::decode(buf)
                 .map_err(|_| DecodeError::Protocol {

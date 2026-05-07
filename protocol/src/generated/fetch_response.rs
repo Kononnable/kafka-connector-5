@@ -792,18 +792,11 @@ impl KafkaDeserialize for NodeEndpoint {
             }
         })?;
         let rack = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Rack".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Rack".into(),
+                }
+            })?
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -1084,17 +1077,10 @@ impl KafkaDeserialize for PartitionData {
                 message: "failed to decode SnapshotId".into(),
             })?;
         let aborted_transactions = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<AbortedTransaction> as KafkaDeserialize>::decode_flexible(buf, true)
-                        .map_err(|_| DecodeError::Protocol {
-                            message: "failed to decode AbortedTransactions".into(),
-                        })?,
-                )
-            }
+            <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode_flexible(buf, true)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode AbortedTransactions".into(),
+                })?
         } else {
             <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -1107,18 +1093,11 @@ impl KafkaDeserialize for PartitionData {
             message: "failed to decode PreferredReadReplica".into(),
         })?;
         let records = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-            if __present == 0 {
-                None
-            } else {
-                Some(
-                    <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Records".into(),
-                        }
-                    })?,
-                )
-            }
+            <Option<Vec<u8>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Records".into(),
+                }
+            })?
         } else {
             <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
