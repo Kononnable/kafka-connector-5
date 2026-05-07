@@ -137,18 +137,47 @@ where
 
 // ── Request inspection (read-only) ────────────────────────────────────
 
-use protocol::generated::{ProduceRequest, FetchRequest, ListOffsetsRequest, MetadataRequest,
-    OffsetCommitRequest, OffsetFetchRequest, FindCoordinatorRequest, JoinGroupRequest,
-    HeartbeatRequest, LeaveGroupRequest, SyncGroupRequest, DescribeGroupsRequest,
-    ListGroupsRequest, SaslHandshakeRequest, ApiVersionsRequest, CreateTopicsRequest,
-    DeleteTopicsRequest, DeleteRecordsRequest, InitProducerIdRequest,
-    OffsetForLeaderEpochRequest, AddPartitionsToTxnRequest, AddOffsetsToTxnRequest,
-    EndTxnRequest, WriteTxnMarkersRequest, TxnOffsetCommitRequest, DescribeAclsRequest,
-    CreateAclsRequest, DeleteAclsRequest, DescribeConfigsRequest, AlterConfigsRequest,
-    AlterReplicaLogDirsRequest, DescribeLogDirsRequest, SaslAuthenticateRequest,
-    CreatePartitionsRequest, CreateDelegationTokenRequest, RenewDelegationTokenRequest,
-    ExpireDelegationTokenRequest, DescribeDelegationTokenRequest, ElectLeadersRequest,
-    MetadataResponse};
+use protocol::generated::{
+    ProduceRequest, ProduceResponse,
+    FetchRequest, FetchResponse,
+    ListOffsetsRequest, ListOffsetsResponse,
+    MetadataRequest, MetadataResponse,
+    OffsetCommitRequest, OffsetCommitResponse,
+    OffsetFetchRequest, OffsetFetchResponse,
+    FindCoordinatorRequest, FindCoordinatorResponse,
+    JoinGroupRequest, JoinGroupResponse,
+    HeartbeatRequest, HeartbeatResponse,
+    LeaveGroupRequest, LeaveGroupResponse,
+    SyncGroupRequest, SyncGroupResponse,
+    DescribeGroupsRequest, DescribeGroupsResponse,
+    ListGroupsRequest, ListGroupsResponse,
+    SaslHandshakeRequest, SaslHandshakeResponse,
+    ApiVersionsRequest, ApiVersionsResponse,
+    CreateTopicsRequest, CreateTopicsResponse,
+    DeleteTopicsRequest, DeleteTopicsResponse,
+    DeleteRecordsRequest, DeleteRecordsResponse,
+    InitProducerIdRequest, InitProducerIdResponse,
+    OffsetForLeaderEpochRequest, OffsetForLeaderEpochResponse,
+    AddPartitionsToTxnRequest, AddPartitionsToTxnResponse,
+    AddOffsetsToTxnRequest, AddOffsetsToTxnResponse,
+    EndTxnRequest, EndTxnResponse,
+    WriteTxnMarkersRequest, WriteTxnMarkersResponse,
+    TxnOffsetCommitRequest, TxnOffsetCommitResponse,
+    DescribeAclsRequest, DescribeAclsResponse,
+    CreateAclsRequest, CreateAclsResponse,
+    DeleteAclsRequest, DeleteAclsResponse,
+    DescribeConfigsRequest, DescribeConfigsResponse,
+    AlterConfigsRequest, AlterConfigsResponse,
+    AlterReplicaLogDirsRequest, AlterReplicaLogDirsResponse,
+    DescribeLogDirsRequest, DescribeLogDirsResponse,
+    SaslAuthenticateRequest, SaslAuthenticateResponse,
+    CreatePartitionsRequest, CreatePartitionsResponse,
+    CreateDelegationTokenRequest, CreateDelegationTokenResponse,
+    RenewDelegationTokenRequest, RenewDelegationTokenResponse,
+    ExpireDelegationTokenRequest, ExpireDelegationTokenResponse,
+    DescribeDelegationTokenRequest, DescribeDelegationTokenResponse,
+    ElectLeadersRequest, ElectLeadersResponse,
+};
 
 /// Try to deserialize and debug-log a request body.
 fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
@@ -204,20 +233,57 @@ fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
 
 /// Try to deserialize and debug-log a response body.
 fn log_response_body(api_key: i16, version: i16, body: &[u8]) {
-    // Only Metadata responses (api_key=3) are safely decoded for now.
-    // Other response types may use protocol versions or formats that
-    // the generated code doesn't support, causing OOM from misaligned
-    // varint parsing.
-    if api_key == 3 {
-        let ver = ApiVersion::new(version);
-        let mut buf = Bytes::copy_from_slice(body);
-        let result = MetadataResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}"));
-        match result {
-            Some(s) => tracing::info!("← RES body: {s}"),
-            None => tracing::info!("← RES body: {} bytes (undecoded)", body.len()),
+    let name = protocol::traits::ApiKey::new(api_key);
+    let ver = ApiVersion::new(version);
+    let mut buf = Bytes::copy_from_slice(body);
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        match api_key {
+            0  => ProduceResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            1  => FetchResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            2  => ListOffsetsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            3  => MetadataResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            8  => OffsetCommitResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            9  => OffsetFetchResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            10 => FindCoordinatorResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            11 => JoinGroupResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            12 => HeartbeatResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            13 => LeaveGroupResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            14 => SyncGroupResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            15 => DescribeGroupsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            16 => ListGroupsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            17 => SaslHandshakeResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            18 => ApiVersionsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            19 => CreateTopicsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            20 => DeleteTopicsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            21 => DeleteRecordsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            22 => InitProducerIdResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            23 => OffsetForLeaderEpochResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            24 => AddPartitionsToTxnResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            25 => AddOffsetsToTxnResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            26 => EndTxnResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            27 => WriteTxnMarkersResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            28 => TxnOffsetCommitResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            29 => DescribeAclsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            30 => CreateAclsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            31 => DeleteAclsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            32 => DescribeConfigsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            33 => AlterConfigsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            34 => AlterReplicaLogDirsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            35 => DescribeLogDirsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            36 => SaslAuthenticateResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            37 => CreatePartitionsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            38 => CreateDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            39 => RenewDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            40 => ExpireDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            41 => DescribeDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            42 => ElectLeadersResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+            _  => None,
         }
-    } else {
-        tracing::info!("← RES body: {} bytes (undecoded)", body.len());
+    }));
+    match result {
+        Ok(Some(s)) => tracing::info!("← RES body: {s}"),
+        Ok(None) => tracing::debug!("← RES body: {} bytes (decode err)", body.len()),
+        Err(_) => tracing::warn!("← RES body: {} bytes (panic)", body.len()),
     }
 }
 
