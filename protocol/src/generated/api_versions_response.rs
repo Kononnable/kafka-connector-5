@@ -20,7 +20,7 @@ pub struct ApiVersionsResponse {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ApiVersionsResponseKey {
     /// The API index.
-    pub index: i16,
+    pub api_key: i16,
     /// The minimum supported version, inclusive.
     pub min_version: i16,
     /// The maximum supported version, inclusive.
@@ -36,12 +36,12 @@ impl ApiResponse for ApiVersionsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(3)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)
         );
@@ -123,10 +123,10 @@ impl KafkaDeserialize for ApiVersionsResponse {
 
 impl KafkaSerialize for ApiVersionsResponseKey {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.index
+        self.api_key
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Index".into(),
+                message: "failed to encode ApiKey".into(),
             })?;
         self.min_version
             .encode(buf)
@@ -144,9 +144,10 @@ impl KafkaSerialize for ApiVersionsResponseKey {
 
 impl KafkaDeserialize for ApiVersionsResponseKey {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let index = <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Index".into(),
-        })?;
+        let api_key =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ApiKey".into(),
+            })?;
         let min_version =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MinVersion".into(),
@@ -156,7 +157,7 @@ impl KafkaDeserialize for ApiVersionsResponseKey {
                 message: "failed to decode MaxVersion".into(),
             })?;
         Ok(Self {
-            index,
+            api_key,
             min_version,
             max_version,
         })

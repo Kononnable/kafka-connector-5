@@ -50,9 +50,9 @@ pub fn generate_all() -> GeneratedFiles {
             .filter(|line| !line.trim_start().starts_with("//"))
             .collect::<Vec<_>>()
             .join("\n");
-        if let Ok(msg) = serde_json::from_str::<MessageStruct>(&cleaned) {
-            parsed.push(msg);
-        }
+        let msg = serde_json::from_str::<MessageStruct>(&cleaned)
+            .unwrap_or_else(|e| panic!("failed to parse {:?}: {e}", path));
+        parsed.push(msg);
     }
 
     // Build apiKey → (request_name, response_name) pairing.
@@ -150,6 +150,17 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
     // Collect all nested structs that need to be emitted.
     let mut nested = BTreeMap::new();
     collect_nested_structs(&msg.fields, &mut nested);
+    // Also collect common structs (shared struct definitions).
+    for cs in &msg.common_structs {
+        let name = if cs.field_type.is_empty() {
+            cs.name.clone()
+        } else {
+            cs.field_type.clone()
+        };
+        nested.entry(name).or_insert_with(|| cs.fields.clone());
+        // Recurse into common struct fields for deeper nesting
+        collect_nested_structs(&cs.fields, &mut nested);
+    }
 
     // Main struct
     code.push_str("// -------------------------------------------------------\n");
@@ -720,6 +731,8 @@ mod tests {
             message_type: MessageType::Response,
             name: "TestResponse".into(),
             valid_versions: "0-1".into(),
+            flexible_versions: None,
+            common_structs: Vec::new(),
             fields: vec![Field::new(
                 "throttleTimeMs".into(),
                 "int32".into(),

@@ -38,6 +38,9 @@ pub struct DescribedGroup {
 pub struct DescribedGroupMember {
     /// The member ID assigned by the group coordinator.
     pub member_id: String,
+    /// The unique identifier of the consumer instance provided by end user.
+    /// Available in version 4+.
+    pub group_instance_id: Option<String>,
     /// The client ID used in the member's latest join group request.
     pub client_id: String,
     /// The client host.
@@ -57,12 +60,12 @@ impl ApiResponse for DescribeGroupsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+        ApiVersion::new(5)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
-            "version {} is not supported by {} (supported: 0-3)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
@@ -217,6 +220,11 @@ impl KafkaSerialize for DescribedGroupMember {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MemberId".into(),
             })?;
+        self.group_instance_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupInstanceId".into(),
+            })?;
         self.client_id
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -247,6 +255,12 @@ impl KafkaDeserialize for DescribedGroupMember {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        let group_instance_id =
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupInstanceId".into(),
+                }
+            })?;
         let client_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientId".into(),
@@ -265,6 +279,7 @@ impl KafkaDeserialize for DescribedGroupMember {
             })?;
         Ok(Self {
             member_id,
+            group_instance_id,
             client_id,
             client_host,
             member_metadata,

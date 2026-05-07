@@ -15,12 +15,12 @@ pub struct LeaderAndIsrRequest {
     /// The current broker epoch.
     /// Available in version 2+.
     pub broker_epoch: i64,
+    /// The state of each partition, in a v0 or v1 message.
+    /// Available in version 0-1.
+    pub ungrouped_partition_states: Vec<LeaderAndIsrPartitionState>,
     /// Each topic.
     /// Available in version 2+.
-    pub topic_states: Vec<LeaderAndIsrRequestTopicState>,
-    /// The state of each partition
-    /// Available in version 0-1.
-    pub partition_states_v0: Vec<LeaderAndIsrRequestPartitionStateV0>,
+    pub topic_states: Vec<LeaderAndIsrTopicState>,
     /// The current live leaders.
     pub live_leaders: Vec<LeaderAndIsrLiveLeader>,
 }
@@ -36,64 +36,43 @@ pub struct LeaderAndIsrLiveLeader {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct LeaderAndIsrRequestPartitionState {
+pub struct LeaderAndIsrPartitionState {
+    /// The topic name.  This is only present in v0 or v1.
+    /// Available in version 0-1.
+    pub topic_name: String,
     /// The partition index.
     pub partition_index: i32,
     /// The controller epoch.
     pub controller_epoch: i32,
     /// The broker ID of the leader.
-    pub leader_key: i32,
+    pub leader: i32,
     /// The leader epoch.
     pub leader_epoch: i32,
     /// The in-sync replica IDs.
-    pub isr_replicas: Vec<i32>,
+    pub isr: Vec<i32>,
     /// The ZooKeeper version.
     pub zk_version: i32,
     /// The replica IDs.
     pub replicas: Vec<i32>,
+    /// The replica IDs that we are adding this partition to, or null if no replicas are being added.
+    /// Available in version 3+.
+    pub adding_replicas: Vec<i32>,
+    /// The replica IDs that we are removing this partition from, or null if no replicas are being removed.
+    /// Available in version 3+.
+    pub removing_replicas: Vec<i32>,
     /// Whether the replica should have existed on the broker or not.
     /// Available in version 1+.
     pub is_new: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct LeaderAndIsrRequestPartitionStateV0 {
-    /// The topic name.
-    /// Available in version 0-1.
-    pub topic_name: String,
-    /// The partition index.
-    /// Available in version 0-1.
-    pub partition_index: i32,
-    /// The controller epoch.
-    /// Available in version 0-1.
-    pub controller_epoch: i32,
-    /// The broker ID of the leader.
-    /// Available in version 0-1.
-    pub leader_key: i32,
-    /// The leader epoch.
-    /// Available in version 0-1.
-    pub leader_epoch: i32,
-    /// The in-sync replica IDs.
-    /// Available in version 0-1.
-    pub isr_replicas: Vec<i32>,
-    /// The ZooKeeper version.
-    /// Available in version 0-1.
-    pub zk_version: i32,
-    /// The replica IDs.
-    /// Available in version 0-1.
-    pub replicas: Vec<i32>,
-    /// Whether the replica should have existed on the broker or not.
-    /// Available in version 1.
-    pub is_new: bool,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct LeaderAndIsrRequestTopicState {
+pub struct LeaderAndIsrTopicState {
     /// The topic name.
     /// Available in version 2+.
-    pub name: String,
+    pub topic_name: String,
     /// The state of each partition
-    pub partition_states: Vec<LeaderAndIsrRequestPartitionState>,
+    /// Available in version 2+.
+    pub partition_states: Vec<LeaderAndIsrPartitionState>,
 }
 
 impl ApiRequest for LeaderAndIsrRequest {
@@ -105,12 +84,12 @@ impl ApiRequest for LeaderAndIsrRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(4)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (4),
+            "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
         );
@@ -125,15 +104,15 @@ impl ApiRequest for LeaderAndIsrRequest {
                 .encode(buf)
                 .map_err(|_| SerializationError::Encode("failed to encode BrokerEpoch"))?;
         }
+        if (0) <= version.0 && version.0 <= (1) {
+            self.ungrouped_partition_states.encode(buf).map_err(|_| {
+                SerializationError::Encode("failed to encode UngroupedPartitionStates")
+            })?;
+        }
         if (2) <= version.0 {
             self.topic_states
                 .encode(buf)
                 .map_err(|_| SerializationError::Encode("failed to encode TopicStates"))?;
-        }
-        if (0) <= version.0 && version.0 <= (1) {
-            self.partition_states_v0
-                .encode(buf)
-                .map_err(|_| SerializationError::Encode("failed to encode PartitionStatesV0"))?;
         }
         self.live_leaders
             .encode(buf)
@@ -151,15 +130,16 @@ impl ApiRequest for LeaderAndIsrRequest {
         } else {
             Default::default()
         };
-        let topic_states = if (2) <= version.0 {
-            <Vec<LeaderAndIsrRequestTopicState> as KafkaDeserialize>::decode(buf)
-                .map_err(|_| SerializationError::Decode("failed to decode TopicStates"))?
+        let ungrouped_partition_states = if (0) <= version.0 && version.0 <= (1) {
+            <Vec<LeaderAndIsrPartitionState> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                SerializationError::Decode("failed to decode UngroupedPartitionStates")
+            })?
         } else {
             Default::default()
         };
-        let partition_states_v0 = if (0) <= version.0 && version.0 <= (1) {
-            <Vec<LeaderAndIsrRequestPartitionStateV0> as KafkaDeserialize>::decode(buf)
-                .map_err(|_| SerializationError::Decode("failed to decode PartitionStatesV0"))?
+        let topic_states = if (2) <= version.0 {
+            <Vec<LeaderAndIsrTopicState> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode TopicStates"))?
         } else {
             Default::default()
         };
@@ -169,8 +149,8 @@ impl ApiRequest for LeaderAndIsrRequest {
             controller_id,
             controller_epoch,
             broker_epoch,
+            ungrouped_partition_states,
             topic_states,
-            partition_states_v0,
             live_leaders,
         })
     }
@@ -192,15 +172,15 @@ impl KafkaSerialize for LeaderAndIsrRequest {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode BrokerEpoch".into(),
             })?;
+        self.ungrouped_partition_states
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode UngroupedPartitionStates".into(),
+            })?;
         self.topic_states
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TopicStates".into(),
-            })?;
-        self.partition_states_v0
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionStatesV0".into(),
             })?;
         self.live_leaders
             .encode(buf)
@@ -225,16 +205,18 @@ impl KafkaDeserialize for LeaderAndIsrRequest {
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode BrokerEpoch".into(),
             })?;
-        let topic_states = <Vec<LeaderAndIsrRequestTopicState> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TopicStates".into(),
+        let ungrouped_partition_states =
+            <Vec<LeaderAndIsrPartitionState> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode UngroupedPartitionStates".into(),
+                }
             })?;
-        let partition_states_v0 =
-            <Vec<LeaderAndIsrRequestPartitionStateV0> as KafkaDeserialize>::decode(buf).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode PartitionStatesV0".into(),
-                },
-            )?;
+        let topic_states =
+            <Vec<LeaderAndIsrTopicState> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicStates".into(),
+                }
+            })?;
         let live_leaders =
             <Vec<LeaderAndIsrLiveLeader> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -245,8 +227,8 @@ impl KafkaDeserialize for LeaderAndIsrRequest {
             controller_id,
             controller_epoch,
             broker_epoch,
+            ungrouped_partition_states,
             topic_states,
-            partition_states_v0,
             live_leaders,
         })
     }
@@ -294,100 +276,7 @@ impl KafkaDeserialize for LeaderAndIsrLiveLeader {
     }
 }
 
-impl KafkaSerialize for LeaderAndIsrRequestPartitionState {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_index
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
-        self.controller_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ControllerEpoch".into(),
-            })?;
-        self.leader_key
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LeaderKey".into(),
-            })?;
-        self.leader_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LeaderEpoch".into(),
-            })?;
-        self.isr_replicas
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IsrReplicas".into(),
-            })?;
-        self.zk_version
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ZkVersion".into(),
-            })?;
-        self.replicas
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Replicas".into(),
-            })?;
-        self.is_new
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IsNew".into(),
-            })?;
-        Ok(())
-    }
-}
-
-impl KafkaDeserialize for LeaderAndIsrRequestPartitionState {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition_index =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
-        let controller_epoch =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ControllerEpoch".into(),
-            })?;
-        let leader_key =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LeaderKey".into(),
-            })?;
-        let leader_epoch =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LeaderEpoch".into(),
-            })?;
-        let isr_replicas =
-            <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IsrReplicas".into(),
-            })?;
-        let zk_version =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ZkVersion".into(),
-            })?;
-        let replicas =
-            <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Replicas".into(),
-            })?;
-        let is_new =
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IsNew".into(),
-            })?;
-        Ok(Self {
-            partition_index,
-            controller_epoch,
-            leader_key,
-            leader_epoch,
-            isr_replicas,
-            zk_version,
-            replicas,
-            is_new,
-        })
-    }
-}
-
-impl KafkaSerialize for LeaderAndIsrRequestPartitionStateV0 {
+impl KafkaSerialize for LeaderAndIsrPartitionState {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.topic_name
             .encode(buf)
@@ -404,20 +293,20 @@ impl KafkaSerialize for LeaderAndIsrRequestPartitionStateV0 {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ControllerEpoch".into(),
             })?;
-        self.leader_key
+        self.leader
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LeaderKey".into(),
+                message: "failed to encode Leader".into(),
             })?;
         self.leader_epoch
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode LeaderEpoch".into(),
             })?;
-        self.isr_replicas
+        self.isr
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IsrReplicas".into(),
+                message: "failed to encode Isr".into(),
             })?;
         self.zk_version
             .encode(buf)
@@ -429,6 +318,16 @@ impl KafkaSerialize for LeaderAndIsrRequestPartitionStateV0 {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Replicas".into(),
             })?;
+        self.adding_replicas
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode AddingReplicas".into(),
+            })?;
+        self.removing_replicas
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode RemovingReplicas".into(),
+            })?;
         self.is_new
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -438,7 +337,7 @@ impl KafkaSerialize for LeaderAndIsrRequestPartitionStateV0 {
     }
 }
 
-impl KafkaDeserialize for LeaderAndIsrRequestPartitionStateV0 {
+impl KafkaDeserialize for LeaderAndIsrPartitionState {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let topic_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -452,17 +351,16 @@ impl KafkaDeserialize for LeaderAndIsrRequestPartitionStateV0 {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ControllerEpoch".into(),
             })?;
-        let leader_key =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LeaderKey".into(),
-            })?;
+        let leader = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Leader".into(),
+        })?;
         let leader_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LeaderEpoch".into(),
             })?;
-        let isr_replicas =
+        let isr =
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IsrReplicas".into(),
+                message: "failed to decode Isr".into(),
             })?;
         let zk_version =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -472,6 +370,14 @@ impl KafkaDeserialize for LeaderAndIsrRequestPartitionStateV0 {
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Replicas".into(),
             })?;
+        let adding_replicas =
+            <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode AddingReplicas".into(),
+            })?;
+        let removing_replicas =
+            <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode RemovingReplicas".into(),
+            })?;
         let is_new =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IsNew".into(),
@@ -480,22 +386,24 @@ impl KafkaDeserialize for LeaderAndIsrRequestPartitionStateV0 {
             topic_name,
             partition_index,
             controller_epoch,
-            leader_key,
+            leader,
             leader_epoch,
-            isr_replicas,
+            isr,
             zk_version,
             replicas,
+            adding_replicas,
+            removing_replicas,
             is_new,
         })
     }
 }
 
-impl KafkaSerialize for LeaderAndIsrRequestTopicState {
+impl KafkaSerialize for LeaderAndIsrTopicState {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
+        self.topic_name
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+                message: "failed to encode TopicName".into(),
             })?;
         self.partition_states
             .encode(buf)
@@ -506,20 +414,18 @@ impl KafkaSerialize for LeaderAndIsrRequestTopicState {
     }
 }
 
-impl KafkaDeserialize for LeaderAndIsrRequestTopicState {
+impl KafkaDeserialize for LeaderAndIsrTopicState {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
+        let topic_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+                message: "failed to decode TopicName".into(),
             })?;
-        let partition_states =
-            <Vec<LeaderAndIsrRequestPartitionState> as KafkaDeserialize>::decode(buf).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode PartitionStates".into(),
-                },
-            )?;
+        let partition_states = <Vec<LeaderAndIsrPartitionState> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode PartitionStates".into(),
+        })?;
         Ok(Self {
-            name,
+            topic_name,
             partition_states,
         })
     }

@@ -21,6 +21,14 @@ pub struct MessageStruct {
     #[serde(rename = "validVersions")]
     pub valid_versions: String,
 
+    /// The versions that support flexible (varint) encoding
+    #[serde(rename = "flexibleVersions", default)]
+    pub flexible_versions: Option<String>,
+
+    /// Shared struct definitions referenced by multiple messages
+    #[serde(rename = "commonStructs", default)]
+    pub common_structs: Vec<Field>,
+
     /// Fields in this message
     pub fields: Vec<Field>,
 }
@@ -44,7 +52,8 @@ pub struct Field {
     pub name: String,
 
     /// The type of the field (e.g., "int32", "string", "[]MetadataRequestTopic")
-    #[serde(rename = "type")]
+    /// Defaults to empty for common struct definitions.
+    #[serde(rename = "type", default)]
     pub field_type: String,
 
     /// The versions this field is supported in
@@ -53,6 +62,10 @@ pub struct Field {
     /// Whether this field is nullable
     #[serde(rename = "nullableVersions", default)]
     pub nullable_versions: Option<String>,
+
+    /// Whether this field supports flexible (varint) encoding
+    #[serde(rename = "flexibleVersions", default)]
+    pub flexible_versions: Option<String>,
 
     /// Whether this field is ignorable
     #[serde(default = "default_true")]
@@ -73,6 +86,14 @@ pub struct Field {
     /// The entity type (e.g. "transactionalId")
     #[serde(rename = "entityType", default)]
     pub entity_type: Option<String>,
+
+    /// Numeric tag for tagged fields (flexible encoding)
+    #[serde(default)]
+    pub tag: Option<i32>,
+
+    /// Versions where the tagged field is present
+    #[serde(rename = "taggedVersions", default)]
+    pub tagged_versions: Option<String>,
 
     /// Nested fields for complex types (like arrays)
     #[serde(default)]
@@ -445,11 +466,14 @@ impl Field {
             field_type,
             versions,
             nullable_versions: None,
+            flexible_versions: None,
             ignorable: false,
             default: None,
             about: None,
             map_key: false,
             entity_type: None,
+            tag: None,
+            tagged_versions: None,
             fields: Vec::new(),
         }
     }
@@ -468,6 +492,8 @@ impl MessageStruct {
             message_type,
             name,
             valid_versions,
+            flexible_versions: None,
+            common_structs: Vec::new(),
             fields: Vec::new(),
         }
     }

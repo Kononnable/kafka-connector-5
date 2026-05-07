@@ -29,9 +29,9 @@ pub struct CreatableReplicaAssignment {
 pub struct CreatableTopic {
     /// The topic name.
     pub name: String,
-    /// The number of partitions to create in the topic, or -1 if we are specifying a manual partition assignment.
+    /// The number of partitions to create in the topic, or -1 if we are either specifying a manual partition assignment or using the default partitions.
     pub num_partitions: i32,
-    /// The number of replicas to create for each partition in the topic, or -1 if we are specifying a manual partition assignment.
+    /// The number of replicas to create for each partition in the topic, or -1 if we are either specifying a manual partition assignment or using the default replication factor.
     pub replication_factor: i16,
     /// The manual partition assignment, or the empty array if we are using automatic assignment.
     pub assignments: Vec<CreatableReplicaAssignment>,
@@ -56,12 +56,12 @@ impl ApiRequest for CreateTopicsRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+        ApiVersion::new(5)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
-            "version {} is not supported by {} (supported: 0-3)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );

@@ -15,5 +15,6 @@ pub struct RequestHeader {
     /// The correlation ID of this request.
     pub correlation_id: i32,
     /// The client ID string.
-    pub client_id: String,
+    /// Available in version 1+.
+    pub client_id: Option<String>,
 }

@@ -16,6 +16,16 @@ pub struct ProduceResponse {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+pub struct BatchIndexAndErrorMessage {
+    /// The batch index of the record that cause the batch to be dropped
+    /// Available in version 8+.
+    pub batch_index: i32,
+    /// The error message of the record that caused the batch to be dropped
+    /// Available in version 8+.
+    pub batch_index_error_message: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PartitionProduceResponse {
     /// The partition index.
     pub partition_index: i32,
@@ -29,6 +39,12 @@ pub struct PartitionProduceResponse {
     /// The log start offset.
     /// Available in version 5+.
     pub log_start_offset: i64,
+    /// The batch indices of records that caused the batch to be dropped
+    /// Available in version 8+.
+    pub record_errors: Vec<BatchIndexAndErrorMessage>,
+    /// The global error message summarizing the common root cause of the records that caused the batch to be dropped
+    /// Available in version 8+.
+    pub error_message: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -48,12 +64,12 @@ impl ApiResponse for ProduceResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(7)
+        ApiVersion::new(8)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (7),
-            "version {} is not supported by {} (supported: 0-7)",
+            (0) <= version.0 && version.0 <= (8),
+            "version {} is not supported by {} (supported: 0-8)",
             version.0,
             stringify!(Self)
         );
@@ -117,6 +133,41 @@ impl KafkaDeserialize for ProduceResponse {
     }
 }
 
+impl KafkaSerialize for BatchIndexAndErrorMessage {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.batch_index
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode BatchIndex".into(),
+            })?;
+        self.batch_index_error_message
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode BatchIndexErrorMessage".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for BatchIndexAndErrorMessage {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let batch_index =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode BatchIndex".into(),
+            })?;
+        let batch_index_error_message =
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode BatchIndexErrorMessage".into(),
+                }
+            })?;
+        Ok(Self {
+            batch_index,
+            batch_index_error_message,
+        })
+    }
+}
+
 impl KafkaSerialize for PartitionProduceResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.partition_index
@@ -144,6 +195,16 @@ impl KafkaSerialize for PartitionProduceResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode LogStartOffset".into(),
             })?;
+        self.record_errors
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode RecordErrors".into(),
+            })?;
+        self.error_message
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorMessage".into(),
+            })?;
         Ok(())
     }
 }
@@ -170,12 +231,23 @@ impl KafkaDeserialize for PartitionProduceResponse {
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LogStartOffset".into(),
             })?;
+        let record_errors = <Vec<BatchIndexAndErrorMessage> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode RecordErrors".into(),
+            })?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ErrorMessage".into(),
+            }
+        })?;
         Ok(Self {
             partition_index,
             error_code,
             base_offset,
             log_append_time_ms,
             log_start_offset,
+            record_errors,
+            error_message,
         })
     }
 }

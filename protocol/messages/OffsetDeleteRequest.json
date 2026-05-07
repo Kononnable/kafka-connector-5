@@ -14,20 +14,24 @@
 // limitations under the License.
 
 {
-  "apiKey": 43,
+  "apiKey": 47,
   "type": "request",
-  "name": "ElectPreferredLeadersRequest",
+  "name": "OffsetDeleteRequest",
   "validVersions": "0",
   "fields": [
-    { "name": "TopicPartitions", "type": "[]TopicPartitions", "versions": "0+", "nullableVersions": "0+",
-      "about": "The topic partitions to elect the preferred leader of.",
-      "fields": [
-        { "name": "Topic", "type": "string", "versions": "0+", "entityType": "topicName",
-          "about": "The name of a topic." },
-        { "name": "PartitionId", "type": "[]int32", "versions": "0+",
-          "about": "The partitions of this topic whose preferred leader should be elected" }
-      ]},
-    { "name": "TimeoutMs", "type": "int32", "versions": "0+", "default": "60000",
-      "about": "The time in ms to wait for the election to complete." }
+    { "name": "GroupId", "type": "string", "versions": "0+",
+      "about": "The unique group identifier." },
+    { "name": "Topics", "type": "[]OffsetDeleteRequestTopic", "versions": "0+",
+      "about": "The topics to delete offsets for", "fields": [
+        { "name": "Name",  "type": "string",  "versions": "0+", "mapKey": true,
+          "about": "The topic name." },
+        { "name": "Partitions", "type": "[]OffsetDeleteRequestPartition", "versions": "0+",
+          "about": "Each partition to delete offsets for.", "fields": [
+            { "name": "PartitionIndex", "type": "int32", "versions": "0+",
+              "about": "The partition index." }
+          ]
+        }
+      ]
+    }
   ]
 }

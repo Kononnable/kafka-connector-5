@@ -21,12 +21,12 @@ impl ApiResponse for UpdateMetadataResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(5)
+        ApiVersion::new(6)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
-            "version {} is not supported by {} (supported: 0-5)",
+            (0) <= version.0 && version.0 <= (6),
+            "version {} is not supported by {} (supported: 0-6)",
             version.0,
             stringify!(Self)
         );

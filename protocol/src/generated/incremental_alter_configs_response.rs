@@ -11,11 +11,11 @@ pub struct IncrementalAlterConfigsResponse {
     /// Duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
     /// The responses for each resource.
-    pub responses: Vec<AlterConfigsResourceResult>,
+    pub responses: Vec<AlterConfigsResourceResponse>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct AlterConfigsResourceResult {
+pub struct AlterConfigsResourceResponse {
     /// The resource error code.
     pub error_code: i16,
     /// The resource error message, or null if there was no error.
@@ -35,12 +35,12 @@ impl ApiResponse for IncrementalAlterConfigsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+        ApiVersion::new(1)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (0),
-            "version {} is not supported by {} (supported: 0-0)",
+            (0) <= version.0 && version.0 <= (1),
+            "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)
         );
@@ -49,14 +49,14 @@ impl ApiResponse for IncrementalAlterConfigsResponse {
             .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
         self.responses
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode responses"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode Responses"))?;
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let responses = <Vec<AlterConfigsResourceResult> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode responses"))?;
+        let responses = <Vec<AlterConfigsResourceResponse> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Responses"))?;
         Ok(Self {
             throttle_time_ms,
             responses,
@@ -73,7 +73,7 @@ impl KafkaSerialize for IncrementalAlterConfigsResponse {
         self.responses
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode responses".into(),
+                message: "failed to encode Responses".into(),
             })?;
         Ok(())
     }
@@ -85,9 +85,9 @@ impl KafkaDeserialize for IncrementalAlterConfigsResponse {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
-        let responses = <Vec<AlterConfigsResourceResult> as KafkaDeserialize>::decode(buf)
+        let responses = <Vec<AlterConfigsResourceResponse> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode responses".into(),
+                message: "failed to decode Responses".into(),
             })?;
         Ok(Self {
             throttle_time_ms,
@@ -96,7 +96,7 @@ impl KafkaDeserialize for IncrementalAlterConfigsResponse {
     }
 }
 
-impl KafkaSerialize for AlterConfigsResourceResult {
+impl KafkaSerialize for AlterConfigsResourceResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.error_code
             .encode(buf)
@@ -122,7 +122,7 @@ impl KafkaSerialize for AlterConfigsResourceResult {
     }
 }
 
-impl KafkaDeserialize for AlterConfigsResourceResult {
+impl KafkaDeserialize for AlterConfigsResourceResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {

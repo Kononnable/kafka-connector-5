@@ -43,12 +43,12 @@ impl ApiRequest for IncrementalAlterConfigsRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+        ApiVersion::new(1)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (0),
-            "version {} is not supported by {} (supported: 0-0)",
+            (0) <= version.0 && version.0 <= (1),
+            "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)
         );

@@ -23,7 +23,7 @@ pub struct FetchRequest {
     /// The fetch session ID.
     /// Available in version 7+.
     pub session_id: i32,
-    /// The fetch session ID.
+    /// The epoch of the partition leader as known to the follower replica or a consumer.
     /// Available in version 7+.
     pub epoch: i32,
     /// The topics to fetch.

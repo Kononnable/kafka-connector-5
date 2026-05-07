@@ -11,7 +11,7 @@ pub struct AlterConfigsResponse {
     /// Duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
     /// The responses for each resource.
-    pub resources: Vec<AlterConfigsResourceResponse>,
+    pub responses: Vec<AlterConfigsResourceResponse>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -47,19 +47,19 @@ impl ApiResponse for AlterConfigsResponse {
         self.throttle_time_ms
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
-        self.resources
+        self.responses
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode Resources"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode Responses"))?;
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let resources = <Vec<AlterConfigsResourceResponse> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Resources"))?;
+        let responses = <Vec<AlterConfigsResourceResponse> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Responses"))?;
         Ok(Self {
             throttle_time_ms,
-            resources,
+            responses,
         })
     }
 }
@@ -70,10 +70,10 @@ impl KafkaSerialize for AlterConfigsResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ThrottleTimeMs".into(),
             })?;
-        self.resources
+        self.responses
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Resources".into(),
+                message: "failed to encode Responses".into(),
             })?;
         Ok(())
     }
@@ -85,13 +85,13 @@ impl KafkaDeserialize for AlterConfigsResponse {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
-        let resources = <Vec<AlterConfigsResourceResponse> as KafkaDeserialize>::decode(buf)
+        let responses = <Vec<AlterConfigsResourceResponse> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Resources".into(),
+                message: "failed to decode Responses".into(),
             })?;
         Ok(Self {
             throttle_time_ms,
-            resources,
+            responses,
         })
     }
 }

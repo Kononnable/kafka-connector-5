@@ -44,12 +44,12 @@ impl ApiRequest for ProduceRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(7)
+        ApiVersion::new(8)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (7),
-            "version {} is not supported by {} (supported: 0-7)",
+            (0) <= version.0 && version.0 <= (8),
+            "version {} is not supported by {} (supported: 0-8)",
             version.0,
             stringify!(Self)
         );

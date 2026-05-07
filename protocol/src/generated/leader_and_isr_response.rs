@@ -11,11 +11,11 @@ pub struct LeaderAndIsrResponse {
     /// The error code, or 0 if there was no error.
     pub error_code: i16,
     /// Each partition.
-    pub partitions: Vec<LeaderAndIsrResponsePartition>,
+    pub partition_errors: Vec<LeaderAndIsrPartitionError>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct LeaderAndIsrResponsePartition {
+pub struct LeaderAndIsrPartitionError {
     /// The topic name.
     pub topic_name: String,
     /// The partition index.
@@ -33,31 +33,32 @@ impl ApiResponse for LeaderAndIsrResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(4)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (4),
+            "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
         );
         self.error_code
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
-        self.partitions
+        self.partition_errors
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode Partitions"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode PartitionErrors"))?;
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let error_code = <i16 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let partitions = <Vec<LeaderAndIsrResponsePartition> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Partitions"))?;
+        let partition_errors =
+            <Vec<LeaderAndIsrPartitionError> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode PartitionErrors"))?;
         Ok(Self {
             error_code,
-            partitions,
+            partition_errors,
         })
     }
 }
@@ -68,10 +69,10 @@ impl KafkaSerialize for LeaderAndIsrResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ErrorCode".into(),
             })?;
-        self.partitions
+        self.partition_errors
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
+                message: "failed to encode PartitionErrors".into(),
             })?;
         Ok(())
     }
@@ -83,18 +84,18 @@ impl KafkaDeserialize for LeaderAndIsrResponse {
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
-        let partitions = <Vec<LeaderAndIsrResponsePartition> as KafkaDeserialize>::decode(buf)
+        let partition_errors = <Vec<LeaderAndIsrPartitionError> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Partitions".into(),
-            })?;
+            message: "failed to decode PartitionErrors".into(),
+        })?;
         Ok(Self {
             error_code,
-            partitions,
+            partition_errors,
         })
     }
 }
 
-impl KafkaSerialize for LeaderAndIsrResponsePartition {
+impl KafkaSerialize for LeaderAndIsrPartitionError {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.topic_name
             .encode(buf)
@@ -115,7 +116,7 @@ impl KafkaSerialize for LeaderAndIsrResponsePartition {
     }
 }
 
-impl KafkaDeserialize for LeaderAndIsrResponsePartition {
+impl KafkaDeserialize for LeaderAndIsrPartitionError {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let topic_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {

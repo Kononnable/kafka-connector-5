@@ -36,12 +36,12 @@ impl ApiRequest for MetadataRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(8)
+        ApiVersion::new(9)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (8),
-            "version {} is not supported by {} (supported: 0-8)",
+            (0) <= version.0 && version.0 <= (9),
+            "version {} is not supported by {} (supported: 0-9)",
             version.0,
             stringify!(Self)
         );

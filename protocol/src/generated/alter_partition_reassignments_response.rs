@@ -4,38 +4,42 @@ use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationEr
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
-// ElectPreferredLeadersResponse
+// AlterPartitionReassignmentsResponse
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ElectPreferredLeadersResponse {
+pub struct AlterPartitionReassignmentsResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
-    /// The election results, or an empty array if the requester did not have permission and the request asks for all partitions.
-    pub replica_election_results: Vec<ReplicaElectionResult>,
+    /// The top-level error code, or 0 if there was no error.
+    pub error_code: i16,
+    /// The top-level error message, or null if there was no error.
+    pub error_message: Option<String>,
+    /// The responses to topics to reassign.
+    pub responses: Vec<ReassignableTopicResponse>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct PartitionResult {
-    /// The partition id
-    pub partition_id: i32,
-    /// The result error, or zero if there was no error.
+pub struct ReassignablePartitionResponse {
+    /// The partition index.
+    pub partition_index: i32,
+    /// The error code for this partition, or 0 if there was no error.
     pub error_code: i16,
-    /// The result message, or null if there was no error.
+    /// The error message for this partition, or null if there was no error.
     pub error_message: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ReplicaElectionResult {
+pub struct ReassignableTopicResponse {
     /// The topic name
-    pub topic: String,
-    /// The results for each partition
-    pub partition_result: Vec<PartitionResult>,
+    pub name: String,
+    /// The responses to partitions to reassign
+    pub partitions: Vec<ReassignablePartitionResponse>,
 }
 
-impl ApiResponse for ElectPreferredLeadersResponse {
-    type Request = crate::generated::ElectPreferredLeadersRequest;
+impl ApiResponse for AlterPartitionReassignmentsResponse {
+    type Request = crate::generated::AlterPartitionReassignmentsRequest;
     fn get_api_key() -> ApiKey {
-        ApiKey::new(43)
+        ApiKey::new(45)
     }
     fn get_min_supported_version() -> ApiVersion {
         ApiVersion::new(0)
@@ -53,65 +57,96 @@ impl ApiResponse for ElectPreferredLeadersResponse {
         self.throttle_time_ms
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
-        self.replica_election_results
+        self.error_code
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode ReplicaElectionResults"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        self.error_message
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorMessage"))?;
+        self.responses
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode Responses"))?;
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let replica_election_results =
-            <Vec<ReplicaElectionResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                SerializationError::Decode("failed to decode ReplicaElectionResults")
-            })?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?;
+        let responses = <Vec<ReassignableTopicResponse> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Responses"))?;
         Ok(Self {
             throttle_time_ms,
-            replica_election_results,
+            error_code,
+            error_message,
+            responses,
         })
     }
 }
-impl KafkaSerialize for ElectPreferredLeadersResponse {
+impl KafkaSerialize for AlterPartitionReassignmentsResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.throttle_time_ms
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ThrottleTimeMs".into(),
             })?;
-        self.replica_election_results
+        self.error_code
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ReplicaElectionResults".into(),
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.error_message
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorMessage".into(),
+            })?;
+        self.responses
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Responses".into(),
             })?;
         Ok(())
     }
 }
 
-impl KafkaDeserialize for ElectPreferredLeadersResponse {
+impl KafkaDeserialize for AlterPartitionReassignmentsResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
-        let replica_election_results =
-            <Vec<ReplicaElectionResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
+            })?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ErrorMessage".into(),
+            }
+        })?;
+        let responses =
+            <Vec<ReassignableTopicResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
-                    message: "failed to decode ReplicaElectionResults".into(),
+                    message: "failed to decode Responses".into(),
                 }
             })?;
         Ok(Self {
             throttle_time_ms,
-            replica_election_results,
+            error_code,
+            error_message,
+            responses,
         })
     }
 }
 
-impl KafkaSerialize for PartitionResult {
+impl KafkaSerialize for ReassignablePartitionResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_id
+        self.partition_index
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionId".into(),
+                message: "failed to encode PartitionIndex".into(),
             })?;
         self.error_code
             .encode(buf)
@@ -127,11 +162,11 @@ impl KafkaSerialize for PartitionResult {
     }
 }
 
-impl KafkaDeserialize for PartitionResult {
+impl KafkaDeserialize for ReassignablePartitionResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition_id =
+        let partition_index =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionId".into(),
+                message: "failed to decode PartitionIndex".into(),
             })?;
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -143,44 +178,39 @@ impl KafkaDeserialize for PartitionResult {
             }
         })?;
         Ok(Self {
-            partition_id,
+            partition_index,
             error_code,
             error_message,
         })
     }
 }
 
-impl KafkaSerialize for ReplicaElectionResult {
+impl KafkaSerialize for ReassignableTopicResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.topic
+        self.name
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topic".into(),
+                message: "failed to encode Name".into(),
             })?;
-        self.partition_result
+        self.partitions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionResult".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         Ok(())
     }
 }
 
-impl KafkaDeserialize for ReplicaElectionResult {
+impl KafkaDeserialize for ReassignableTopicResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let topic =
+        let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Topic".into(),
+                message: "failed to decode Name".into(),
             })?;
-        let partition_result =
-            <Vec<PartitionResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode PartitionResult".into(),
-                }
+        let partitions = <Vec<ReassignablePartitionResponse> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Partitions".into(),
             })?;
-        Ok(Self {
-            topic,
-            partition_result,
-        })
+        Ok(Self { name, partitions })
     }
 }

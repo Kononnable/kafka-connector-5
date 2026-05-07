@@ -19,14 +19,14 @@ pub struct StopReplicaRequest {
     pub delete_partitions: bool,
     /// The partitions to stop.
     /// Available in version 0.
-    pub partitions_v0: Vec<StopReplicaRequestPartitionV0>,
+    pub ungrouped_partitions: Vec<StopReplicaPartitionV0>,
     /// The topics to stop.
     /// Available in version 1+.
-    pub topics: Vec<StopReplicaRequestTopic>,
+    pub topics: Vec<StopReplicaTopic>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct StopReplicaRequestPartitionV0 {
+pub struct StopReplicaPartitionV0 {
     /// The topic name.
     /// Available in version 0.
     pub topic_name: String,
@@ -36,7 +36,7 @@ pub struct StopReplicaRequestPartitionV0 {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct StopReplicaRequestTopic {
+pub struct StopReplicaTopic {
     /// The topic name.
     /// Available in version 1+.
     pub name: String,
@@ -54,12 +54,12 @@ impl ApiRequest for StopReplicaRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(1)
+        ApiVersion::new(2)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
-            "version {} is not supported by {} (supported: 0-1)",
+            (0) <= version.0 && version.0 <= (2),
+            "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
@@ -78,9 +78,9 @@ impl ApiRequest for StopReplicaRequest {
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode DeletePartitions"))?;
         if version.0 == (0) {
-            self.partitions_v0
+            self.ungrouped_partitions
                 .encode(buf)
-                .map_err(|_| SerializationError::Encode("failed to encode PartitionsV0"))?;
+                .map_err(|_| SerializationError::Encode("failed to encode UngroupedPartitions"))?;
         }
         if (1) <= version.0 {
             self.topics
@@ -102,14 +102,14 @@ impl ApiRequest for StopReplicaRequest {
         };
         let delete_partitions = <bool as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode DeletePartitions"))?;
-        let partitions_v0 = if version.0 == (0) {
-            <Vec<StopReplicaRequestPartitionV0> as KafkaDeserialize>::decode(buf)
-                .map_err(|_| SerializationError::Decode("failed to decode PartitionsV0"))?
+        let ungrouped_partitions = if version.0 == (0) {
+            <Vec<StopReplicaPartitionV0> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode UngroupedPartitions"))?
         } else {
             Default::default()
         };
         let topics = if (1) <= version.0 {
-            <Vec<StopReplicaRequestTopic> as KafkaDeserialize>::decode(buf)
+            <Vec<StopReplicaTopic> as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode Topics"))?
         } else {
             Default::default()
@@ -119,7 +119,7 @@ impl ApiRequest for StopReplicaRequest {
             controller_epoch,
             broker_epoch,
             delete_partitions,
-            partitions_v0,
+            ungrouped_partitions,
             topics,
         })
     }
@@ -146,10 +146,10 @@ impl KafkaSerialize for StopReplicaRequest {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode DeletePartitions".into(),
             })?;
-        self.partitions_v0
+        self.ungrouped_partitions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionsV0".into(),
+                message: "failed to encode UngroupedPartitions".into(),
             })?;
         self.topics
             .encode(buf)
@@ -178,28 +178,27 @@ impl KafkaDeserialize for StopReplicaRequest {
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode DeletePartitions".into(),
             })?;
-        let partitions_v0 = <Vec<StopReplicaRequestPartitionV0> as KafkaDeserialize>::decode(buf)
+        let ungrouped_partitions = <Vec<StopReplicaPartitionV0> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode PartitionsV0".into(),
+            message: "failed to decode UngroupedPartitions".into(),
         })?;
-        let topics =
-            <Vec<StopReplicaRequestTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                }
-            })?;
+        let topics = <Vec<StopReplicaTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            }
+        })?;
         Ok(Self {
             controller_id,
             controller_epoch,
             broker_epoch,
             delete_partitions,
-            partitions_v0,
+            ungrouped_partitions,
             topics,
         })
     }
 }
 
-impl KafkaSerialize for StopReplicaRequestPartitionV0 {
+impl KafkaSerialize for StopReplicaPartitionV0 {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.topic_name
             .encode(buf)
@@ -215,7 +214,7 @@ impl KafkaSerialize for StopReplicaRequestPartitionV0 {
     }
 }
 
-impl KafkaDeserialize for StopReplicaRequestPartitionV0 {
+impl KafkaDeserialize for StopReplicaPartitionV0 {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let topic_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -232,7 +231,7 @@ impl KafkaDeserialize for StopReplicaRequestPartitionV0 {
     }
 }
 
-impl KafkaSerialize for StopReplicaRequestTopic {
+impl KafkaSerialize for StopReplicaTopic {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.name
             .encode(buf)
@@ -248,7 +247,7 @@ impl KafkaSerialize for StopReplicaRequestTopic {
     }
 }
 
-impl KafkaDeserialize for StopReplicaRequestTopic {
+impl KafkaDeserialize for StopReplicaTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {

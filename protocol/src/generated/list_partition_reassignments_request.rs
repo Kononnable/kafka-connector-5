@@ -4,28 +4,28 @@ use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationEr
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
-// ElectPreferredLeadersRequest
+// ListPartitionReassignmentsRequest
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ElectPreferredLeadersRequest {
-    /// The topic partitions to elect the preferred leader of.
-    pub topic_partitions: Option<Vec<TopicPartitions>>,
-    /// The time in ms to wait for the election to complete.
+pub struct ListPartitionReassignmentsRequest {
+    /// The time in ms to wait for the request to complete.
     pub timeout_ms: i32,
+    /// The topics to list partition reassignments for, or null to list everything.
+    pub topics: Option<Vec<ListPartitionReassignmentsTopics>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct TopicPartitions {
-    /// The name of a topic.
-    pub topic: String,
-    /// The partitions of this topic whose preferred leader should be elected
-    pub partition_id: Vec<i32>,
+pub struct ListPartitionReassignmentsTopics {
+    /// The topic name
+    pub name: String,
+    /// The partitions to list partition reassignments for.
+    pub partition_indexes: Vec<i32>,
 }
 
-impl ApiRequest for ElectPreferredLeadersRequest {
-    type Response = crate::generated::ElectPreferredLeadersResponse;
+impl ApiRequest for ListPartitionReassignmentsRequest {
+    type Response = crate::generated::ListPartitionReassignmentsResponse;
     fn get_api_key() -> ApiKey {
-        ApiKey::new(43)
+        ApiKey::new(46)
     }
     fn get_min_supported_version() -> ApiVersion {
         ApiVersion::new(0)
@@ -40,87 +40,83 @@ impl ApiRequest for ElectPreferredLeadersRequest {
             version.0,
             stringify!(Self)
         );
-        self.topic_partitions
-            .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode TopicPartitions"))?;
         self.timeout_ms
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode TimeoutMs"))?;
+        self.topics
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
-        let topic_partitions = <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode TopicPartitions"))?;
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode TimeoutMs"))?;
-        Ok(Self {
-            topic_partitions,
-            timeout_ms,
-        })
+        let topics =
+            <Option<Vec<ListPartitionReassignmentsTopics>> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        Ok(Self { timeout_ms, topics })
     }
 }
-impl KafkaSerialize for ElectPreferredLeadersRequest {
+impl KafkaSerialize for ListPartitionReassignmentsRequest {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.topic_partitions
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicPartitions".into(),
-            })?;
         self.timeout_ms
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TimeoutMs".into(),
             })?;
+        self.topics
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topics".into(),
+            })?;
         Ok(())
     }
 }
 
-impl KafkaDeserialize for ElectPreferredLeadersRequest {
+impl KafkaDeserialize for ListPartitionReassignmentsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let topic_partitions = <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TopicPartitions".into(),
-            })?;
         let timeout_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TimeoutMs".into(),
             })?;
-        Ok(Self {
-            topic_partitions,
-            timeout_ms,
-        })
+        let topics =
+            <Option<Vec<ListPartitionReassignmentsTopics>> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Topics".into(),
+                })?;
+        Ok(Self { timeout_ms, topics })
     }
 }
 
-impl KafkaSerialize for TopicPartitions {
+impl KafkaSerialize for ListPartitionReassignmentsTopics {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.topic
+        self.name
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topic".into(),
+                message: "failed to encode Name".into(),
             })?;
-        self.partition_id
+        self.partition_indexes
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionId".into(),
+                message: "failed to encode PartitionIndexes".into(),
             })?;
         Ok(())
     }
 }
 
-impl KafkaDeserialize for TopicPartitions {
+impl KafkaDeserialize for ListPartitionReassignmentsTopics {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let topic =
+        let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Topic".into(),
+                message: "failed to decode Name".into(),
             })?;
-        let partition_id =
+        let partition_indexes =
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionId".into(),
+                message: "failed to decode PartitionIndexes".into(),
             })?;
         Ok(Self {
-            topic,
-            partition_id,
+            name,
+            partition_indexes,
         })
     }
 }
