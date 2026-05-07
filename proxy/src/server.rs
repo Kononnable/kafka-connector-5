@@ -384,12 +384,11 @@ fn rewrite_broker_port_in_metadata(
     let body_slice = &buf[body_start..body_end];
 
     let proxy_host = config.proxy_host();
-    let proxy_port = config.proxy_port();
 
-    // Collect port offsets by parsing with proper version (not dummy 0)
-    let patches: Vec<usize> = {
+    // Collect (offset, new_port) pairs
+    let patches: Vec<(usize, i32)> = {
         let mut cursor = Bytes::copy_from_slice(body_slice);
-        let mut offsets = Vec::new();
+        let mut patches = Vec::new();
         let body_total = body_slice.len();
         let ver = protocol::traits::ApiVersion::new(api_version);
 
@@ -451,28 +450,31 @@ fn rewrite_broker_port_in_metadata(
                     cursor.advance(len as usize);
                 }
             }
-            if host == proxy_host && port != proxy_port {
-                offsets.push(port_offset);
+            // Rewrite any broker matching proxy_host that has a port mapping
+            if host == proxy_host {
+                if let Some(new_port) = config.proxy_port_for(port) {
+                    patches.push((port_offset, new_port));
+                }
             }
         }
-        offsets
+        patches
     };
 
-    for &port_offset in &patches {
+    for &(port_offset, new_port) in &patches {
         let abs_offset = body_start + port_offset;
         tracing::info!(
-            "rewriting broker port at buf[{abs_offset}..]: 9092 → {}",
-            proxy_port,
+            "rewriting broker port at buf[{abs_offset}..]: → {}",
+            new_port,
         );
-        buf[abs_offset..abs_offset + 4].copy_from_slice(&proxy_port.to_be_bytes());
+        buf[abs_offset..abs_offset + 4].copy_from_slice(&new_port.to_be_bytes());
     }
 
     if !patches.is_empty() {
         tracing::debug!(
-            "patched {} broker port(s) → {}:{}",
+            "patched {} broker port(s) at {}:{:?}",
             patches.len(),
             proxy_host,
-            proxy_port,
+            patches.iter().map(|(_, p)| p).collect::<Vec<_>>(),
         );
     }
 
