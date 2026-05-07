@@ -136,6 +136,16 @@ where
 
 // ── Request inspection (read-only) ────────────────────────────────────
 
+fn hex_dump(data: &[u8], max: usize) -> String {
+    let take = data.len().min(max);
+    let hex: String = data[..take].iter().map(|b| format!("{:02x}", b)).collect();
+    if take < data.len() {
+        format!("{}... ({} bytes total)", hex, data.len())
+    } else {
+        hex
+    }
+}
+
 async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) {
     let mut offset = 0;
     loop {
@@ -154,9 +164,13 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
                 hdr.client_id,
                 parsed.size,
             );
+            tracing::info!(
+                "→ REQ hex: {}",
+                hex_dump(&remaining[4..consumed], 128),
+            );
             let mut t = tracker.lock().await;
             let inflight = t.track_request(hdr);
-            tracing::debug!(
+            tracing::trace!(
                 "tracking req  corr={} api={}({}) v={} | in-flight={}",
                 hdr.correlation_id,
                 frame::api_key_name(hdr.api_key),
@@ -188,6 +202,10 @@ async fn inspect_and_rewrite_responses(
                 "← RES  corr={} | {} bytes",
                 res.correlation_id,
                 parsed.size,
+            );
+            tracing::info!(
+                "← RES hex: {}",
+                hex_dump(&remaining[4..consumed], 128),
             );
 
             // Look up the matching request
