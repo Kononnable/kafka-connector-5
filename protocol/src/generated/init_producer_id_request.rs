@@ -42,21 +42,26 @@ impl ApiRequest for InitProducerIdRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (2) <= version.0;
         self.transactional_id
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode TransactionalId"))?;
         self.transaction_timeout_ms
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode TransactionTimeoutMs"))?;
         if (3) <= version.0 {
             self.producer_id
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProducerId"))?;
         }
         if (3) <= version.0 {
             self.producer_epoch
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProducerEpoch"))?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -64,18 +69,21 @@ impl ApiRequest for InitProducerIdRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let transactional_id = <Option<String> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode TransactionalId"))?;
-        let transaction_timeout_ms = <i32 as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode TransactionTimeoutMs"))?;
+        let is_flexible = (2) <= version.0;
+        let transactional_id =
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode TransactionalId"))?;
+        let transaction_timeout_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode TransactionTimeoutMs"))?;
         let producer_id = if (3) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf)
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ProducerId"))?
         } else {
             Default::default()
         };
         let producer_epoch = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf)
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ProducerEpoch"))?
         } else {
             Default::default()
@@ -112,6 +120,37 @@ impl KafkaSerialize for InitProducerIdRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.transactional_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TransactionalId".into(),
+            })?;
+        self.transaction_timeout_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TransactionTimeoutMs".into(),
+            })?;
+        self.producer_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProducerId".into(),
+            })?;
+        self.producer_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ProducerEpoch".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for InitProducerIdRequest {
@@ -133,6 +172,40 @@ impl KafkaDeserialize for InitProducerIdRequest {
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerEpoch".into(),
             })?;
+        Ok(Self {
+            transactional_id,
+            transaction_timeout_ms,
+            producer_id,
+            producer_epoch,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let transactional_id =
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode TransactionalId".into(),
+                },
+            )?;
+        let transaction_timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode TransactionTimeoutMs".into(),
+        })?;
+        let producer_id =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ProducerId".into(),
+                }
+            })?;
+        let producer_epoch =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ProducerEpoch".into(),
+                }
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             transactional_id,
             transaction_timeout_ms,

@@ -46,22 +46,31 @@ impl ApiResponse for CreatePartitionsResponse {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (2) <= version.0;
         self.throttle_time_ms
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
         self.results
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Results"))?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
         Ok(())
     }
     fn deserialize(
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf)
+        let is_flexible = (2) <= version.0;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let results = <Vec<CreatePartitionsTopicResult> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Results"))?;
+        let results = <Vec<CreatePartitionsTopicResult> as KafkaDeserialize>::decode_flexible(
+            buf,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode Results"))?;
         Ok(Self {
             throttle_time_ms,
             results,
@@ -82,6 +91,27 @@ impl KafkaSerialize for CreatePartitionsResponse {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.throttle_time_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
+        self.results
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Results".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for CreatePartitionsResponse {
@@ -96,6 +126,27 @@ impl KafkaDeserialize for CreatePartitionsResponse {
                     message: "failed to decode Results".into(),
                 }
             })?;
+        Ok(Self {
+            throttle_time_ms,
+            results,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        let results = <Vec<CreatePartitionsTopicResult> as KafkaDeserialize>::decode_flexible(
+            buf,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Results".into(),
+        })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             results,
@@ -122,6 +173,32 @@ impl KafkaSerialize for CreatePartitionsTopicResult {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Name".into(),
+            })?;
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.error_message
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorMessage".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for CreatePartitionsTopicResult {
@@ -139,6 +216,33 @@ impl KafkaDeserialize for CreatePartitionsTopicResult {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        Ok(Self {
+            name,
+            error_code,
+            error_message,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let name =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
+            })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorCode".into(),
+                }
+            })?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorMessage".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             name,
             error_code,

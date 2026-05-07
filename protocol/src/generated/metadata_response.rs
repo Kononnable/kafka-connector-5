@@ -100,33 +100,38 @@ impl ApiResponse for MetadataResponse {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (9) <= version.0;
         if (3) <= version.0 {
             self.throttle_time_ms
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
         }
         self.brokers
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Brokers"))?;
         if (2) <= version.0 {
             self.cluster_id
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
         }
         if (1) <= version.0 {
             self.controller_id
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ControllerId"))?;
         }
         self.topics
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if (8) <= version.0 && version.0 <= (10) {
             self.cluster_authorized_operations
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode ClusterAuthorizedOperations")
                 })?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -134,30 +139,33 @@ impl ApiResponse for MetadataResponse {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
+        let is_flexible = (9) <= version.0;
         let throttle_time_ms = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
         } else {
             Default::default()
         };
-        let brokers = <Vec<MetadataResponseBroker> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Brokers"))?;
+        let brokers =
+            <Vec<MetadataResponseBroker> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Brokers"))?;
         let cluster_id = if (2) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf)
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?
         } else {
             Default::default()
         };
         let controller_id = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?
         } else {
             Default::default()
         };
-        let topics = <Vec<MetadataResponseTopic> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topics =
+            <Vec<MetadataResponseTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         let cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| {
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 SerializationError::Decode("failed to decode ClusterAuthorizedOperations")
             })?
         } else {
@@ -207,6 +215,47 @@ impl KafkaSerialize for MetadataResponse {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.throttle_time_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
+        self.brokers
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Brokers".into(),
+            })?;
+        self.cluster_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClusterId".into(),
+            })?;
+        self.controller_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ControllerId".into(),
+            })?;
+        self.topics
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topics".into(),
+            })?;
+        self.cluster_authorized_operations
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClusterAuthorizedOperations".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for MetadataResponse {
@@ -249,6 +298,50 @@ impl KafkaDeserialize for MetadataResponse {
             cluster_authorized_operations,
         })
     }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        let brokers =
+            <Vec<MetadataResponseBroker> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Brokers".into(),
+                })?;
+        let cluster_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ClusterId".into(),
+            })?;
+        let controller_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ControllerId".into(),
+                }
+            })?;
+        let topics =
+            <Vec<MetadataResponseTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Topics".into(),
+                })?;
+        let cluster_authorized_operations =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ClusterAuthorizedOperations".into(),
+                }
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            throttle_time_ms,
+            brokers,
+            cluster_id,
+            controller_id,
+            topics,
+            cluster_authorized_operations,
+        })
+    }
 }
 
 impl KafkaSerialize for MetadataResponseBroker {
@@ -275,6 +368,37 @@ impl KafkaSerialize for MetadataResponseBroker {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.node_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode NodeId".into(),
+            })?;
+        self.host
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Host".into(),
+            })?;
+        self.port
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Port".into(),
+            })?;
+        self.rack
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Rack".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for MetadataResponseBroker {
@@ -295,6 +419,39 @@ impl KafkaDeserialize for MetadataResponseBroker {
                 message: "failed to decode Rack".into(),
             }
         })?;
+        Ok(Self {
+            node_id,
+            host,
+            port,
+            rack,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let node_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode NodeId".into(),
+                }
+            })?;
+        let host =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Host".into(),
+                }
+            })?;
+        let port = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Port".into(),
+            }
+        })?;
+        let rack = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Rack".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             node_id,
             host,
@@ -343,6 +500,52 @@ impl KafkaSerialize for MetadataResponsePartition {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.partition_index
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndex".into(),
+            })?;
+        self.leader_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LeaderId".into(),
+            })?;
+        self.leader_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LeaderEpoch".into(),
+            })?;
+        self.replica_nodes
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ReplicaNodes".into(),
+            })?;
+        self.isr_nodes
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode IsrNodes".into(),
+            })?;
+        self.offline_replicas
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode OfflineReplicas".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for MetadataResponsePartition {
@@ -375,6 +578,57 @@ impl KafkaDeserialize for MetadataResponsePartition {
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode OfflineReplicas".into(),
             })?;
+        Ok(Self {
+            error_code,
+            partition_index,
+            leader_id,
+            leader_epoch,
+            replica_nodes,
+            isr_nodes,
+            offline_replicas,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let error_code =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorCode".into(),
+                }
+            })?;
+        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionIndex".into(),
+            })?;
+        let leader_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode LeaderId".into(),
+                }
+            })?;
+        let leader_epoch =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode LeaderEpoch".into(),
+                }
+            })?;
+        let replica_nodes = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ReplicaNodes".into(),
+            })?;
+        let isr_nodes =
+            <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode IsrNodes".into(),
+                }
+            })?;
+        let offline_replicas = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode OfflineReplicas".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             error_code,
             partition_index,
@@ -421,6 +675,47 @@ impl KafkaSerialize for MetadataResponseTopic {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Name".into(),
+            })?;
+        self.topic_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
+        self.is_internal
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode IsInternal".into(),
+            })?;
+        self.partitions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Partitions".into(),
+            })?;
+        self.topic_authorized_operations
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicAuthorizedOperations".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for MetadataResponseTopic {
@@ -449,6 +744,55 @@ impl KafkaDeserialize for MetadataResponseTopic {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TopicAuthorizedOperations".into(),
             })?;
+        Ok(Self {
+            error_code,
+            name,
+            topic_id,
+            is_internal,
+            partitions,
+            topic_authorized_operations,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let error_code =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorCode".into(),
+                }
+            })?;
+        let name =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
+            })?;
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicId".into(),
+                }
+            })?;
+        let is_internal =
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode IsInternal".into(),
+                }
+            })?;
+        let partitions =
+            <Vec<MetadataResponsePartition> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Partitions".into(),
+                })?;
+        let topic_authorized_operations =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicAuthorizedOperations".into(),
+                }
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             error_code,
             name,

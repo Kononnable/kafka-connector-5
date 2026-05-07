@@ -64,7 +64,7 @@ impl From<std::str::Utf8Error> for DecodeError {
 
 /// Encode `value` as an unsigned variable-length integer.
 /// Returns the number of bytes written.
-fn encode_unsigned_varint<B: BufMut>(mut value: u64, buf: &mut B) -> usize {
+pub fn encode_unsigned_varint<B: BufMut>(mut value: u64, buf: &mut B) -> usize {
     let start = buf.remaining_mut();
     loop {
         if value < 0x80 {
@@ -80,7 +80,7 @@ fn encode_unsigned_varint<B: BufMut>(mut value: u64, buf: &mut B) -> usize {
 
 /// Decode an unsigned variable-length integer.
 /// Returns `(value, bytes_consumed)`.
-fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), DecodeError> {
+pub fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), DecodeError> {
     let mut value: u64 = 0;
     let mut shift: u32 = 0;
     let mut consumed: usize = 0;
@@ -109,14 +109,37 @@ fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), DecodeErr
 
 /// A type that can be encoded into Kafka's binary wire format.
 pub trait KafkaSerialize {
-    /// Encode `self` into `buf`.
+    /// Encode `self` into `buf` using the classic (pre-flexible) encoding.
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError>;
+
+    /// Encode `self` into `buf`, switching between classic and flexible
+    /// (unsigned varint) encoding based on `is_flexible`.
+    ///
+    /// The default implementation calls [`encode`], which is correct for
+    /// fixed-width types.  Types whose wire format changes (String, Vec<u8>,
+    /// Vec<T>) override this to use unsigned-varint length prefixes when
+    /// `is_flexible` is true.
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        let _ = is_flexible;
+        self.encode(buf)
+    }
 }
 
 /// A type that can be decoded from Kafka's binary wire format.
 pub trait KafkaDeserialize: Sized {
-    /// Decode an instance of `Self` from `buf`.
+    /// Decode an instance of `Self` from `buf` using classic encoding.
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError>;
+
+    /// Decode an instance of `Self` from `buf`, switching between classic and
+    /// flexible (unsigned varint) encoding based on `is_flexible`.
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let _ = is_flexible;
+        Self::decode(buf)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +336,22 @@ impl KafkaSerialize for String {
         buf.put_slice(self.as_bytes());
         Ok(())
     }
+
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        if is_flexible {
+            // Compact string: unsigned varint(length + 1) + UTF-8
+            let len = self.len() as u64 + 1;
+            encode_unsigned_varint(len, buf);
+            buf.put_slice(self.as_bytes());
+            Ok(())
+        } else {
+            self.encode(buf)
+        }
+    }
 }
 
 impl KafkaDeserialize for String {
@@ -336,6 +375,24 @@ impl KafkaDeserialize for String {
             }
         }
     }
+
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        if is_flexible {
+            // Compact string: unsigned varint, value 0 = null, otherwise length = value - 1
+            let (raw_len, _) = decode_unsigned_varint(buf)?;
+            if raw_len == 0 {
+                return Err(DecodeError::UnexpectedNull);
+            }
+            let n = (raw_len - 1) as usize;
+            if buf.remaining() < n {
+                return Err(DecodeError::InsufficientBytes);
+            }
+            let bytes = &buf.copy_to_bytes(n)[..];
+            Ok(std::str::from_utf8(bytes)?.to_owned())
+        } else {
+            Self::decode(buf)
+        }
+    }
 }
 
 /// A nullable string encoded as a 2-byte length + UTF-8 bytes, with -1 for null.
@@ -347,6 +404,29 @@ impl KafkaSerialize for Option<String> {
                 Ok(())
             }
             Some(s) => s.encode(buf),
+        }
+    }
+
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        if is_flexible {
+            match self {
+                None => {
+                    encode_unsigned_varint(0, buf);
+                    Ok(())
+                }
+                Some(s) => {
+                    // Compact: unsigned varint(length + 1) + UTF-8
+                    encode_unsigned_varint(s.len() as u64 + 1, buf);
+                    buf.put_slice(s.as_bytes());
+                    Ok(())
+                }
+            }
+        } else {
+            self.encode(buf)
         }
     }
 }
@@ -372,6 +452,23 @@ impl KafkaDeserialize for Option<String> {
             }
         }
     }
+
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        if is_flexible {
+            let (raw_len, _) = decode_unsigned_varint(buf)?;
+            if raw_len == 0 {
+                return Ok(None);
+            }
+            let n = (raw_len - 1) as usize;
+            if buf.remaining() < n {
+                return Err(DecodeError::InsufficientBytes);
+            }
+            let bytes = &buf.copy_to_bytes(n)[..];
+            Ok(Some(std::str::from_utf8(bytes)?.to_owned()))
+        } else {
+            Self::decode(buf)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -389,6 +486,21 @@ impl KafkaSerialize for Vec<u8> {
         buf.put_i32(len as i32);
         buf.put_slice(self);
         Ok(())
+    }
+
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        if is_flexible {
+            // Compact bytes: unsigned varint(length + 1) + data
+            encode_unsigned_varint(self.len() as u64 + 1, buf);
+            buf.put_slice(self);
+            Ok(())
+        } else {
+            self.encode(buf)
+        }
     }
 }
 
@@ -412,6 +524,22 @@ impl KafkaDeserialize for Vec<u8> {
             }
         }
     }
+
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        if is_flexible {
+            let (raw_len, _) = decode_unsigned_varint(buf)?;
+            if raw_len == 0 {
+                return Err(DecodeError::UnexpectedNull);
+            }
+            let n = (raw_len - 1) as usize;
+            if buf.remaining() < n {
+                return Err(DecodeError::InsufficientBytes);
+            }
+            Ok(buf.copy_to_bytes(n).to_vec())
+        } else {
+            Self::decode(buf)
+        }
+    }
 }
 
 /// Nullable bytes: 4-byte length prefix + raw bytes, -1 ⇒ null.
@@ -423,6 +551,28 @@ impl KafkaSerialize for Option<Vec<u8>> {
                 Ok(())
             }
             Some(b) => b.encode(buf),
+        }
+    }
+
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        if is_flexible {
+            match self {
+                None => {
+                    encode_unsigned_varint(0, buf);
+                    Ok(())
+                }
+                Some(b) => {
+                    encode_unsigned_varint(b.len() as u64 + 1, buf);
+                    buf.put_slice(b);
+                    Ok(())
+                }
+            }
+        } else {
+            self.encode(buf)
         }
     }
 }
@@ -447,6 +597,22 @@ impl KafkaDeserialize for Option<Vec<u8>> {
             }
         }
     }
+
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        if is_flexible {
+            let (raw_len, _) = decode_unsigned_varint(buf)?;
+            if raw_len == 0 {
+                return Ok(None);
+            }
+            let n = (raw_len - 1) as usize;
+            if buf.remaining() < n {
+                return Err(DecodeError::InsufficientBytes);
+            }
+            Ok(Some(buf.copy_to_bytes(n).to_vec()))
+        } else {
+            Self::decode(buf)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -466,6 +632,23 @@ impl<T: KafkaSerialize> KafkaSerialize for Vec<T> {
             item.encode(buf)?;
         }
         Ok(())
+    }
+
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        if is_flexible {
+            // Compact array: unsigned varint(count + 1) + elements
+            encode_unsigned_varint(self.len() as u64 + 1, buf);
+            for item in self {
+                item.encode_flexible(buf, true)?;
+            }
+            Ok(())
+        } else {
+            self.encode(buf)
+        }
     }
 }
 
@@ -489,6 +672,23 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Vec<T> {
             }
         }
     }
+
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        if is_flexible {
+            let (raw_count, _) = decode_unsigned_varint(buf)?;
+            if raw_count == 0 {
+                return Err(DecodeError::UnexpectedNull);
+            }
+            let n = (raw_count - 1) as usize;
+            let mut items = Vec::with_capacity(n);
+            for _ in 0..n {
+                items.push(T::decode_flexible(buf, true)?);
+            }
+            Ok(items)
+        } else {
+            Self::decode(buf)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -503,6 +703,30 @@ impl<T: KafkaSerialize> KafkaSerialize for Option<Vec<T>> {
                 Ok(())
             }
             Some(v) => v.encode(buf),
+        }
+    }
+
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        if is_flexible {
+            match self {
+                None => {
+                    encode_unsigned_varint(0, buf);
+                    Ok(())
+                }
+                Some(v) => {
+                    encode_unsigned_varint(v.len() as u64 + 1, buf);
+                    for item in v {
+                        item.encode_flexible(buf, true)?;
+                    }
+                    Ok(())
+                }
+            }
+        } else {
+            self.encode(buf)
         }
     }
 }
@@ -525,6 +749,23 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Option<Vec<T>> {
                 }
                 Ok(Some(items))
             }
+        }
+    }
+
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        if is_flexible {
+            let (raw_count, _) = decode_unsigned_varint(buf)?;
+            if raw_count == 0 {
+                return Ok(None);
+            }
+            let n = (raw_count - 1) as usize;
+            let mut items = Vec::with_capacity(n);
+            for _ in 0..n {
+                items.push(T::decode_flexible(buf, true)?);
+            }
+            Ok(Some(items))
+        } else {
+            Self::decode(buf)
         }
     }
 }

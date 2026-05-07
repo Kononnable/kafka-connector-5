@@ -46,21 +46,28 @@ impl ApiRequest for DescribeClientQuotasRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (1) <= version.0;
         self.components
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Components"))?;
         self.strict
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Strict"))?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
         Ok(())
     }
     fn deserialize(
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let components = <Vec<ComponentData> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Components"))?;
-        let strict = <bool as KafkaDeserialize>::decode(buf)
+        let is_flexible = (1) <= version.0;
+        let components =
+            <Vec<ComponentData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Components"))?;
+        let strict = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Strict"))?;
         Ok(Self { components, strict })
     }
@@ -79,6 +86,27 @@ impl KafkaSerialize for DescribeClientQuotasRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.components
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Components".into(),
+            })?;
+        self.strict
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Strict".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for DescribeClientQuotasRequest {
@@ -92,6 +120,25 @@ impl KafkaDeserialize for DescribeClientQuotasRequest {
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Strict".into(),
             })?;
+        Ok(Self { components, strict })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let components =
+            <Vec<ComponentData> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode Components".into(),
+                },
+            )?;
+        let strict =
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Strict".into(),
+                }
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { components, strict })
     }
 }
@@ -115,6 +162,32 @@ impl KafkaSerialize for ComponentData {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.entity_type
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode EntityType".into(),
+            })?;
+        self.match_type
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MatchType".into(),
+            })?;
+        self.r#match
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Match".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for ComponentData {
@@ -132,6 +205,33 @@ impl KafkaDeserialize for ComponentData {
                 message: "failed to decode Match".into(),
             }
         })?;
+        Ok(Self {
+            entity_type,
+            match_type,
+            r#match,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let entity_type =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode EntityType".into(),
+                }
+            })?;
+        let match_type =
+            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MatchType".into(),
+                }
+            })?;
+        let r#match = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Match".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             entity_type,
             match_type,

@@ -47,16 +47,21 @@ impl ApiRequest for OffsetFetchRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (6) <= version.0;
         self.group_id
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
         self.topics
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if (7) <= version.0 {
             self.require_stable
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode RequireStable"))?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -64,12 +69,16 @@ impl ApiRequest for OffsetFetchRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let group_id = <String as KafkaDeserialize>::decode(buf)
+        let is_flexible = (6) <= version.0;
+        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
-        let topics = <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topics = <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode_flexible(
+            buf,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         let require_stable = if (7) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf)
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode RequireStable"))?
         } else {
             Default::default()
@@ -100,6 +109,32 @@ impl KafkaSerialize for OffsetFetchRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.group_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupId".into(),
+            })?;
+        self.topics
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topics".into(),
+            })?;
+        self.require_stable
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode RequireStable".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for OffsetFetchRequest {
@@ -122,6 +157,34 @@ impl KafkaDeserialize for OffsetFetchRequest {
             require_stable,
         })
     }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let group_id =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupId".into(),
+                }
+            })?;
+        let topics = <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode_flexible(
+            buf,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Topics".into(),
+        })?;
+        let require_stable = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode RequireStable".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            group_id,
+            topics,
+            require_stable,
+        })
+    }
 }
 
 impl KafkaSerialize for OffsetFetchRequestTopic {
@@ -138,6 +201,27 @@ impl KafkaSerialize for OffsetFetchRequestTopic {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Name".into(),
+            })?;
+        self.partition_indexes
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndexes".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for OffsetFetchRequestTopic {
@@ -150,6 +234,26 @@ impl KafkaDeserialize for OffsetFetchRequestTopic {
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndexes".into(),
             })?;
+        Ok(Self {
+            name,
+            partition_indexes,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let name =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
+            })?;
+        let partition_indexes = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode PartitionIndexes".into(),
+        })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             name,
             partition_indexes,

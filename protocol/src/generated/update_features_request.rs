@@ -46,22 +46,29 @@ impl ApiRequest for UpdateFeaturesRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = true;
         self.timeout_ms
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode timeoutMs"))?;
         self.feature_updates
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode FeatureUpdates"))?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
         Ok(())
     }
     fn deserialize(
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf)
+        let is_flexible = true;
+        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode timeoutMs"))?;
-        let feature_updates = <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode FeatureUpdates"))?;
+        let feature_updates =
+            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode FeatureUpdates"))?;
         Ok(Self {
             timeout_ms,
             feature_updates,
@@ -82,6 +89,27 @@ impl KafkaSerialize for UpdateFeaturesRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.timeout_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode timeoutMs".into(),
+            })?;
+        self.feature_updates
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode FeatureUpdates".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for UpdateFeaturesRequest {
@@ -96,6 +124,27 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
                     message: "failed to decode FeatureUpdates".into(),
                 }
             })?;
+        Ok(Self {
+            timeout_ms,
+            feature_updates,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let timeout_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode timeoutMs".into(),
+                }
+            })?;
+        let feature_updates =
+            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode FeatureUpdates".into(),
+                })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             timeout_ms,
             feature_updates,
@@ -122,6 +171,32 @@ impl KafkaSerialize for FeatureUpdateKey {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.feature
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Feature".into(),
+            })?;
+        self.max_version_level
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MaxVersionLevel".into(),
+            })?;
+        self.allow_downgrade
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode AllowDowngrade".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for FeatureUpdateKey {
@@ -138,6 +213,31 @@ impl KafkaDeserialize for FeatureUpdateKey {
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode AllowDowngrade".into(),
             })?;
+        Ok(Self {
+            feature,
+            max_version_level,
+            allow_downgrade,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let feature =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Feature".into(),
+                }
+            })?;
+        let max_version_level = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MaxVersionLevel".into(),
+            })?;
+        let allow_downgrade = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode AllowDowngrade".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             feature,
             max_version_level,

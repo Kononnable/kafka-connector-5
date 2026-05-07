@@ -37,13 +37,18 @@ impl ApiRequest for FindCoordinatorRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (3) <= version.0;
         self.key
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Key"))?;
         if (1) <= version.0 {
             self.key_type
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode KeyType"))?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -51,10 +56,11 @@ impl ApiRequest for FindCoordinatorRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let key = <String as KafkaDeserialize>::decode(buf)
+        let is_flexible = (3) <= version.0;
+        let key = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Key"))?;
         let key_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf)
+            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode KeyType"))?
         } else {
             Default::default()
@@ -76,6 +82,27 @@ impl KafkaSerialize for FindCoordinatorRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.key
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Key".into(),
+            })?;
+        self.key_type
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode KeyType".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for FindCoordinatorRequest {
@@ -87,6 +114,25 @@ impl KafkaDeserialize for FindCoordinatorRequest {
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode KeyType".into(),
             })?;
+        Ok(Self { key, key_type })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let key =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Key".into(),
+                }
+            })?;
+        let key_type =
+            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode KeyType".into(),
+                }
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { key, key_type })
     }
 }

@@ -98,52 +98,57 @@ impl ApiRequest for FetchRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (12) <= version.0;
         if (12) <= version.0 {
             self.cluster_id
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
         }
         self.replica_id
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ReplicaId"))?;
         self.max_wait_ms
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode MaxWaitMs"))?;
         self.min_bytes
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode MinBytes"))?;
         if (3) <= version.0 {
             self.max_bytes
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode MaxBytes"))?;
         }
         if (4) <= version.0 {
             self.isolation_level
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IsolationLevel"))?;
         }
         if (7) <= version.0 {
             self.session_id
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SessionId"))?;
         }
         if (7) <= version.0 {
             self.session_epoch
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SessionEpoch"))?;
         }
         self.topics
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if (7) <= version.0 {
             self.forgotten_topics_data
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ForgottenTopicsData"))?;
         }
         if (11) <= version.0 {
             self.rack_id
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -151,52 +156,53 @@ impl ApiRequest for FetchRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
+        let is_flexible = (12) <= version.0;
         let cluster_id = if (12) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf)
+            <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?
         } else {
             Default::default()
         };
-        let replica_id = <i32 as KafkaDeserialize>::decode(buf)
+        let replica_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ReplicaId"))?;
-        let max_wait_ms = <i32 as KafkaDeserialize>::decode(buf)
+        let max_wait_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode MaxWaitMs"))?;
-        let min_bytes = <i32 as KafkaDeserialize>::decode(buf)
+        let min_bytes = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode MinBytes"))?;
         let max_bytes = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode MaxBytes"))?
         } else {
             Default::default()
         };
         let isolation_level = if (4) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf)
+            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode IsolationLevel"))?
         } else {
             Default::default()
         };
         let session_id = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode SessionId"))?
         } else {
             Default::default()
         };
         let session_epoch = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf)
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode SessionEpoch"))?
         } else {
             Default::default()
         };
-        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf)
+        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         let forgotten_topics_data = if (7) <= version.0 {
-            <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf)
+            <Vec<ForgottenTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ForgottenTopicsData"))?
         } else {
             Default::default()
         };
         let rack_id = if (11) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf)
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode RackId"))?
         } else {
             Default::default()
@@ -275,6 +281,72 @@ impl KafkaSerialize for FetchRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.cluster_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClusterId".into(),
+            })?;
+        self.replica_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ReplicaId".into(),
+            })?;
+        self.max_wait_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MaxWaitMs".into(),
+            })?;
+        self.min_bytes
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MinBytes".into(),
+            })?;
+        self.max_bytes
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MaxBytes".into(),
+            })?;
+        self.isolation_level
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode IsolationLevel".into(),
+            })?;
+        self.session_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode SessionId".into(),
+            })?;
+        self.session_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode SessionEpoch".into(),
+            })?;
+        self.topics
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topics".into(),
+            })?;
+        self.forgotten_topics_data
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ForgottenTopicsData".into(),
+            })?;
+        self.rack_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode RackId".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for FetchRequest {
@@ -339,6 +411,87 @@ impl KafkaDeserialize for FetchRequest {
             rack_id,
         })
     }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let cluster_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ClusterId".into(),
+            })?;
+        let replica_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ReplicaId".into(),
+                }
+            })?;
+        let max_wait_ms =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MaxWaitMs".into(),
+                }
+            })?;
+        let min_bytes =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MinBytes".into(),
+                }
+            })?;
+        let max_bytes =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MaxBytes".into(),
+                }
+            })?;
+        let isolation_level =
+            <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode IsolationLevel".into(),
+                }
+            })?;
+        let session_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode SessionId".into(),
+                }
+            })?;
+        let session_epoch =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode SessionEpoch".into(),
+                }
+            })?;
+        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            })?;
+        let forgotten_topics_data =
+            <Vec<ForgottenTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode ForgottenTopicsData".into(),
+                },
+            )?;
+        let rack_id =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode RackId".into(),
+                }
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            cluster_id,
+            replica_id,
+            max_wait_ms,
+            min_bytes,
+            max_bytes,
+            isolation_level,
+            session_id,
+            session_epoch,
+            topics,
+            forgotten_topics_data,
+            rack_id,
+        })
+    }
 }
 
 impl KafkaSerialize for FetchPartition {
@@ -373,6 +526,47 @@ impl KafkaSerialize for FetchPartition {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PartitionMaxBytes".into(),
             })?;
+        Ok(())
+    }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.partition
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Partition".into(),
+            })?;
+        self.current_leader_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode CurrentLeaderEpoch".into(),
+            })?;
+        self.fetch_offset
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode FetchOffset".into(),
+            })?;
+        self.last_fetched_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LastFetchedEpoch".into(),
+            })?;
+        self.log_start_offset
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LogStartOffset".into(),
+            })?;
+        self.partition_max_bytes
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionMaxBytes".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
         Ok(())
     }
 }
@@ -412,6 +606,48 @@ impl KafkaDeserialize for FetchPartition {
             partition_max_bytes,
         })
     }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let partition =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Partition".into(),
+                }
+            })?;
+        let current_leader_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode CurrentLeaderEpoch".into(),
+            })?;
+        let fetch_offset =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode FetchOffset".into(),
+                }
+            })?;
+        let last_fetched_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LastFetchedEpoch".into(),
+            })?;
+        let log_start_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LogStartOffset".into(),
+            })?;
+        let partition_max_bytes = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionMaxBytes".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            partition,
+            current_leader_epoch,
+            fetch_offset,
+            last_fetched_epoch,
+            log_start_offset,
+            partition_max_bytes,
+        })
+    }
 }
 
 impl KafkaSerialize for FetchTopic {
@@ -428,6 +664,27 @@ impl KafkaSerialize for FetchTopic {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topic
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topic".into(),
+            })?;
+        self.partitions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Partitions".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for FetchTopic {
@@ -441,6 +698,25 @@ impl KafkaDeserialize for FetchTopic {
                 message: "failed to decode Partitions".into(),
             }
         })?;
+        Ok(Self { topic, partitions })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let topic =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Topic".into(),
+                }
+            })?;
+        let partitions =
+            <Vec<FetchPartition> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode Partitions".into(),
+                },
+            )?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { topic, partitions })
     }
 }
@@ -459,6 +735,27 @@ impl KafkaSerialize for ForgottenTopic {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topic
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topic".into(),
+            })?;
+        self.partitions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Partitions".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for ForgottenTopic {
@@ -471,6 +768,23 @@ impl KafkaDeserialize for ForgottenTopic {
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
             })?;
+        Ok(Self { topic, partitions })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let topic =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Topic".into(),
+                }
+            })?;
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Partitions".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { topic, partitions })
     }
 }

@@ -42,16 +42,26 @@ impl ApiRequest for DescribeDelegationTokenRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (2) <= version.0;
         self.owners
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Owners"))?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
         Ok(())
     }
     fn deserialize(
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let owners = <Option<Vec<DescribeDelegationTokenOwner>> as KafkaDeserialize>::decode(buf)
+        let is_flexible = (2) <= version.0;
+        let owners =
+            <Option<Vec<DescribeDelegationTokenOwner>> as KafkaDeserialize>::decode_flexible(
+                buf,
+                is_flexible,
+            )
             .map_err(|_| SerializationError::Decode("failed to decode Owners"))?;
         Ok(Self { owners })
     }
@@ -65,6 +75,22 @@ impl KafkaSerialize for DescribeDelegationTokenRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.owners
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Owners".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for DescribeDelegationTokenRequest {
@@ -73,6 +99,21 @@ impl KafkaDeserialize for DescribeDelegationTokenRequest {
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode Owners".into(),
         })?;
+        Ok(Self { owners })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let owners =
+            <Option<Vec<DescribeDelegationTokenOwner>> as KafkaDeserialize>::decode_flexible(
+                buf,
+                is_flexible,
+            )
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Owners".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { owners })
     }
 }
@@ -91,6 +132,27 @@ impl KafkaSerialize for DescribeDelegationTokenOwner {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.principal_type
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalType".into(),
+            })?;
+        self.principal_name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalName".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for DescribeDelegationTokenOwner {
@@ -103,6 +165,24 @@ impl KafkaDeserialize for DescribeDelegationTokenOwner {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalName".into(),
             })?;
+        Ok(Self {
+            principal_type,
+            principal_name,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalType".into(),
+            })?;
+        let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalName".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             principal_type,
             principal_name,

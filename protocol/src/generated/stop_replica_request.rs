@@ -94,36 +94,41 @@ impl ApiRequest for StopReplicaRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (2) <= version.0;
         self.controller_id
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ControllerId"))?;
         self.controller_epoch
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ControllerEpoch"))?;
         if (1) <= version.0 {
             self.broker_epoch
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode BrokerEpoch"))?;
         }
         if (0) <= version.0 && version.0 <= (2) {
             self.delete_partitions
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode DeletePartitions"))?;
         }
         if version.0 == (0) {
             self.ungrouped_partitions
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode UngroupedPartitions"))?;
         }
         if (1) <= version.0 && version.0 <= (2) {
             self.topics
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         }
         if (3) <= version.0 {
             self.topic_states
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode TopicStates"))?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -131,36 +136,37 @@ impl ApiRequest for StopReplicaRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let controller_id = <i32 as KafkaDeserialize>::decode(buf)
+        let is_flexible = (2) <= version.0;
+        let controller_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?;
-        let controller_epoch = <i32 as KafkaDeserialize>::decode(buf)
+        let controller_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ControllerEpoch"))?;
         let broker_epoch = if (1) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf)
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode BrokerEpoch"))?
         } else {
             Default::default()
         };
         let delete_partitions = if (0) <= version.0 && version.0 <= (2) {
-            <bool as KafkaDeserialize>::decode(buf)
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode DeletePartitions"))?
         } else {
             Default::default()
         };
         let ungrouped_partitions = if version.0 == (0) {
-            <Vec<StopReplicaPartitionV0> as KafkaDeserialize>::decode(buf)
+            <Vec<StopReplicaPartitionV0> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode UngroupedPartitions"))?
         } else {
             Default::default()
         };
         let topics = if (1) <= version.0 && version.0 <= (2) {
-            <Vec<StopReplicaTopicV1> as KafkaDeserialize>::decode(buf)
+            <Vec<StopReplicaTopicV1> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode Topics"))?
         } else {
             Default::default()
         };
         let topic_states = if (3) <= version.0 {
-            <Vec<StopReplicaTopicState> as KafkaDeserialize>::decode(buf)
+            <Vec<StopReplicaTopicState> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode TopicStates"))?
         } else {
             Default::default()
@@ -215,6 +221,52 @@ impl KafkaSerialize for StopReplicaRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.controller_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ControllerId".into(),
+            })?;
+        self.controller_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ControllerEpoch".into(),
+            })?;
+        self.broker_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode BrokerEpoch".into(),
+            })?;
+        self.delete_partitions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode DeletePartitions".into(),
+            })?;
+        self.ungrouped_partitions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode UngroupedPartitions".into(),
+            })?;
+        self.topics
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topics".into(),
+            })?;
+        self.topic_states
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicStates".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for StopReplicaRequest {
@@ -260,6 +312,56 @@ impl KafkaDeserialize for StopReplicaRequest {
             topic_states,
         })
     }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let controller_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ControllerId".into(),
+                }
+            })?;
+        let controller_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ControllerEpoch".into(),
+            })?;
+        let broker_epoch =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode BrokerEpoch".into(),
+                }
+            })?;
+        let delete_partitions = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode DeletePartitions".into(),
+            })?;
+        let ungrouped_partitions =
+            <Vec<StopReplicaPartitionV0> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode UngroupedPartitions".into(),
+                })?;
+        let topics =
+            <Vec<StopReplicaTopicV1> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Topics".into(),
+                })?;
+        let topic_states =
+            <Vec<StopReplicaTopicState> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode TopicStates".into(),
+                })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            controller_id,
+            controller_epoch,
+            broker_epoch,
+            delete_partitions,
+            ungrouped_partitions,
+            topics,
+            topic_states,
+        })
+    }
 }
 
 impl KafkaSerialize for StopReplicaPartitionState {
@@ -279,6 +381,32 @@ impl KafkaSerialize for StopReplicaPartitionState {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode DeletePartition".into(),
             })?;
+        Ok(())
+    }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.partition_index
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndex".into(),
+            })?;
+        self.leader_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LeaderEpoch".into(),
+            })?;
+        self.delete_partition
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode DeletePartition".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
         Ok(())
     }
 }
@@ -303,6 +431,31 @@ impl KafkaDeserialize for StopReplicaPartitionState {
             delete_partition,
         })
     }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionIndex".into(),
+            })?;
+        let leader_epoch =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode LeaderEpoch".into(),
+                }
+            })?;
+        let delete_partition = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode DeletePartition".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            partition_index,
+            leader_epoch,
+            delete_partition,
+        })
+    }
 }
 
 impl KafkaSerialize for StopReplicaPartitionV0 {
@@ -319,6 +472,27 @@ impl KafkaSerialize for StopReplicaPartitionV0 {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topic_name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicName".into(),
+            })?;
+        self.partition_index
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndex".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for StopReplicaPartitionV0 {
@@ -331,6 +505,26 @@ impl KafkaDeserialize for StopReplicaPartitionV0 {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        Ok(Self {
+            topic_name,
+            partition_index,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let topic_name =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicName".into(),
+                }
+            })?;
+        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionIndex".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             topic_name,
             partition_index,
@@ -352,6 +546,27 @@ impl KafkaSerialize for StopReplicaTopicState {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topic_name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicName".into(),
+            })?;
+        self.partition_states
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionStates".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for StopReplicaTopicState {
@@ -364,6 +579,27 @@ impl KafkaDeserialize for StopReplicaTopicState {
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionStates".into(),
             })?;
+        Ok(Self {
+            topic_name,
+            partition_states,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let topic_name =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicName".into(),
+                }
+            })?;
+        let partition_states =
+            <Vec<StopReplicaPartitionState> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode PartitionStates".into(),
+                })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             topic_name,
             partition_states,
@@ -385,6 +621,27 @@ impl KafkaSerialize for StopReplicaTopicV1 {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Name".into(),
+            })?;
+        self.partition_indexes
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndexes".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for StopReplicaTopicV1 {
@@ -397,6 +654,26 @@ impl KafkaDeserialize for StopReplicaTopicV1 {
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndexes".into(),
             })?;
+        Ok(Self {
+            name,
+            partition_indexes,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let name =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
+            })?;
+        let partition_indexes = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode PartitionIndexes".into(),
+        })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             name,
             partition_indexes,

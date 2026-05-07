@@ -42,36 +42,42 @@ impl ApiRequest for BrokerHeartbeatRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = true;
         self.broker_id
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode BrokerId"))?;
         self.broker_epoch
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode BrokerEpoch"))?;
         self.current_metadata_offset
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode CurrentMetadataOffset"))?;
         self.want_fence
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode WantFence"))?;
         self.want_shut_down
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode WantShutDown"))?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
         Ok(())
     }
     fn deserialize(
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let broker_id = <i32 as KafkaDeserialize>::decode(buf)
+        let is_flexible = true;
+        let broker_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode BrokerId"))?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf)
+        let broker_epoch = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode BrokerEpoch"))?;
-        let current_metadata_offset = <i64 as KafkaDeserialize>::decode(buf)
+        let current_metadata_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode CurrentMetadataOffset"))?;
-        let want_fence = <bool as KafkaDeserialize>::decode(buf)
+        let want_fence = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode WantFence"))?;
-        let want_shut_down = <bool as KafkaDeserialize>::decode(buf)
+        let want_shut_down = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode WantShutDown"))?;
         Ok(Self {
             broker_id,
@@ -111,6 +117,42 @@ impl KafkaSerialize for BrokerHeartbeatRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.broker_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode BrokerId".into(),
+            })?;
+        self.broker_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode BrokerEpoch".into(),
+            })?;
+        self.current_metadata_offset
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode CurrentMetadataOffset".into(),
+            })?;
+        self.want_fence
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode WantFence".into(),
+            })?;
+        self.want_shut_down
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode WantShutDown".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for BrokerHeartbeatRequest {
@@ -135,6 +177,45 @@ impl KafkaDeserialize for BrokerHeartbeatRequest {
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode WantShutDown".into(),
             })?;
+        Ok(Self {
+            broker_id,
+            broker_epoch,
+            current_metadata_offset,
+            want_fence,
+            want_shut_down,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let broker_id =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode BrokerId".into(),
+                }
+            })?;
+        let broker_epoch =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode BrokerEpoch".into(),
+                }
+            })?;
+        let current_metadata_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode CurrentMetadataOffset".into(),
+            })?;
+        let want_fence =
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode WantFence".into(),
+                }
+            })?;
+        let want_shut_down = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode WantShutDown".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             broker_id,
             broker_epoch,

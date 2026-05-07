@@ -35,10 +35,15 @@ impl ApiRequest for ListGroupsRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (3) <= version.0;
         if (4) <= version.0 {
             self.states_filter
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode StatesFilter"))?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -46,8 +51,9 @@ impl ApiRequest for ListGroupsRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
+        let is_flexible = (3) <= version.0;
         let states_filter = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf)
+            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode StatesFilter"))?
         } else {
             Default::default()
@@ -64,6 +70,22 @@ impl KafkaSerialize for ListGroupsRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.states_filter
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode StatesFilter".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for ListGroupsRequest {
@@ -72,6 +94,17 @@ impl KafkaDeserialize for ListGroupsRequest {
             <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode StatesFilter".into(),
             })?;
+        Ok(Self { states_filter })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let states_filter = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode StatesFilter".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { states_filter })
     }
 }

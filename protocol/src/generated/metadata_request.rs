@@ -52,17 +52,20 @@ impl ApiRequest for MetadataRequest {
             version.0,
             stringify!(Self)
         );
+        let is_flexible = (9) <= version.0;
         self.topics
-            .encode(buf)
+            .encode_flexible(buf, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if (4) <= version.0 {
-            self.allow_auto_topic_creation.encode(buf).map_err(|_| {
-                SerializationError::Encode("failed to encode AllowAutoTopicCreation")
-            })?;
+            self.allow_auto_topic_creation
+                .encode_flexible(buf, is_flexible)
+                .map_err(|_| {
+                    SerializationError::Encode("failed to encode AllowAutoTopicCreation")
+                })?;
         }
         if (8) <= version.0 && version.0 <= (10) {
             self.include_cluster_authorized_operations
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| {
                     SerializationError::Encode(
                         "failed to encode IncludeClusterAuthorizedOperations",
@@ -71,10 +74,14 @@ impl ApiRequest for MetadataRequest {
         }
         if (8) <= version.0 {
             self.include_topic_authorized_operations
-                .encode(buf)
+                .encode_flexible(buf, is_flexible)
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode IncludeTopicAuthorizedOperations")
                 })?;
+        }
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -82,24 +89,28 @@ impl ApiRequest for MetadataRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let topics = <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let is_flexible = (9) <= version.0;
+        let topics = <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode_flexible(
+            buf,
+            is_flexible,
+        )
+        .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         let allow_auto_topic_creation = if (4) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| {
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 SerializationError::Decode("failed to decode AllowAutoTopicCreation")
             })?
         } else {
             Default::default()
         };
         let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| {
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
             })?
         } else {
             Default::default()
         };
         let include_topic_authorized_operations = if (8) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| {
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 SerializationError::Decode("failed to decode IncludeTopicAuthorizedOperations")
             })?
         } else {
@@ -137,6 +148,37 @@ impl KafkaSerialize for MetadataRequest {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topics
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Topics".into(),
+            })?;
+        self.allow_auto_topic_creation
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode AllowAutoTopicCreation".into(),
+            })?;
+        self.include_cluster_authorized_operations
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode IncludeClusterAuthorizedOperations".into(),
+            })?;
+        self.include_topic_authorized_operations
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode IncludeTopicAuthorizedOperations".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for MetadataRequest {
@@ -166,6 +208,43 @@ impl KafkaDeserialize for MetadataRequest {
             include_topic_authorized_operations,
         })
     }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let topics = <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode_flexible(
+            buf,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Topics".into(),
+        })?;
+        let allow_auto_topic_creation =
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode AllowAutoTopicCreation".into(),
+                }
+            })?;
+        let include_cluster_authorized_operations =
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode IncludeClusterAuthorizedOperations".into(),
+                }
+            })?;
+        let include_topic_authorized_operations =
+            <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode IncludeTopicAuthorizedOperations".into(),
+                }
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            topics,
+            allow_auto_topic_creation,
+            include_cluster_authorized_operations,
+            include_topic_authorized_operations,
+        })
+    }
 }
 
 impl KafkaSerialize for MetadataRequestTopic {
@@ -182,6 +261,27 @@ impl KafkaSerialize for MetadataRequestTopic {
             })?;
         Ok(())
     }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topic_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
+        self.name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Name".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
 }
 
 impl KafkaDeserialize for MetadataRequestTopic {
@@ -195,6 +295,23 @@ impl KafkaDeserialize for MetadataRequestTopic {
                 message: "failed to decode Name".into(),
             }
         })?;
+        Ok(Self { topic_id, name })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicId".into(),
+                }
+            })?;
+        let name = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Name".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { topic_id, name })
     }
 }
