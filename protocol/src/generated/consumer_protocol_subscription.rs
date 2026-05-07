@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -8,21 +8,28 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ConsumerProtocolSubscription {
-    /// Topics. Type: []string.
+    /// The topics that the member wants to consume.
     pub topics: Vec<String>,
-    /// UserData. Type: bytes.
+    /// User data that will be passed back to the consumer.
     pub user_data: Option<Vec<u8>>,
-    /// OwnedPartitions. Type: []TopicPartition.
+    /// The partitions that the member owns.
     /// Available in version 1+.
     pub owned_partitions: Vec<TopicPartition>,
+    /// The generation id of the member.
+    /// Available in version 2+.
+    pub generation_id: i32,
+    /// The rack id of the member.
+    /// Available in version 3+.
+    pub rack_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TopicPartition {
-    /// Topic. Type: string.
+    /// The topic name.
     /// Available in version 1+.
     pub topic: String,
-    /// Partitions. Type: []int32.
+    /// The partition ids.
     /// Available in version 1+.
     pub partitions: Vec<i32>,
 }
+

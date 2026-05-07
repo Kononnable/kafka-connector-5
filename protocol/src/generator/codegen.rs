@@ -217,12 +217,15 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
             // serialize
             code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
-            code.push_str("        assert!((");
-            code.push_str(&format!(
-                "{}) <= version.0 && version.0 <= ({})",
-                min_v, max_v
-            ));
-            code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+            if max_v >= min_v {
+                code.push_str("        assert!((");
+                code.push_str(&format!(
+                    "{}) <= version.0 && version.0 <= ({})",
+                    min_v, max_v
+                ));
+                code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+            }
+
             let flex_cond = flexible_condition(&msg.flexible_versions);
             code.push_str(&format!("        let is_flexible = {};\n", flex_cond));
             for field in &msg.fields {
@@ -299,12 +302,15 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
             // serialize
             code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
-            code.push_str("        assert!((");
-            code.push_str(&format!(
-                "{}) <= version.0 && version.0 <= ({})",
-                min_v, max_v
-            ));
-            code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+            if max_v >= min_v {
+                code.push_str("        assert!((");
+                code.push_str(&format!(
+                    "{}) <= version.0 && version.0 <= ({})",
+                    min_v, max_v
+                ));
+                code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+            }
+
             let flex_cond = flexible_condition(&msg.flexible_versions);
             code.push_str(&format!("        let is_flexible = {};\n", flex_cond));
             for field in &msg.fields {
@@ -359,6 +365,9 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 /// Parse a `validVersions` string like `"0-7"` or `"0+"` into (min, max).
 fn parse_version_range(versions: &str) -> (i16, i16) {
     let v = versions.trim();
+    if v == "none" {
+        return (0, -1);
+    }
     if let Some(range) = v.split_once('-') {
         let min = range.0.trim().parse::<i16>().unwrap_or(0);
         let max = range.1.trim().parse::<i16>().unwrap_or(i16::MAX);
@@ -369,7 +378,7 @@ fn parse_version_range(versions: &str) -> (i16, i16) {
     } else if let Ok(single) = v.parse::<i16>() {
         (single, single)
     } else {
-        (0, i16::MAX)
+        (0, -1)
     }
 }
 
@@ -415,17 +424,58 @@ fn flexible_condition(flexible_versions: &Option<String>) -> String {
     }
 }
 
+/// Return true if the field's Kafka type has built-in Option flexible encoding
+/// (i.e. `Option<String>`, `Option<Vec<u8>>`, `Option<Vec<T>>` all implement
+/// `encode_flexible`/`decode_flexible` themselves).
+fn nullable_has_builtin_flex(field: &Field) -> bool {
+    let ft = &field.field_type;
+    // String, bytes, and array types have built-in Option flexible encoding
+    ft == "string" || ft == "bytes" || ft == "records" || ft.starts_with("[]")
+}
+
 /// Generate one field's serialization code.
 fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
     let rust_name = escape_field_name(&camel_to_snake(&field.name));
     let cond = field_version_condition(field);
     let mut code = String::new();
+    // For nullable struct fields (no builtin flexible), generate presence marker
+    let needs_presence = field.nullable_versions.is_some() && !nullable_has_builtin_flex(field);
+    let body = |code: &mut String, guard: &str| {
+        if needs_presence {
+            code.push_str(&format!("{}if is_flexible {{\n", guard));
+            code.push_str(&format!(
+                "{}if let Some(ref __val) = self.{} {{\n",
+                guard, rust_name
+            ));
+            code.push_str(&format!(
+                "{}crate::protocol::serialization::encode_unsigned_varint(1u64, buf);\n",
+                guard
+            ));
+            code.push_str(&format!("{}__val.encode_flexible(buf, true).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, field.name));
+            code.push_str(&format!("{}}} else {{\n", guard));
+            code.push_str(&format!(
+                "{}crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
+                guard
+            ));
+            code.push_str(&format!("{}}}\n", guard));
+            code.push_str(&format!("{}}} else {{\n", guard));
+            code.push_str(&format!(
+                "{}if let Some(ref __val) = self.{} {{\n",
+                guard, rust_name
+            ));
+            code.push_str(&format!("{}__val.encode(buf).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, field.name));
+            code.push_str(&format!("{}}}\n", guard));
+            code.push_str(&format!("{}}}\n", guard));
+        } else {
+            code.push_str(&format!("{}self.{}.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, rust_name, field.name));
+        }
+    };
     if let Some(c) = cond {
         code.push_str(&format!("        if {} {{\n", c));
-        code.push_str(&format!("            self.{}.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", rust_name, field.name));
+        body(&mut code, "            ");
         code.push_str("        }\n");
     } else {
-        code.push_str(&format!("        self.{}.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", rust_name, field.name));
+        body(&mut code, "        ");
     }
     code
 }
@@ -436,7 +486,35 @@ fn generate_deserialize_field(field: &Field) -> String {
     let rust_type = map_field_type(field);
     let cond = field_version_condition(field);
     let mut code = String::new();
-    if let Some(c) = cond {
+    let needs_presence = field.nullable_versions.is_some() && !nullable_has_builtin_flex(field);
+    if needs_presence {
+        let inner_type = strip_option_wrapper(&rust_type);
+        let decode_expr = |guard: &str| -> String {
+            let mut c = String::new();
+            c.push_str(&format!("{}if is_flexible {{\n", guard));
+            c.push_str(&format!("{}let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf).map_err(|_| SerializationError::Decode(\"tagged field error\"))?;\n", guard));
+            c.push_str(&format!("{}if __present == 0 {{\n", guard));
+            c.push_str(&format!("{}None\n", guard));
+            c.push_str(&format!("{}}} else {{\n", guard));
+            c.push_str(&format!("{}Some(<{} as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?)\n", guard, inner_type, field.name));
+            c.push_str(&format!("{}}}\n", guard));
+            c.push_str(&format!("{}}} else {{\n", guard));
+            c.push_str(&format!("{}Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?)\n", guard, inner_type, field.name));
+            c.push_str(&format!("{}}}\n", guard));
+            c
+        };
+        if let Some(c) = cond {
+            code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
+            code.push_str(&decode_expr("            "));
+            code.push_str("        } else {\n");
+            code.push_str("            Default::default()\n");
+            code.push_str("        };\n");
+        } else {
+            code.push_str(&format!("        let {} = \n", rust_name));
+            code.push_str(&decode_expr("            "));
+            code.push_str("        ;\n");
+        }
+    } else if let Some(c) = cond {
         code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
         code.push_str(&format!("            <{} as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
         code.push_str("        } else {\n");
@@ -456,7 +534,17 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
     code.push_str("    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {\n");
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
-        code.push_str(&format!("        self.{}.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", rust_name, f.name));
+        if f.nullable_versions.is_some() && !nullable_has_builtin_flex(f) {
+            // Nullable struct: unwrap Option first
+            code.push_str(&format!(
+                "        if let Some(ref __val) = self.{} {{\n",
+                rust_name
+            ));
+            code.push_str(&format!("            __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", f.name));
+            code.push_str("        }\n");
+        } else {
+            code.push_str(&format!("        self.{}.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", rust_name, f.name));
+        }
     }
     code.push_str("        Ok(())\n");
     code.push_str("    }\n");
@@ -464,7 +552,29 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
     code.push_str("    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {\n");
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
-        code.push_str(&format!("        self.{}.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", rust_name, f.name));
+        if f.nullable_versions.is_some() {
+            // Nullable field: handle None with a presence marker in flexible mode
+            code.push_str("        if is_flexible {\n");
+            code.push_str(&format!(
+                "            if let Some(ref __val) = self.{} {{\n",
+                rust_name
+            ));
+            code.push_str("                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);\n");
+            code.push_str(&format!("                __val.encode_flexible(buf, true).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", f.name));
+            code.push_str("            } else {\n");
+            code.push_str("                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n");
+            code.push_str("            }\n");
+            code.push_str("        } else {\n");
+            code.push_str(&format!(
+                "            if let Some(ref __val) = self.{} {{\n",
+                rust_name
+            ));
+            code.push_str(&format!("                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", f.name));
+            code.push_str("            }\n");
+            code.push_str("        }\n");
+        } else {
+            code.push_str(&format!("        self.{}.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", rust_name, f.name));
+        }
     }
     code.push_str("        if is_flexible {\n");
     code.push_str("            // Tagged fields (none yet)\n");
@@ -487,7 +597,12 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
-        code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?;\n", rust_name, rust_type, f.name));
+        if f.nullable_versions.is_some() && !nullable_has_builtin_flex(f) {
+            let inner_type = strip_option_wrapper(&rust_type);
+            code.push_str(&format!("        let {} = Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?);\n", rust_name, inner_type, f.name));
+        } else {
+            code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?;\n", rust_name, rust_type, f.name));
+        }
     }
     code.push_str(&format!(
         "        Ok(Self {{ {} }})\n",
@@ -503,7 +618,27 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
-        code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?;\n", rust_name, rust_type, f.name));
+        if f.nullable_versions.is_some() {
+            // Nullable field: use presence marker in flexible mode
+            let inner_type = strip_option_wrapper(&rust_type);
+            let has_builtin = nullable_has_builtin_flex(f);
+            code.push_str(&format!("        let {} = if is_flexible {{\n", rust_name));
+            code.push_str("            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+            code.push_str("            if __present == 0 {\n");
+            code.push_str("                None\n");
+            code.push_str("            } else {\n");
+            code.push_str(&format!("                Some(<{} as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?)\n", inner_type, f.name));
+            code.push_str("            }\n");
+            code.push_str("        } else {\n");
+            if has_builtin {
+                code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));
+            } else {
+                code.push_str(&format!("            Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?)\n", inner_type, f.name));
+            }
+            code.push_str("        };\n");
+        } else {
+            code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?;\n", rust_name, rust_type, f.name));
+        }
     }
     code.push_str("        if is_flexible {\n");
     code.push_str("            // Tagged fields (skip)\n");
@@ -579,6 +714,16 @@ fn generate_struct(struct_name: &str, fields: &[Field], _versions: &str) -> Stri
 // ---------------------------------------------------------------------------
 // Type mapping
 // ---------------------------------------------------------------------------
+
+/// Strip the `Option<...>` wrapper from a type string, returning the inner type.
+/// If the type is not wrapped, returns it unchanged.
+fn strip_option_wrapper(ty: &str) -> String {
+    if let Some(inner) = ty.strip_prefix("Option<") {
+        inner.strip_suffix('>').unwrap_or(ty).to_string()
+    } else {
+        ty.to_string()
+    }
+}
 
 /// Map a Kafka field definition to a Rust type string.
 fn map_field_type(field: &Field) -> String {
@@ -812,6 +957,7 @@ mod tests {
             flexible_versions: None,
             common_structs: Vec::new(),
             listeners: Vec::new(),
+            latest_version_unstable: false,
             fields: vec![Field::new(
                 "throttleTimeMs".into(),
                 "int32".into(),

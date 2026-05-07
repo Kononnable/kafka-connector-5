@@ -33,7 +33,12 @@ pub struct MessageStruct {
     #[serde(default)]
     pub listeners: Vec<String>,
 
+    /// Whether the latest version is considered unstable
+    #[serde(rename = "latestVersionUnstable", default)]
+    pub latest_version_unstable: bool,
+
     /// Fields in this message
+    #[serde(default)]
     pub fields: Vec<Field>,
 }
 
@@ -485,12 +490,13 @@ impl ErrorCode {
     }
 }
 
-/// Default value for a field - either a string literal or an integer.
+/// Default value for a field — a string literal, integer, or boolean.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum FieldDefault {
     Str(String),
     Int(i64),
+    Bool(bool),
 }
 
 impl Field {
@@ -531,6 +537,7 @@ impl MessageStruct {
             flexible_versions: None,
             common_structs: Vec::new(),
             listeners: Vec::new(),
+            latest_version_unstable: false,
             fields: Vec::new(),
         }
     }

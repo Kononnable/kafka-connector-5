@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -8,16 +8,17 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ConsumerProtocolAssignment {
-    /// AssignedPartitions. Type: []TopicPartition.
+    /// The list of topics and partitions assigned to this consumer.
     pub assigned_partitions: Vec<TopicPartition>,
-    /// UserData. Type: bytes.
+    /// User data.
     pub user_data: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TopicPartition {
-    /// Topic. Type: string.
+    /// The topic name.
     pub topic: String,
-    /// Partitions. Type: []int32.
+    /// The list of partitions assigned to this consumer.
     pub partitions: Vec<i32>,
 }
+

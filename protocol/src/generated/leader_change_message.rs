@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -8,18 +8,22 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LeaderChangeMessage {
-    /// The version of the leader change message
+    /// The version of the leader change message.
     pub version: i16,
-    /// The ID of the newly elected leader
+    /// The ID of the newly elected leader.
     pub leader_id: i32,
-    /// The set of voters in the quorum for this epoch
+    /// The set of voters in the quorum for this epoch.
     pub voters: Vec<Voter>,
-    /// The voters who voted for the leader at the time of election
+    /// The voters who voted for the leader at the time of election.
     pub granting_voters: Vec<Voter>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Voter {
-    /// VoterId. Type: int32.
+    /// The ID of the voter.
     pub voter_id: i32,
+    /// The directory id of the voter.
+    /// Available in version 1+.
+    pub voter_directory_id: [u8; 16],
 }
+
