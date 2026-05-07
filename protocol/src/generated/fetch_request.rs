@@ -8,10 +8,13 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FetchRequest {
+    /// The clusterId if known. This is used to validate metadata fetches prior to broker registration.
+    /// Available in version 12+.
+    pub cluster_id: Option<String>,
     /// The broker ID of the follower, of -1 if this request is from a consumer.
     pub replica_id: i32,
     /// The maximum time in milliseconds to wait for the response.
-    pub max_wait: i32,
+    pub max_wait_ms: i32,
     /// The minimum bytes to accumulate in the response.
     pub min_bytes: i32,
     /// The maximum bytes to fetch.  See KIP-74 for cases where this limit may not be honored.
@@ -23,14 +26,14 @@ pub struct FetchRequest {
     /// The fetch session ID.
     /// Available in version 7+.
     pub session_id: i32,
-    /// The epoch of the partition leader as known to the follower replica or a consumer.
+    /// The fetch session epoch, which is used for ordering requests in a session.
     /// Available in version 7+.
-    pub epoch: i32,
+    pub session_epoch: i32,
     /// The topics to fetch.
-    pub topics: Vec<FetchableTopic>,
+    pub topics: Vec<FetchTopic>,
     /// In an incremental fetch request, the partitions to remove.
     /// Available in version 7+.
-    pub forgotten: Vec<ForgottenTopic>,
+    pub forgotten_topics_data: Vec<ForgottenTopic>,
     /// Rack ID of the consumer making this request
     /// Available in version 11+.
     pub rack_id: String,
@@ -39,35 +42,38 @@ pub struct FetchRequest {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FetchPartition {
     /// The partition index.
-    pub partition_index: i32,
+    pub partition: i32,
     /// The current leader epoch of the partition.
     /// Available in version 9+.
     pub current_leader_epoch: i32,
     /// The message offset.
     pub fetch_offset: i64,
+    /// The epoch of the last fetched record or -1 if there is none
+    /// Available in version 12+.
+    pub last_fetched_epoch: i32,
     /// The earliest available offset of the follower replica.  The field is only used when the request is sent by the follower.
     /// Available in version 5+.
     pub log_start_offset: i64,
     /// The maximum bytes to fetch from this partition.  See KIP-74 for cases where this limit may not be honored.
-    pub max_bytes: i32,
+    pub partition_max_bytes: i32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct FetchableTopic {
+pub struct FetchTopic {
     /// The name of the topic to fetch.
-    pub name: String,
+    pub topic: String,
     /// The partitions to fetch.
-    pub fetch_partitions: Vec<FetchPartition>,
+    pub partitions: Vec<FetchPartition>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ForgottenTopic {
     /// The partition name.
     /// Available in version 7+.
-    pub name: String,
+    pub topic: String,
     /// The partitions indexes to forget.
     /// Available in version 7+.
-    pub forgotten_partition_indexes: Vec<i32>,
+    pub partitions: Vec<i32>,
 }
 
 impl ApiRequest for FetchRequest {
@@ -79,21 +85,26 @@ impl ApiRequest for FetchRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(11)
+        ApiVersion::new(12)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (11),
-            "version {} is not supported by {} (supported: 0-11)",
+            (0) <= version.0 && version.0 <= (12),
+            "version {} is not supported by {} (supported: 0-12)",
             version.0,
             stringify!(Self)
         );
+        if (12) <= version.0 {
+            self.cluster_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
+        }
         self.replica_id
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ReplicaId"))?;
-        self.max_wait
+        self.max_wait_ms
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode MaxWait"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode MaxWaitMs"))?;
         self.min_bytes
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode MinBytes"))?;
@@ -113,17 +124,17 @@ impl ApiRequest for FetchRequest {
                 .map_err(|_| SerializationError::Encode("failed to encode SessionId"))?;
         }
         if (7) <= version.0 {
-            self.epoch
+            self.session_epoch
                 .encode(buf)
-                .map_err(|_| SerializationError::Encode("failed to encode Epoch"))?;
+                .map_err(|_| SerializationError::Encode("failed to encode SessionEpoch"))?;
         }
         self.topics
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if (7) <= version.0 {
-            self.forgotten
+            self.forgotten_topics_data
                 .encode(buf)
-                .map_err(|_| SerializationError::Encode("failed to encode Forgotten"))?;
+                .map_err(|_| SerializationError::Encode("failed to encode ForgottenTopicsData"))?;
         }
         if (11) <= version.0 {
             self.rack_id
@@ -133,10 +144,16 @@ impl ApiRequest for FetchRequest {
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+        let cluster_id = if (12) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?
+        } else {
+            Default::default()
+        };
         let replica_id = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ReplicaId"))?;
-        let max_wait = <i32 as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode MaxWait"))?;
+        let max_wait_ms = <i32 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode MaxWaitMs"))?;
         let min_bytes = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode MinBytes"))?;
         let max_bytes = if (3) <= version.0 {
@@ -157,17 +174,17 @@ impl ApiRequest for FetchRequest {
         } else {
             Default::default()
         };
-        let epoch = if (7) <= version.0 {
+        let session_epoch = if (7) <= version.0 {
             <i32 as KafkaDeserialize>::decode(buf)
-                .map_err(|_| SerializationError::Decode("failed to decode Epoch"))?
+                .map_err(|_| SerializationError::Decode("failed to decode SessionEpoch"))?
         } else {
             Default::default()
         };
-        let topics = <Vec<FetchableTopic> as KafkaDeserialize>::decode(buf)
+        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
-        let forgotten = if (7) <= version.0 {
+        let forgotten_topics_data = if (7) <= version.0 {
             <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf)
-                .map_err(|_| SerializationError::Decode("failed to decode Forgotten"))?
+                .map_err(|_| SerializationError::Decode("failed to decode ForgottenTopicsData"))?
         } else {
             Default::default()
         };
@@ -178,30 +195,36 @@ impl ApiRequest for FetchRequest {
             Default::default()
         };
         Ok(Self {
+            cluster_id,
             replica_id,
-            max_wait,
+            max_wait_ms,
             min_bytes,
             max_bytes,
             isolation_level,
             session_id,
-            epoch,
+            session_epoch,
             topics,
-            forgotten,
+            forgotten_topics_data,
             rack_id,
         })
     }
 }
 impl KafkaSerialize for FetchRequest {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.cluster_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClusterId".into(),
+            })?;
         self.replica_id
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ReplicaId".into(),
             })?;
-        self.max_wait
+        self.max_wait_ms
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MaxWait".into(),
+                message: "failed to encode MaxWaitMs".into(),
             })?;
         self.min_bytes
             .encode(buf)
@@ -223,20 +246,20 @@ impl KafkaSerialize for FetchRequest {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode SessionId".into(),
             })?;
-        self.epoch
+        self.session_epoch
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Epoch".into(),
+                message: "failed to encode SessionEpoch".into(),
             })?;
         self.topics
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topics".into(),
             })?;
-        self.forgotten
+        self.forgotten_topics_data
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Forgotten".into(),
+                message: "failed to encode ForgottenTopicsData".into(),
             })?;
         self.rack_id
             .encode(buf)
@@ -249,13 +272,18 @@ impl KafkaSerialize for FetchRequest {
 
 impl KafkaDeserialize for FetchRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ClusterId".into(),
+            }
+        })?;
         let replica_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ReplicaId".into(),
             })?;
-        let max_wait =
+        let max_wait_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MaxWait".into(),
+                message: "failed to decode MaxWaitMs".into(),
             })?;
         let min_bytes =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -273,33 +301,34 @@ impl KafkaDeserialize for FetchRequest {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SessionId".into(),
             })?;
-        let epoch = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Epoch".into(),
-        })?;
-        let topics = <Vec<FetchableTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
+        let session_epoch =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode SessionEpoch".into(),
+            })?;
+        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Topics".into(),
             }
         })?;
-        let forgotten = <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Forgotten".into(),
-            }
-        })?;
+        let forgotten_topics_data = <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ForgottenTopicsData".into(),
+            })?;
         let rack_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RackId".into(),
             })?;
         Ok(Self {
+            cluster_id,
             replica_id,
-            max_wait,
+            max_wait_ms,
             min_bytes,
             max_bytes,
             isolation_level,
             session_id,
-            epoch,
+            session_epoch,
             topics,
-            forgotten,
+            forgotten_topics_data,
             rack_id,
         })
     }
@@ -307,10 +336,10 @@ impl KafkaDeserialize for FetchRequest {
 
 impl KafkaSerialize for FetchPartition {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_index
+        self.partition
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Partition".into(),
             })?;
         self.current_leader_epoch
             .encode(buf)
@@ -322,15 +351,20 @@ impl KafkaSerialize for FetchPartition {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode FetchOffset".into(),
             })?;
+        self.last_fetched_epoch
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LastFetchedEpoch".into(),
+            })?;
         self.log_start_offset
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode LogStartOffset".into(),
             })?;
-        self.max_bytes
+        self.partition_max_bytes
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MaxBytes".into(),
+                message: "failed to encode PartitionMaxBytes".into(),
             })?;
         Ok(())
     }
@@ -338,9 +372,9 @@ impl KafkaSerialize for FetchPartition {
 
 impl KafkaDeserialize for FetchPartition {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition_index =
+        let partition =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
+                message: "failed to decode Partition".into(),
             })?;
         let current_leader_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -350,70 +384,71 @@ impl KafkaDeserialize for FetchPartition {
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode FetchOffset".into(),
             })?;
+        let last_fetched_epoch =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LastFetchedEpoch".into(),
+            })?;
         let log_start_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LogStartOffset".into(),
             })?;
-        let max_bytes =
+        let partition_max_bytes =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MaxBytes".into(),
+                message: "failed to decode PartitionMaxBytes".into(),
             })?;
         Ok(Self {
-            partition_index,
+            partition,
             current_leader_epoch,
             fetch_offset,
+            last_fetched_epoch,
             log_start_offset,
-            max_bytes,
+            partition_max_bytes,
         })
     }
 }
 
-impl KafkaSerialize for FetchableTopic {
+impl KafkaSerialize for FetchTopic {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
+        self.topic
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+                message: "failed to encode Topic".into(),
             })?;
-        self.fetch_partitions
+        self.partitions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode FetchPartitions".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         Ok(())
     }
 }
 
-impl KafkaDeserialize for FetchableTopic {
+impl KafkaDeserialize for FetchTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
+        let topic =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+                message: "failed to decode Topic".into(),
             })?;
-        let fetch_partitions =
-            <Vec<FetchPartition> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode FetchPartitions".into(),
-                }
-            })?;
-        Ok(Self {
-            name,
-            fetch_partitions,
-        })
+        let partitions = <Vec<FetchPartition> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Partitions".into(),
+            }
+        })?;
+        Ok(Self { topic, partitions })
     }
 }
 
 impl KafkaSerialize for ForgottenTopic {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
+        self.topic
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+                message: "failed to encode Topic".into(),
             })?;
-        self.forgotten_partition_indexes
+        self.partitions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ForgottenPartitionIndexes".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         Ok(())
     }
@@ -421,17 +456,14 @@ impl KafkaSerialize for ForgottenTopic {
 
 impl KafkaDeserialize for ForgottenTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
+        let topic =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+                message: "failed to decode Topic".into(),
             })?;
-        let forgotten_partition_indexes =
+        let partitions =
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ForgottenPartitionIndexes".into(),
+                message: "failed to decode Partitions".into(),
             })?;
-        Ok(Self {
-            name,
-            forgotten_partition_indexes,
-        })
+        Ok(Self { topic, partitions })
     }
 }

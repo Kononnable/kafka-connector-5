@@ -21,6 +21,9 @@ pub struct DeletableTopicResult {
     pub name: String,
     /// The deletion error, or 0 if the deletion succeeded.
     pub error_code: i16,
+    /// The error message, or null if there was no error.
+    /// Available in version 5+.
+    pub error_message: Option<String>,
 }
 
 impl ApiResponse for DeleteTopicsResponse {
@@ -32,12 +35,12 @@ impl ApiResponse for DeleteTopicsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(4)
+        ApiVersion::new(5)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
-            "version {} is not supported by {} (supported: 0-4)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
@@ -113,6 +116,11 @@ impl KafkaSerialize for DeletableTopicResult {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ErrorCode".into(),
             })?;
+        self.error_message
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorMessage".into(),
+            })?;
         Ok(())
     }
 }
@@ -127,6 +135,15 @@ impl KafkaDeserialize for DeletableTopicResult {
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
-        Ok(Self { name, error_code })
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ErrorMessage".into(),
+            }
+        })?;
+        Ok(Self {
+            name,
+            error_code,
+            error_message,
+        })
     }
 }

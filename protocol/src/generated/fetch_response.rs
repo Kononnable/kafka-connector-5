@@ -18,7 +18,7 @@ pub struct FetchResponse {
     /// Available in version 7+.
     pub session_id: i32,
     /// The response topics.
-    pub topics: Vec<FetchableTopicResponse>,
+    pub responses: Vec<FetchableTopicResponse>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -32,9 +32,19 @@ pub struct AbortedTransaction {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+pub struct EpochEndOffset {
+    /// Epoch. Type: int32.
+    /// Available in version 12+.
+    pub epoch: i32,
+    /// EndOffset. Type: int64.
+    /// Available in version 12+.
+    pub end_offset: i64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct FetchablePartitionResponse {
-    /// The partiiton index.
-    pub partition_index: i32,
+    /// The partition index.
+    pub partition: i32,
     /// The error code, or 0 if there was no fetch error.
     pub error_code: i16,
     /// The current high water mark.
@@ -45,22 +55,38 @@ pub struct FetchablePartitionResponse {
     /// The current log start offset.
     /// Available in version 5+.
     pub log_start_offset: i64,
+    /// In case divergence is detected based on the `LastFetchedEpoch` and `FetchOffset` in the request, this field indicates the largest epoch and its end offset such that subsequent records are known to diverge
+    /// Available in version 12+.
+    pub diverging_epoch: EpochEndOffset,
+    /// CurrentLeader. Type: LeaderIdAndEpoch.
+    /// Available in version 12+.
+    pub current_leader: LeaderIdAndEpoch,
     /// The aborted transactions.
     /// Available in version 4+.
-    pub aborted: Option<Vec<AbortedTransaction>>,
+    pub aborted_transactions: Option<Vec<AbortedTransaction>>,
     /// The preferred read replica for the consumer to use on its next fetch request
     /// Available in version 11+.
     pub preferred_read_replica: i32,
     /// The record data.
-    pub records: Option<Vec<u8>>,
+    pub record_set: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FetchableTopicResponse {
     /// The topic name.
-    pub name: String,
+    pub topic: String,
     /// The topic partitions.
-    pub partitions: Vec<FetchablePartitionResponse>,
+    pub partition_responses: Vec<FetchablePartitionResponse>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LeaderIdAndEpoch {
+    /// The ID of the current leader or -1 if the leader is unknown.
+    /// Available in version 12+.
+    pub leader_id: i32,
+    /// The latest known leader epoch
+    /// Available in version 12+.
+    pub leader_epoch: i32,
 }
 
 impl ApiResponse for FetchResponse {
@@ -72,12 +98,12 @@ impl ApiResponse for FetchResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(11)
+        ApiVersion::new(12)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (11),
-            "version {} is not supported by {} (supported: 0-11)",
+            (0) <= version.0 && version.0 <= (12),
+            "version {} is not supported by {} (supported: 0-12)",
             version.0,
             stringify!(Self)
         );
@@ -96,9 +122,9 @@ impl ApiResponse for FetchResponse {
                 .encode(buf)
                 .map_err(|_| SerializationError::Encode("failed to encode SessionId"))?;
         }
-        self.topics
+        self.responses
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode Responses"))?;
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
@@ -120,13 +146,13 @@ impl ApiResponse for FetchResponse {
         } else {
             Default::default()
         };
-        let topics = <Vec<FetchableTopicResponse> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let responses = <Vec<FetchableTopicResponse> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Responses"))?;
         Ok(Self {
             throttle_time_ms,
             error_code,
             session_id,
-            topics,
+            responses,
         })
     }
 }
@@ -147,10 +173,10 @@ impl KafkaSerialize for FetchResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode SessionId".into(),
             })?;
-        self.topics
+        self.responses
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
+                message: "failed to encode Responses".into(),
             })?;
         Ok(())
     }
@@ -170,17 +196,17 @@ impl KafkaDeserialize for FetchResponse {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SessionId".into(),
             })?;
-        let topics =
+        let responses =
             <Vec<FetchableTopicResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
+                    message: "failed to decode Responses".into(),
                 }
             })?;
         Ok(Self {
             throttle_time_ms,
             error_code,
             session_id,
-            topics,
+            responses,
         })
     }
 }
@@ -218,12 +244,41 @@ impl KafkaDeserialize for AbortedTransaction {
     }
 }
 
-impl KafkaSerialize for FetchablePartitionResponse {
+impl KafkaSerialize for EpochEndOffset {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_index
+        self.epoch
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Epoch".into(),
+            })?;
+        self.end_offset
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode EndOffset".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for EpochEndOffset {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let epoch = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Epoch".into(),
+        })?;
+        let end_offset =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode EndOffset".into(),
+            })?;
+        Ok(Self { epoch, end_offset })
+    }
+}
+
+impl KafkaSerialize for FetchablePartitionResponse {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.partition
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Partition".into(),
             })?;
         self.error_code
             .encode(buf)
@@ -245,20 +300,30 @@ impl KafkaSerialize for FetchablePartitionResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode LogStartOffset".into(),
             })?;
-        self.aborted
+        self.diverging_epoch
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Aborted".into(),
+                message: "failed to encode DivergingEpoch".into(),
+            })?;
+        self.current_leader
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode CurrentLeader".into(),
+            })?;
+        self.aborted_transactions
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode AbortedTransactions".into(),
             })?;
         self.preferred_read_replica
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PreferredReadReplica".into(),
             })?;
-        self.records
+        self.record_set
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Records".into(),
+                message: "failed to encode RecordSet".into(),
             })?;
         Ok(())
     }
@@ -266,9 +331,9 @@ impl KafkaSerialize for FetchablePartitionResponse {
 
 impl KafkaDeserialize for FetchablePartitionResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition_index =
+        let partition =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
+                message: "failed to decode Partition".into(),
             })?;
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -286,45 +351,57 @@ impl KafkaDeserialize for FetchablePartitionResponse {
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LogStartOffset".into(),
             })?;
-        let aborted =
+        let diverging_epoch = <EpochEndOffset as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode DivergingEpoch".into(),
+            }
+        })?;
+        let current_leader = <LeaderIdAndEpoch as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode CurrentLeader".into(),
+            }
+        })?;
+        let aborted_transactions =
             <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
-                    message: "failed to decode Aborted".into(),
+                    message: "failed to decode AbortedTransactions".into(),
                 }
             })?;
         let preferred_read_replica =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PreferredReadReplica".into(),
             })?;
-        let records = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
+        let record_set = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
-                message: "failed to decode Records".into(),
+                message: "failed to decode RecordSet".into(),
             }
         })?;
         Ok(Self {
-            partition_index,
+            partition,
             error_code,
             high_watermark,
             last_stable_offset,
             log_start_offset,
-            aborted,
+            diverging_epoch,
+            current_leader,
+            aborted_transactions,
             preferred_read_replica,
-            records,
+            record_set,
         })
     }
 }
 
 impl KafkaSerialize for FetchableTopicResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
+        self.topic
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+                message: "failed to encode Topic".into(),
             })?;
-        self.partitions
+        self.partition_responses
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
+                message: "failed to encode PartitionResponses".into(),
             })?;
         Ok(())
     }
@@ -332,14 +409,52 @@ impl KafkaSerialize for FetchableTopicResponse {
 
 impl KafkaDeserialize for FetchableTopicResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
+        let topic =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+                message: "failed to decode Topic".into(),
             })?;
-        let partitions = <Vec<FetchablePartitionResponse> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Partitions".into(),
+        let partition_responses =
+            <Vec<FetchablePartitionResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode PartitionResponses".into(),
+                }
             })?;
-        Ok(Self { name, partitions })
+        Ok(Self {
+            topic,
+            partition_responses,
+        })
+    }
+}
+
+impl KafkaSerialize for LeaderIdAndEpoch {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.leader_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LeaderId".into(),
+            })?;
+        self.leader_epoch
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LeaderEpoch".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for LeaderIdAndEpoch {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let leader_id =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LeaderId".into(),
+            })?;
+        let leader_epoch =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LeaderEpoch".into(),
+            })?;
+        Ok(Self {
+            leader_id,
+            leader_epoch,
+        })
     }
 }

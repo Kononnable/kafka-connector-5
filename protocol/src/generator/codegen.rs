@@ -66,7 +66,7 @@ pub fn generate_all() -> GeneratedFiles {
             match msg.message_type {
                 MessageType::Request => entry.0 = msg.name.clone(),
                 MessageType::Response => entry.1 = msg.name.clone(),
-                MessageType::Header => {}
+                MessageType::Header | MessageType::Data => {}
             }
         }
     }
@@ -332,7 +332,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 code.push('\n');
             }
         }
-        MessageType::Header => {}
+        MessageType::Header | MessageType::Data => {}
     }
 
     code

@@ -42,6 +42,8 @@ pub enum MessageType {
     Response,
     #[serde(rename = "header")]
     Header,
+    #[serde(rename = "data")]
+    Data,
 }
 
 /// Represents a field in a Kafka message
@@ -94,6 +96,10 @@ pub struct Field {
     /// Versions where the tagged field is present
     #[serde(rename = "taggedVersions", default)]
     pub tagged_versions: Option<String>,
+
+    /// Whether this field supports zero-copy transfer
+    #[serde(rename = "zeroCopy", default)]
+    pub zero_copy: bool,
 
     /// Nested fields for complex types (like arrays)
     #[serde(default)]
@@ -474,6 +480,7 @@ impl Field {
             entity_type: None,
             tag: None,
             tagged_versions: None,
+            zero_copy: false,
             fields: Vec::new(),
         }
     }
