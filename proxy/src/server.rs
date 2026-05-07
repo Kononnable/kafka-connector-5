@@ -6,9 +6,8 @@ use crate::config::ProxyConfig;
 use crate::error::ProxyError;
 use crate::frame;
 use crate::tracker::RequestTracker;
-use bytes::{BufMut, Bytes, BytesMut};
-use protocol::generated::MetadataResponse;
-use protocol::traits::{ApiResponse, ApiVersion};
+use bytes::{Buf, Bytes, BytesMut};
+use protocol::protocol::serialization::KafkaDeserialize;
 use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
@@ -191,7 +190,7 @@ async fn inspect_and_rewrite_responses(
                 parsed.size,
             );
 
-            // Look up the matching request to get api_key and version
+            // Look up the matching request
             let meta_version = {
                 let mut t = tracker.lock().await;
                 if let Some(completion) = t.complete_response(res.correlation_id) {
@@ -218,9 +217,8 @@ async fn inspect_and_rewrite_responses(
                 }
             };
 
-            // If this was a Metadata response, rewrite broker addresses
             if let Some(api_version) = meta_version {
-                rewrite_metadata_in_buf(buf, offset, consumed, api_version, config)?;
+                rewrite_broker_port_in_metadata(buf, offset, consumed, api_version, config)?;
             }
         }
 
@@ -229,93 +227,123 @@ async fn inspect_and_rewrite_responses(
     Ok(())
 }
 
-// ── Metadata rewrite logic ────────────────────────────────────────────
+// ── Metadata rewrite: byte-level in-place broker port patching ────────
 
-/// Rewrite a Metadata response frame in-place within `buf`.
+/// Rewrite broker addresses in a Metadata response by patching the port
+/// bytes in-place. Uses the protocol crate's primitive decoders to find
+/// the port fields, then overwrites just the 4 i32 bytes in the buffer.
 ///
-/// The frame starts at `buf[offset..offset+frame_size]`.
-fn rewrite_metadata_in_buf(
+/// This avoids full round-trip deserialize/serialize, preserving all
+/// tagged fields and unknown schema elements.
+fn rewrite_broker_port_in_metadata(
     buf: &mut BytesMut,
     offset: usize,
     frame_size: usize,
     api_version: i16,
     config: &ProxyConfig,
 ) -> Result<(), ProxyError> {
-    // Frame layout: [4-byte size] [ResponseHeader] [ResponseBody]
-    // ResponseHeader v0:  correlation_id (i32) = 4 bytes
-    // ResponseHeader v1+: correlation_id (i32) + tag_buffer (unsigned varint)
     let is_flexible = api_version >= 9;
-    let frame_body = &buf[offset + 4..offset + frame_size];
-    let header_len = frame::response_body_offset(frame_body, is_flexible);
-    let body_bytes = &frame_body[header_len..];
-
-    let version = ApiVersion::new(api_version);
-
-    let mut body_buf = Bytes::copy_from_slice(body_bytes);
-    let mut response = match MetadataResponse::deserialize(version, &mut body_buf) {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::warn!(
-                "failed to deserialize MetadataResponse v{api_version}: {e} — forwarding unchanged"
-            );
-            return Ok(());
-        }
+    // Compute header_len and body_bytes WITHOUT holding a borrow on buf
+    let header_len = {
+        let frame_body = &buf[offset + 4..offset + frame_size];
+        frame::response_body_offset(frame_body, is_flexible)
     };
+    let body_start = offset + 4 + header_len;
+    let body_end = offset + frame_size;
+    let body_slice = &buf[body_start..body_end];
 
-    // Rewrite broker addresses
     let proxy_host = config.proxy_host();
     let proxy_port = config.proxy_port();
-    for broker in &mut response.brokers {
+
+    // Collect port offsets by parsing with a separate Bytes cursor (no borrow on buf)
+    let patches: Vec<usize> = {
+        let mut cursor = Bytes::copy_from_slice(body_slice);
+        let mut offsets = Vec::new();
+        let body_total = body_slice.len();
+
+        // Skip throttle_time_ms (v3+)
+        if api_version >= 3 {
+            let _: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+                Ok(v) => v,
+                Err(_) => return Ok(()),
+            };
+        }
+
+        // Read broker count
+        let broker_count = if is_flexible {
+            let (raw, _) =
+                protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
+                    .map_err(|e| {
+                        ProxyError::Upstream(format!("failed to decode broker count: {e}"))
+                    })?;
+            if raw == 0 {
+                return Ok(());
+            }
+            (raw - 1) as usize
+        } else {
+            let count: i32 = KafkaDeserialize::decode(&mut cursor)
+                .map_err(|_| ProxyError::Upstream("failed to decode broker count".into()))?;
+            if count < 0 {
+                return Ok(());
+            }
+            count as usize
+        };
+
+        for _ in 0..broker_count {
+            let _: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+                Ok(v) => v,
+                Err(_) => return Ok(()),
+            };
+            let host: String = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+                Ok(v) => v,
+                Err(_) => return Ok(()),
+            };
+            let port_offset = body_total - cursor.len();
+            let port: i32 = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+                Ok(v) => v,
+                Err(_) => return Ok(()),
+            };
+            let _: Option<String> = match KafkaDeserialize::decode_flexible(&mut cursor, is_flexible) {
+                Ok(v) => v,
+                Err(_) => return Ok(()),
+            };
+            if is_flexible {
+                let (tag_count, _) =
+                    protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
+                        .map_err(|_| ProxyError::Upstream("tag count error".into()))?;
+                for _ in 0..tag_count {
+                    let (_, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
+                        .map_err(|_| ProxyError::Upstream("tag id error".into()))?;
+                    let (len, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
+                        .map_err(|_| ProxyError::Upstream("tag len error".into()))?;
+                    cursor.advance(len as usize);
+                }
+            }
+            if host == proxy_host && port != proxy_port {
+                offsets.push(port_offset);
+            }
+        }
+        offsets
+    };
+    // body_slice borrow is now released
+
+    for &port_offset in &patches {
+        let abs_offset = body_start + port_offset;
         tracing::info!(
-            "rewriting broker {}: {}:{} → {}:{}",
-            broker.node_id,
-            broker.host,
-            broker.port,
+            "rewriting broker port at buf[{abs_offset}..]: 9092 → {}",
+            proxy_port,
+        );
+        buf[abs_offset..abs_offset + 4].copy_from_slice(&proxy_port.to_be_bytes());
+    }
+
+    if !patches.is_empty() {
+        tracing::debug!(
+            "patched {} broker port(s) → {}:{}",
+            patches.len(),
             proxy_host,
             proxy_port,
         );
-        broker.host = proxy_host.clone();
-        broker.port = proxy_port;
     }
-
-    // Re-serialize the body using version-aware ApiResponse::serialize
-    let mut new_body = BytesMut::new();
-    if let Err(e) = response.serialize(version, &mut new_body) {
-        tracing::warn!("failed to serialize MetadataResponse v{api_version}: {e}");
-        return Ok(());
-    }
-
-    // Build new frame: [size: i32] [header] [body]
-    let total_body_size = header_len + new_body.len();
-    if total_body_size > i32::MAX as usize {
-        tracing::warn!("rewritten MetadataResponse too large");
-        return Ok(());
-    }
-
-    let mut new_frame = BytesMut::with_capacity(4 + total_body_size);
-    new_frame.put_i32(total_body_size as i32);
-    new_frame.extend_from_slice(&frame_body[..header_len]);
-    new_frame.extend_from_slice(&new_body);
-
-    // Replace bytes in the original buffer
-    if new_frame.len() <= frame_size {
-        buf[offset..offset + new_frame.len()].copy_from_slice(&new_frame);
-    } else {
-        let tail = buf.split_off(offset + frame_size);
-        let head = buf.split_to(offset);
-        buf.clear();
-        buf.extend_from_slice(&head);
-        buf.extend_from_slice(&new_frame);
-        buf.extend_from_slice(&tail);
-    }
-
-    tracing::debug!(
-        "rewrote MetadataResponse: {} bytes → {} bytes, brokers point to {}:{}",
-        frame_size,
-        new_frame.len(),
-        proxy_host,
-        proxy_port,
-    );
 
     Ok(())
 }
