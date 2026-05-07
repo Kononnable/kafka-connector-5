@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -22,68 +22,156 @@ pub struct ShareGroupHeartbeatRequest {
 
 impl ApiRequest for ShareGroupHeartbeatRequest {
     type Response = crate::generated::ShareGroupHeartbeatResponse;
-    fn get_api_key() -> ApiKey { ApiKey::new(76) }
-    fn get_min_supported_version() -> crate::traits::ApiVersion { crate::traits::ApiVersion::new(1) }
-    fn get_max_supported_version() -> crate::traits::ApiVersion { crate::traits::ApiVersion::new(1) }
-    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
-        assert!((1) <= version.0 && version.0 <= (1), "version {} is not supported by {} (supported: 1-1)", version.0, stringify!(Self));
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(76)
+    }
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(1)
+    }
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(1)
+    }
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
+        assert!(
+            (1) <= version.0 && version.0 <= (1),
+            "version {} is not supported by {} (supported: 1-1)",
+            version.0,
+            stringify!(Self)
+        );
         let is_flexible = true;
-        self.group_id.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
-        self.member_id.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
-        self.member_epoch.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode MemberEpoch"))?;
-        self.rack_id.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
-        self.subscribed_topic_names.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode SubscribedTopicNames"))?;
+        self.group_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
+        self.member_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        self.member_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode MemberEpoch"))?;
+        self.rack_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
+        self.subscribed_topic_names
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode SubscribedTopicNames"))?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
-    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
-        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode MemberEpoch"))?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode RackId"))?;
-        let subscribed_topic_names = <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode SubscribedTopicNames"))?;
-        Ok(Self { group_id, member_id, member_epoch, rack_id, subscribed_topic_names })
+        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
+        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
+        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode MemberEpoch"))?;
+        let rack_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode RackId"))?;
+        let subscribed_topic_names =
+            <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode SubscribedTopicNames"))?;
+        Ok(Self {
+            group_id,
+            member_id,
+            member_epoch,
+            rack_id,
+            subscribed_topic_names,
+        })
     }
 }
 impl KafkaSerialize for ShareGroupHeartbeatRequest {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.group_id.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode GroupId".into() })?;
-        self.member_id.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberId".into() })?;
-        self.member_epoch.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberEpoch".into() })?;
-        self.rack_id.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode RackId".into() })?;
-        self.subscribed_topic_names.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode SubscribedTopicNames".into() })?;
+        self.group_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupId".into(),
+            })?;
+        self.member_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberId".into(),
+            })?;
+        self.member_epoch
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberEpoch".into(),
+            })?;
+        self.rack_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode RackId".into(),
+            })?;
+        self.subscribed_topic_names
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode SubscribedTopicNames".into(),
+            })?;
         Ok(())
     }
-    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {
-        self.group_id.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode GroupId".into() })?;
-        self.member_id.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberId".into() })?;
-        self.member_epoch.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberEpoch".into() })?;
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.group_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupId".into(),
+            })?;
+        self.member_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberId".into(),
+            })?;
+        self.member_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberEpoch".into(),
+            })?;
         if is_flexible {
             if let Some(ref __val) = self.rack_id {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val.encode_flexible(buf, true).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode RackId".into() })?;
+                __val
+                    .encode_flexible(buf, true)
+                    .map_err(|_| EncodeError::ValueTooLarge {
+                        message: "failed to encode RackId".into(),
+                    })?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.rack_id {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode RackId".into() })?;
+                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode RackId".into(),
+                })?;
             }
         }
         if is_flexible {
             if let Some(ref __val) = self.subscribed_topic_names {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val.encode_flexible(buf, true).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode SubscribedTopicNames".into() })?;
+                __val
+                    .encode_flexible(buf, true)
+                    .map_err(|_| EncodeError::ValueTooLarge {
+                        message: "failed to encode SubscribedTopicNames".into(),
+                    })?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.subscribed_topic_names {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode SubscribedTopicNames".into() })?;
+                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode SubscribedTopicNames".into(),
+                })?;
             }
         }
         if is_flexible {
@@ -96,42 +184,104 @@ impl KafkaSerialize for ShareGroupHeartbeatRequest {
 
 impl KafkaDeserialize for ShareGroupHeartbeatRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let group_id = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode GroupId".into() })?;
-        let member_id = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberId".into() })?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberEpoch".into() })?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode RackId".into() })?;
-        let subscribed_topic_names = <Option<Vec<String>> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode SubscribedTopicNames".into() })?;
-        Ok(Self { group_id, member_id, member_epoch, rack_id, subscribed_topic_names })
+        let group_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GroupId".into(),
+            })?;
+        let member_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
+            })?;
+        let member_epoch =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberEpoch".into(),
+            })?;
+        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode RackId".into(),
+            }
+        })?;
+        let subscribed_topic_names = <Option<Vec<String>> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode SubscribedTopicNames".into(),
+            })?;
+        Ok(Self {
+            group_id,
+            member_id,
+            member_epoch,
+            rack_id,
+            subscribed_topic_names,
+        })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode GroupId".into() })?;
-        let member_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberId".into() })?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberEpoch".into() })?;
+        let group_id =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupId".into(),
+                }
+            })?;
+        let member_id =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MemberId".into(),
+                }
+            })?;
+        let member_epoch =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MemberEpoch".into(),
+                }
+            })?;
         let rack_id = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol { message: "failed to decode RackId".into() })?)
+                Some(
+                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                        DecodeError::Protocol {
+                            message: "failed to decode RackId".into(),
+                        }
+                    })?,
+                )
             }
         } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode RackId".into() })?
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode RackId".into(),
+                }
+            })?
         };
         let subscribed_topic_names = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<Vec<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol { message: "failed to decode SubscribedTopicNames".into() })?)
+                Some(
+                    <Vec<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
+                        |_| DecodeError::Protocol {
+                            message: "failed to decode SubscribedTopicNames".into(),
+                        },
+                    )?,
+                )
             }
         } else {
-            <Option<Vec<String>> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode SubscribedTopicNames".into() })?
+            <Option<Vec<String>> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode SubscribedTopicNames".into(),
+                }
+            })?
         };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self { group_id, member_id, member_epoch, rack_id, subscribed_topic_names })
+        Ok(Self {
+            group_id,
+            member_id,
+            member_epoch,
+            rack_id,
+            subscribed_topic_names,
+        })
     }
 }
-

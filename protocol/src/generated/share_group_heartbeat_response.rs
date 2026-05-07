@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -40,29 +40,60 @@ pub struct TopicPartitions {
 
 impl ApiResponse for ShareGroupHeartbeatResponse {
     type Request = crate::generated::ShareGroupHeartbeatRequest;
-    fn get_api_key() -> ApiKey { ApiKey::new(76) }
-    fn get_min_supported_version() -> crate::traits::ApiVersion { crate::traits::ApiVersion::new(1) }
-    fn get_max_supported_version() -> crate::traits::ApiVersion { crate::traits::ApiVersion::new(1) }
-    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
-        assert!((1) <= version.0 && version.0 <= (1), "version {} is not supported by {} (supported: 1-1)", version.0, stringify!(Self));
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(76)
+    }
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(1)
+    }
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(1)
+    }
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
+        assert!(
+            (1) <= version.0 && version.0 <= (1),
+            "version {} is not supported by {} (supported: 1-1)",
+            version.0,
+            stringify!(Self)
+        );
         let is_flexible = true;
-        self.throttle_time_ms.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
-        self.error_code.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
-        self.error_message.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode ErrorMessage"))?;
-        self.member_id.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
-        self.member_epoch.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode MemberEpoch"))?;
-        self.heartbeat_interval_ms.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode HeartbeatIntervalMs"))?;
+        self.throttle_time_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        self.error_message
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorMessage"))?;
+        self.member_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        self.member_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode MemberEpoch"))?;
+        self.heartbeat_interval_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode HeartbeatIntervalMs"))?;
         if is_flexible {
-        if let Some(ref __val) = self.assignment {
-        crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-        __val.encode_flexible(buf, true).map_err(|_| SerializationError::Encode("failed to encode Assignment"))?;
+            if let Some(ref __val) = self.assignment {
+                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
+                __val
+                    .encode_flexible(buf, true)
+                    .map_err(|_| SerializationError::Encode("failed to encode Assignment"))?;
+            } else {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            }
         } else {
-        crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-        }
-        } else {
-        if let Some(ref __val) = self.assignment {
-        __val.encode(buf).map_err(|_| SerializationError::Encode("failed to encode Assignment"))?;
-        }
+            if let Some(ref __val) = self.assignment {
+                __val
+                    .encode(buf)
+                    .map_err(|_| SerializationError::Encode("failed to encode Assignment"))?;
+            }
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -70,81 +101,167 @@ impl ApiResponse for ShareGroupHeartbeatResponse {
         }
         Ok(())
     }
-    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let is_flexible = true;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let error_message = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?;
-        let member_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode MemberEpoch"))?;
-        let heartbeat_interval_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode HeartbeatIntervalMs"))?;
-        let assignment = 
-            if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf).map_err(|_| SerializationError::Decode("tagged field error"))?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?;
+        let member_id = <Option<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
+        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode MemberEpoch"))?;
+        let heartbeat_interval_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode HeartbeatIntervalMs"))?;
+        let assignment = if is_flexible {
+            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)
+                .map_err(|_| SerializationError::Decode("tagged field error"))?;
             if __present == 0 {
-            None
+                None
             } else {
-            Some(<Assignment as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| SerializationError::Decode("failed to decode Assignment"))?)
+                Some(
+                    <Assignment as KafkaDeserialize>::decode_flexible(buf, true)
+                        .map_err(|_| SerializationError::Decode("failed to decode Assignment"))?,
+                )
             }
-            } else {
-            Some(<Assignment as KafkaDeserialize>::decode(buf).map_err(|_| SerializationError::Decode("failed to decode Assignment"))?)
-            }
-        ;
-        Ok(Self { throttle_time_ms, error_code, error_message, member_id, member_epoch, heartbeat_interval_ms, assignment })
+        } else {
+            Some(
+                <Assignment as KafkaDeserialize>::decode(buf)
+                    .map_err(|_| SerializationError::Decode("failed to decode Assignment"))?,
+            )
+        };
+        Ok(Self {
+            throttle_time_ms,
+            error_code,
+            error_message,
+            member_id,
+            member_epoch,
+            heartbeat_interval_ms,
+            assignment,
+        })
     }
 }
 impl KafkaSerialize for ShareGroupHeartbeatResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.throttle_time_ms.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ThrottleTimeMs".into() })?;
-        self.error_code.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ErrorCode".into() })?;
-        self.error_message.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ErrorMessage".into() })?;
-        self.member_id.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberId".into() })?;
-        self.member_epoch.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberEpoch".into() })?;
-        self.heartbeat_interval_ms.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode HeartbeatIntervalMs".into() })?;
+        self.throttle_time_ms
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
+        self.error_code
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.error_message
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorMessage".into(),
+            })?;
+        self.member_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberId".into(),
+            })?;
+        self.member_epoch
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberEpoch".into(),
+            })?;
+        self.heartbeat_interval_ms
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode HeartbeatIntervalMs".into(),
+            })?;
         if let Some(ref __val) = self.assignment {
-            __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Assignment".into() })?;
+            __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Assignment".into(),
+            })?;
         }
         Ok(())
     }
-    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {
-        self.throttle_time_ms.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ThrottleTimeMs".into() })?;
-        self.error_code.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ErrorCode".into() })?;
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.throttle_time_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
         if is_flexible {
             if let Some(ref __val) = self.error_message {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val.encode_flexible(buf, true).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ErrorMessage".into() })?;
+                __val
+                    .encode_flexible(buf, true)
+                    .map_err(|_| EncodeError::ValueTooLarge {
+                        message: "failed to encode ErrorMessage".into(),
+                    })?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.error_message {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ErrorMessage".into() })?;
+                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode ErrorMessage".into(),
+                })?;
             }
         }
         if is_flexible {
             if let Some(ref __val) = self.member_id {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val.encode_flexible(buf, true).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberId".into() })?;
+                __val
+                    .encode_flexible(buf, true)
+                    .map_err(|_| EncodeError::ValueTooLarge {
+                        message: "failed to encode MemberId".into(),
+                    })?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.member_id {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberId".into() })?;
+                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode MemberId".into(),
+                })?;
             }
         }
-        self.member_epoch.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MemberEpoch".into() })?;
-        self.heartbeat_interval_ms.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode HeartbeatIntervalMs".into() })?;
+        self.member_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MemberEpoch".into(),
+            })?;
+        self.heartbeat_interval_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode HeartbeatIntervalMs".into(),
+            })?;
         if is_flexible {
             if let Some(ref __val) = self.assignment {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val.encode_flexible(buf, true).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Assignment".into() })?;
+                __val
+                    .encode_flexible(buf, true)
+                    .map_err(|_| EncodeError::ValueTooLarge {
+                        message: "failed to encode Assignment".into(),
+                    })?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.assignment {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Assignment".into() })?;
+                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode Assignment".into(),
+                })?;
             }
         }
         if is_flexible {
@@ -157,65 +274,163 @@ impl KafkaSerialize for ShareGroupHeartbeatResponse {
 
 impl KafkaDeserialize for ShareGroupHeartbeatResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode ThrottleTimeMs".into() })?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode ErrorCode".into() })?;
-        let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode ErrorMessage".into() })?;
-        let member_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberId".into() })?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberEpoch".into() })?;
-        let heartbeat_interval_ms = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode HeartbeatIntervalMs".into() })?;
-        let assignment = Some(<Assignment as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode Assignment".into() })?);
-        Ok(Self { throttle_time_ms, error_code, error_message, member_id, member_epoch, heartbeat_interval_ms, assignment })
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
+            })?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ErrorMessage".into(),
+            }
+        })?;
+        let member_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode MemberId".into(),
+            }
+        })?;
+        let member_epoch =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MemberEpoch".into(),
+            })?;
+        let heartbeat_interval_ms =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode HeartbeatIntervalMs".into(),
+            })?;
+        let assignment = Some(<Assignment as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Assignment".into(),
+            }
+        })?);
+        Ok(Self {
+            throttle_time_ms,
+            error_code,
+            error_message,
+            member_id,
+            member_epoch,
+            heartbeat_interval_ms,
+            assignment,
+        })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode ThrottleTimeMs".into() })?;
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode ErrorCode".into() })?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorCode".into(),
+                }
+            })?;
         let error_message = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol { message: "failed to decode ErrorMessage".into() })?)
+                Some(
+                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                        DecodeError::Protocol {
+                            message: "failed to decode ErrorMessage".into(),
+                        }
+                    })?,
+                )
             }
         } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode ErrorMessage".into() })?
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorMessage".into(),
+                }
+            })?
         };
         let member_id = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberId".into() })?)
+                Some(
+                    <String as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                        DecodeError::Protocol {
+                            message: "failed to decode MemberId".into(),
+                        }
+                    })?,
+                )
             }
         } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberId".into() })?
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MemberId".into(),
+                }
+            })?
         };
-        let member_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode MemberEpoch".into() })?;
-        let heartbeat_interval_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode HeartbeatIntervalMs".into() })?;
+        let member_epoch =
+            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MemberEpoch".into(),
+                }
+            })?;
+        let heartbeat_interval_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode HeartbeatIntervalMs".into(),
+            })?;
         let assignment = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<Assignment as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| DecodeError::Protocol { message: "failed to decode Assignment".into() })?)
+                Some(
+                    <Assignment as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
+                        DecodeError::Protocol {
+                            message: "failed to decode Assignment".into(),
+                        }
+                    })?,
+                )
             }
         } else {
-            Some(<Assignment as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode Assignment".into() })?)
+            Some(<Assignment as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Assignment".into(),
+                }
+            })?)
         };
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self { throttle_time_ms, error_code, error_message, member_id, member_epoch, heartbeat_interval_ms, assignment })
+        Ok(Self {
+            throttle_time_ms,
+            error_code,
+            error_message,
+            member_id,
+            member_epoch,
+            heartbeat_interval_ms,
+            assignment,
+        })
     }
 }
 
 impl KafkaSerialize for Assignment {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.topic_partitions.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TopicPartitions".into() })?;
+        self.topic_partitions
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicPartitions".into(),
+            })?;
         Ok(())
     }
-    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {
-        self.topic_partitions.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TopicPartitions".into() })?;
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topic_partitions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicPartitions".into(),
+            })?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -226,11 +441,21 @@ impl KafkaSerialize for Assignment {
 
 impl KafkaDeserialize for Assignment {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let topic_partitions = <Vec<TopicPartitions> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode TopicPartitions".into() })?;
+        let topic_partitions =
+            <Vec<TopicPartitions> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicPartitions".into(),
+                }
+            })?;
         Ok(Self { topic_partitions })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let topic_partitions = <Vec<TopicPartitions> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode TopicPartitions".into() })?;
+        let topic_partitions =
+            <Vec<TopicPartitions> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode TopicPartitions".into(),
+                },
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -241,13 +466,33 @@ impl KafkaDeserialize for Assignment {
 
 impl KafkaSerialize for TopicPartitions {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.topic_id.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TopicId".into() })?;
-        self.partitions.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Partitions".into() })?;
+        self.topic_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
+        self.partitions
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Partitions".into(),
+            })?;
         Ok(())
     }
-    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {
-        self.topic_id.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TopicId".into() })?;
-        self.partitions.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Partitions".into() })?;
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.topic_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
+        self.partitions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Partitions".into(),
+            })?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -258,18 +503,37 @@ impl KafkaSerialize for TopicPartitions {
 
 impl KafkaDeserialize for TopicPartitions {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let topic_id = <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode TopicId".into() })?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode Partitions".into() })?;
-        Ok(Self { topic_id, partitions })
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TopicId".into(),
+            })?;
+        let partitions =
+            <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Partitions".into(),
+            })?;
+        Ok(Self {
+            topic_id,
+            partitions,
+        })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let topic_id = <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode TopicId".into() })?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode Partitions".into() })?;
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicId".into(),
+                }
+            })?;
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Partitions".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self { topic_id, partitions })
+        Ok(Self {
+            topic_id,
+            partitions,
+        })
     }
 }
-

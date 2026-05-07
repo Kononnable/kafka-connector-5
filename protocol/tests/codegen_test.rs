@@ -44,7 +44,14 @@ fn test_codegen_generated_structs() {
             .unwrap_or_else(|e| panic!("failed to write {:?}: {e}", abs_path));
     }
 
-    // TODO: re-enable cargo fmt
+    // Run cargo fmt to fix formatting of the generated files.
+    let fmt_status = std::process::Command::new("cargo")
+        .args(["fmt", "--package", "protocol"])
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .status()
+        .expect("failed to run cargo fmt");
+    assert!(fmt_status.success(), "cargo fmt failed");
 
     // Now read back the formatted content and verify with expect_file.
     // This means the checked-in snapshot is always properly formatted.
@@ -72,8 +79,26 @@ fn test_codegen_generated_structs() {
 
     eprintln!("✓ All {} files written, formatted & verified.", files.len());
 
-    // TODO: re-enable cargo clippy
-    eprintln!("✓ cargo clippy (skipped)");
+    // Run cargo clippy to ensure no warnings.
+    let clippy_output = std::process::Command::new("cargo")
+        .args([
+            "clippy",
+            "--package",
+            "protocol",
+            "--all-targets",
+            "--",
+            "--deny",
+            "warnings",
+        ])
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .output()
+        .expect("failed to run cargo clippy");
+    assert!(
+        clippy_output.status.success(),
+        "clippy found issues in generated code — fix the codegen and re-run with UPDATE_EXPECT=1"
+    );
+    eprintln!("✓ cargo clippy passed");
 }
 
 /// Quick sanity check on one of the generated files.

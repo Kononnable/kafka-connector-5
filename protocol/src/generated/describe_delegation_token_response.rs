@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -52,40 +52,100 @@ pub struct DescribedDelegationTokenRenewer {
 
 impl ApiResponse for DescribeDelegationTokenResponse {
     type Request = crate::generated::DescribeDelegationTokenRequest;
-    fn get_api_key() -> ApiKey { ApiKey::new(41) }
-    fn get_min_supported_version() -> crate::traits::ApiVersion { crate::traits::ApiVersion::new(1) }
-    fn get_max_supported_version() -> crate::traits::ApiVersion { crate::traits::ApiVersion::new(3) }
-    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
-        assert!((1) <= version.0 && version.0 <= (3), "version {} is not supported by {} (supported: 1-3)", version.0, stringify!(Self));
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(41)
+    }
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(1)
+    }
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(3)
+    }
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
+        assert!(
+            (1) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 1-3)",
+            version.0,
+            stringify!(Self)
+        );
         let is_flexible = (2) <= version.0;
-        self.error_code.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
-        self.tokens.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode Tokens"))?;
-        self.throttle_time_ms.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        self.tokens
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode Tokens"))?;
+        self.throttle_time_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
-    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let is_flexible = (2) <= version.0;
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let tokens = <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode Tokens"))?;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        Ok(Self { error_code, tokens, throttle_time_ms })
+        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        let tokens =
+            <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Tokens"))?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        Ok(Self {
+            error_code,
+            tokens,
+            throttle_time_ms,
+        })
     }
 }
 impl KafkaSerialize for DescribeDelegationTokenResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.error_code.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ErrorCode".into() })?;
-        self.tokens.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Tokens".into() })?;
-        self.throttle_time_ms.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ThrottleTimeMs".into() })?;
+        self.error_code
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.tokens
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Tokens".into(),
+            })?;
+        self.throttle_time_ms
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
         Ok(())
     }
-    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {
-        self.error_code.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ErrorCode".into() })?;
-        self.tokens.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Tokens".into() })?;
-        self.throttle_time_ms.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ThrottleTimeMs".into() })?;
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.tokens
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Tokens".into(),
+            })?;
+        self.throttle_time_ms
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -96,48 +156,163 @@ impl KafkaSerialize for DescribeDelegationTokenResponse {
 
 impl KafkaDeserialize for DescribeDelegationTokenResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let error_code = <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode ErrorCode".into() })?;
-        let tokens = <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode Tokens".into() })?;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode ThrottleTimeMs".into() })?;
-        Ok(Self { error_code, tokens, throttle_time_ms })
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
+            })?;
+        let tokens =
+            <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Tokens".into(),
+                }
+            })?;
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        Ok(Self {
+            error_code,
+            tokens,
+            throttle_time_ms,
+        })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode ErrorCode".into() })?;
-        let tokens = <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode Tokens".into() })?;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode ThrottleTimeMs".into() })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorCode".into(),
+                }
+            })?;
+        let tokens =
+            <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Tokens".into(),
+                })?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self { error_code, tokens, throttle_time_ms })
+        Ok(Self {
+            error_code,
+            tokens,
+            throttle_time_ms,
+        })
     }
 }
 
 impl KafkaSerialize for DescribedDelegationToken {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.principal_type.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalType".into() })?;
-        self.principal_name.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalName".into() })?;
-        self.token_requester_principal_type.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TokenRequesterPrincipalType".into() })?;
-        self.token_requester_principal_name.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TokenRequesterPrincipalName".into() })?;
-        self.issue_timestamp.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode IssueTimestamp".into() })?;
-        self.expiry_timestamp.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ExpiryTimestamp".into() })?;
-        self.max_timestamp.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MaxTimestamp".into() })?;
-        self.token_id.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TokenId".into() })?;
-        self.hmac.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Hmac".into() })?;
-        self.renewers.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Renewers".into() })?;
+        self.principal_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalType".into(),
+            })?;
+        self.principal_name
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalName".into(),
+            })?;
+        self.token_requester_principal_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TokenRequesterPrincipalType".into(),
+            })?;
+        self.token_requester_principal_name
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TokenRequesterPrincipalName".into(),
+            })?;
+        self.issue_timestamp
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode IssueTimestamp".into(),
+            })?;
+        self.expiry_timestamp
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ExpiryTimestamp".into(),
+            })?;
+        self.max_timestamp
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MaxTimestamp".into(),
+            })?;
+        self.token_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TokenId".into(),
+            })?;
+        self.hmac
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Hmac".into(),
+            })?;
+        self.renewers
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Renewers".into(),
+            })?;
         Ok(())
     }
-    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {
-        self.principal_type.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalType".into() })?;
-        self.principal_name.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalName".into() })?;
-        self.token_requester_principal_type.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TokenRequesterPrincipalType".into() })?;
-        self.token_requester_principal_name.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TokenRequesterPrincipalName".into() })?;
-        self.issue_timestamp.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode IssueTimestamp".into() })?;
-        self.expiry_timestamp.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode ExpiryTimestamp".into() })?;
-        self.max_timestamp.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode MaxTimestamp".into() })?;
-        self.token_id.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode TokenId".into() })?;
-        self.hmac.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Hmac".into() })?;
-        self.renewers.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode Renewers".into() })?;
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.principal_type
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalType".into(),
+            })?;
+        self.principal_name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalName".into(),
+            })?;
+        self.token_requester_principal_type
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TokenRequesterPrincipalType".into(),
+            })?;
+        self.token_requester_principal_name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TokenRequesterPrincipalName".into(),
+            })?;
+        self.issue_timestamp
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode IssueTimestamp".into(),
+            })?;
+        self.expiry_timestamp
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ExpiryTimestamp".into(),
+            })?;
+        self.max_timestamp
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode MaxTimestamp".into(),
+            })?;
+        self.token_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TokenId".into(),
+            })?;
+        self.hmac
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Hmac".into(),
+            })?;
+        self.renewers
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Renewers".into(),
+            })?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -148,46 +323,161 @@ impl KafkaSerialize for DescribedDelegationToken {
 
 impl KafkaDeserialize for DescribedDelegationToken {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let principal_type = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalType".into() })?;
-        let principal_name = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalName".into() })?;
-        let token_requester_principal_type = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode TokenRequesterPrincipalType".into() })?;
-        let token_requester_principal_name = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode TokenRequesterPrincipalName".into() })?;
-        let issue_timestamp = <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode IssueTimestamp".into() })?;
-        let expiry_timestamp = <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode ExpiryTimestamp".into() })?;
-        let max_timestamp = <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode MaxTimestamp".into() })?;
-        let token_id = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode TokenId".into() })?;
-        let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode Hmac".into() })?;
-        let renewers = <Vec<DescribedDelegationTokenRenewer> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode Renewers".into() })?;
-        Ok(Self { principal_type, principal_name, token_requester_principal_type, token_requester_principal_name, issue_timestamp, expiry_timestamp, max_timestamp, token_id, hmac, renewers })
+        let principal_type =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalType".into(),
+            })?;
+        let principal_name =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalName".into(),
+            })?;
+        let token_requester_principal_type =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TokenRequesterPrincipalType".into(),
+            })?;
+        let token_requester_principal_name =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TokenRequesterPrincipalName".into(),
+            })?;
+        let issue_timestamp =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode IssueTimestamp".into(),
+            })?;
+        let expiry_timestamp =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ExpiryTimestamp".into(),
+            })?;
+        let max_timestamp =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MaxTimestamp".into(),
+            })?;
+        let token_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TokenId".into(),
+            })?;
+        let hmac =
+            <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Hmac".into(),
+            })?;
+        let renewers = <Vec<DescribedDelegationTokenRenewer> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Renewers".into(),
+            })?;
+        Ok(Self {
+            principal_type,
+            principal_name,
+            token_requester_principal_type,
+            token_requester_principal_name,
+            issue_timestamp,
+            expiry_timestamp,
+            max_timestamp,
+            token_id,
+            hmac,
+            renewers,
+        })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalType".into() })?;
-        let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalName".into() })?;
-        let token_requester_principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode TokenRequesterPrincipalType".into() })?;
-        let token_requester_principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode TokenRequesterPrincipalName".into() })?;
-        let issue_timestamp = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode IssueTimestamp".into() })?;
-        let expiry_timestamp = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode ExpiryTimestamp".into() })?;
-        let max_timestamp = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode MaxTimestamp".into() })?;
-        let token_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode TokenId".into() })?;
-        let hmac = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode Hmac".into() })?;
-        let renewers = <Vec<DescribedDelegationTokenRenewer> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode Renewers".into() })?;
+        let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalType".into(),
+            })?;
+        let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalName".into(),
+            })?;
+        let token_requester_principal_type =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TokenRequesterPrincipalType".into(),
+                }
+            })?;
+        let token_requester_principal_name =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TokenRequesterPrincipalName".into(),
+                }
+            })?;
+        let issue_timestamp = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode IssueTimestamp".into(),
+            })?;
+        let expiry_timestamp = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ExpiryTimestamp".into(),
+            })?;
+        let max_timestamp =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode MaxTimestamp".into(),
+                }
+            })?;
+        let token_id =
+            <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TokenId".into(),
+                }
+            })?;
+        let hmac =
+            <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Hmac".into(),
+                }
+            })?;
+        let renewers = <Vec<DescribedDelegationTokenRenewer> as KafkaDeserialize>::decode_flexible(
+            buf,
+            is_flexible,
+        )
+        .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Renewers".into(),
+        })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self { principal_type, principal_name, token_requester_principal_type, token_requester_principal_name, issue_timestamp, expiry_timestamp, max_timestamp, token_id, hmac, renewers })
+        Ok(Self {
+            principal_type,
+            principal_name,
+            token_requester_principal_type,
+            token_requester_principal_name,
+            issue_timestamp,
+            expiry_timestamp,
+            max_timestamp,
+            token_id,
+            hmac,
+            renewers,
+        })
     }
 }
 
 impl KafkaSerialize for DescribedDelegationTokenRenewer {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.principal_type.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalType".into() })?;
-        self.principal_name.encode(buf).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalName".into() })?;
+        self.principal_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalType".into(),
+            })?;
+        self.principal_name
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalName".into(),
+            })?;
         Ok(())
     }
-    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {
-        self.principal_type.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalType".into() })?;
-        self.principal_name.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge { message: "failed to encode PrincipalName".into() })?;
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.principal_type
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalType".into(),
+            })?;
+        self.principal_name
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PrincipalName".into(),
+            })?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -198,18 +488,35 @@ impl KafkaSerialize for DescribedDelegationTokenRenewer {
 
 impl KafkaDeserialize for DescribedDelegationTokenRenewer {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let principal_type = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalType".into() })?;
-        let principal_name = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalName".into() })?;
-        Ok(Self { principal_type, principal_name })
+        let principal_type =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalType".into(),
+            })?;
+        let principal_name =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalName".into(),
+            })?;
+        Ok(Self {
+            principal_type,
+            principal_name,
+        })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalType".into() })?;
-        let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| DecodeError::Protocol { message: "failed to decode PrincipalName".into() })?;
+        let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalType".into(),
+            })?;
+        let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalName".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self { principal_type, principal_name })
+        Ok(Self {
+            principal_type,
+            principal_name,
+        })
     }
 }
-
