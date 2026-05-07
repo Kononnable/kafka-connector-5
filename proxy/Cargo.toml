@@ -1,0 +1,14 @@
+[package]
+name = "proxy"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+bytes = { workspace = true }
+protocol = { path = "../protocol" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2"
+
+[dev-dependencies]
