@@ -33,6 +33,12 @@ pub struct DescribeConfigsResourceResult {
     /// The synonyms for this configuration key.
     /// Available in version 1+.
     pub synonyms: Vec<DescribeConfigsSynonym>,
+    /// The configuration data type. Type can be one of the following values - BOOLEAN, STRING, INT, SHORT, LONG, DOUBLE, LIST, CLASS, PASSWORD
+    /// Available in version 3+.
+    pub config_type: i8,
+    /// The configuration documentation.
+    /// Available in version 3+.
+    pub documentation: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -71,12 +77,12 @@ impl ApiResponse for DescribeConfigsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(3)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)
         );
@@ -171,6 +177,16 @@ impl KafkaSerialize for DescribeConfigsResourceResult {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Synonyms".into(),
             })?;
+        self.config_type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ConfigType".into(),
+            })?;
+        self.documentation
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Documentation".into(),
+            })?;
         Ok(())
     }
 }
@@ -208,6 +224,15 @@ impl KafkaDeserialize for DescribeConfigsResourceResult {
                     message: "failed to decode Synonyms".into(),
                 }
             })?;
+        let config_type =
+            <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ConfigType".into(),
+            })?;
+        let documentation = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Documentation".into(),
+            }
+        })?;
         Ok(Self {
             name,
             value,
@@ -216,6 +241,8 @@ impl KafkaDeserialize for DescribeConfigsResourceResult {
             config_source,
             is_sensitive,
             synonyms,
+            config_type,
+            documentation,
         })
     }
 }

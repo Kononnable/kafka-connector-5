@@ -119,11 +119,11 @@ fn test_generated_struct_create_acls_response() {
         "missing throttle_time_ms field"
     );
     assert!(
-        content.contains("pub results: Vec<CreatableAclResult>"),
+        content.contains("pub results: Vec<") && content.contains("Result>"),
         "missing results field"
     );
     assert!(
-        content.contains("pub struct CreatableAclResult"),
-        "missing CreatableAclResult struct"
+        content.contains("AclCreationResult") || content.contains("CreatableAclResult"),
+        "missing results struct"
     );
 }

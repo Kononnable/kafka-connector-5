@@ -23,6 +23,9 @@ pub struct ListedGroup {
     pub group_id: String,
     /// The group protocol type.
     pub protocol_type: String,
+    /// The group state name.
+    /// Available in version 4+.
+    pub group_state: String,
 }
 
 impl ApiResponse for ListGroupsResponse {
@@ -34,12 +37,12 @@ impl ApiResponse for ListGroupsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+        ApiVersion::new(4)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
-            "version {} is not supported by {} (supported: 0-3)",
+            (0) <= version.0 && version.0 <= (4),
+            "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
         );
@@ -130,6 +133,11 @@ impl KafkaSerialize for ListedGroup {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ProtocolType".into(),
             })?;
+        self.group_state
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupState".into(),
+            })?;
         Ok(())
     }
 }
@@ -144,9 +152,14 @@ impl KafkaDeserialize for ListedGroup {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProtocolType".into(),
             })?;
+        let group_state =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode GroupState".into(),
+            })?;
         Ok(Self {
             group_id,
             protocol_type,
+            group_state,
         })
     }
 }

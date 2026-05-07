@@ -187,6 +187,22 @@ impl KafkaDeserialize for i64 {
     }
 }
 
+impl KafkaSerialize for f64 {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        buf.put_f64(*self);
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for f64 {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        if buf.remaining() < 8 {
+            return Err(DecodeError::InsufficientBytes);
+        }
+        Ok(buf.get_f64())
+    }
+}
+
 impl KafkaSerialize for u32 {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         buf.put_u32(*self);

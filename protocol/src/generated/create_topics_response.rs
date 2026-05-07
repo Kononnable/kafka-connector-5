@@ -49,7 +49,7 @@ pub struct CreatableTopicResult {
     /// Number of partitions of the topic.
     /// Available in version 5+.
     pub num_partitions: i32,
-    /// Replicator factor of the topic.
+    /// Replication factor of the topic.
     /// Available in version 5+.
     pub replication_factor: i16,
     /// Configuration of the topic.

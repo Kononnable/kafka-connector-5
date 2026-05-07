@@ -525,6 +525,7 @@ fn resolve_type(t: &str) -> String {
 
     match t {
         "int8" => "i8".into(),
+        "float64" => "f64".into(),
         "int16" => "i16".into(),
         "int32" => "i32".into(),
         "int64" => "i64".into(),

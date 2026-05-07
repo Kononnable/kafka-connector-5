@@ -14,7 +14,7 @@ pub struct AddPartitionsToTxnRequest {
     pub producer_id: i64,
     /// Current epoch associated with the producer id.
     pub producer_epoch: i16,
-    /// The partitions to add to the transation.
+    /// The partitions to add to the transaction.
     pub topics: Vec<AddPartitionsToTxnTopic>,
 }
 

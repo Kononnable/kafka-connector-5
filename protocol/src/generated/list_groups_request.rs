@@ -7,7 +7,11 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 // ListGroupsRequest
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ListGroupsRequest {}
+pub struct ListGroupsRequest {
+    /// The states of the groups we want to list. If empty all groups are returned with their state.
+    /// Available in version 4+.
+    pub states_filter: Vec<String>,
+}
 
 impl ApiRequest for ListGroupsRequest {
     type Response = crate::generated::ListGroupsResponse;
@@ -18,29 +22,49 @@ impl ApiRequest for ListGroupsRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+        ApiVersion::new(4)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
-            "version {} is not supported by {} (supported: 0-3)",
+            (0) <= version.0 && version.0 <= (4),
+            "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
         );
+        if (4) <= version.0 {
+            self.states_filter
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode StatesFilter"))?;
+        }
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
-        Ok(Self {})
+        let states_filter = if (4) <= version.0 {
+            <Vec<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode StatesFilter"))?
+        } else {
+            Default::default()
+        };
+        Ok(Self { states_filter })
     }
 }
 impl KafkaSerialize for ListGroupsRequest {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.states_filter
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode StatesFilter".into(),
+            })?;
         Ok(())
     }
 }
 
 impl KafkaDeserialize for ListGroupsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        Ok(Self {})
+        let states_filter =
+            <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode StatesFilter".into(),
+            })?;
+        Ok(Self { states_filter })
     }
 }
