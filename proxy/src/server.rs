@@ -181,48 +181,48 @@ use protocol::generated::{
 
 /// Try to deserialize and debug-log a request body.
 fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
-    let version = ApiVersion::new(version);
+    let ver = ApiVersion::new(version);
     let mut buf = Bytes::copy_from_slice(body);
     let result = match api_key {
-        0  => ProduceRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        1  => FetchRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        2  => ListOffsetsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        3  => MetadataRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        8  => OffsetCommitRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        9  => OffsetFetchRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        10 => FindCoordinatorRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        11 => JoinGroupRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        12 => HeartbeatRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        13 => LeaveGroupRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        14 => SyncGroupRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        15 => DescribeGroupsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        16 => ListGroupsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        17 => SaslHandshakeRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        18 => ApiVersionsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        19 => CreateTopicsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        20 => DeleteTopicsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        21 => DeleteRecordsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        22 => InitProducerIdRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        23 => OffsetForLeaderEpochRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        24 => AddPartitionsToTxnRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        25 => AddOffsetsToTxnRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        26 => EndTxnRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        27 => WriteTxnMarkersRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        28 => TxnOffsetCommitRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        29 => DescribeAclsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        30 => CreateAclsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        31 => DeleteAclsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        32 => DescribeConfigsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        33 => AlterConfigsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        34 => AlterReplicaLogDirsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        35 => DescribeLogDirsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        36 => SaslAuthenticateRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        37 => CreatePartitionsRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        38 => CreateDelegationTokenRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        39 => RenewDelegationTokenRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        40 => ExpireDelegationTokenRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        41 => DescribeDelegationTokenRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        42 => ElectLeadersRequest::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
+        0  => ProduceRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
+        1  => FetchRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
+        2  => ListOffsetsRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
+        3  => MetadataRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
+        8  => OffsetCommitRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        9  => OffsetFetchRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        10 => FindCoordinatorRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        11 => JoinGroupRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        12 => HeartbeatRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        13 => LeaveGroupRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        14 => SyncGroupRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        15 => DescribeGroupsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        16 => ListGroupsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        17 => SaslHandshakeRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        18 => ApiVersionsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        19 => CreateTopicsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        20 => DeleteTopicsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        21 => DeleteRecordsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        22 => InitProducerIdRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        23 => OffsetForLeaderEpochRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        24 => AddPartitionsToTxnRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        25 => AddOffsetsToTxnRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        26 => EndTxnRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        27 => WriteTxnMarkersRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        28 => TxnOffsetCommitRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        29 => DescribeAclsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        30 => CreateAclsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        31 => DeleteAclsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        32 => DescribeConfigsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        33 => AlterConfigsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        34 => AlterReplicaLogDirsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        35 => DescribeLogDirsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        36 => SaslAuthenticateRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        37 => CreatePartitionsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        38 => CreateDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        39 => RenewDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        40 => ExpireDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        41 => DescribeDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
+        42 => ElectLeadersRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
         _  => None,
     };
     match result {
@@ -233,52 +233,16 @@ fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
 
 /// Try to deserialize and debug-log a response body.
 fn log_response_body(api_key: i16, version: i16, body: &[u8]) {
-    let name = protocol::traits::ApiKey::new(api_key);
     let ver = ApiVersion::new(version);
     let mut buf = Bytes::copy_from_slice(body);
+    // Only MetadataResponse is safe to decode — other response types have
+    // misaligned body offsets that lead to OOM from huge varint values.
+    if api_key != 3 {
+        tracing::debug!("← RES body: {} bytes (undecoded)", body.len());
+        return;
+    }
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        match api_key {
-            0  => ProduceResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            1  => FetchResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            2  => ListOffsetsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            3  => MetadataResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            8  => OffsetCommitResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            9  => OffsetFetchResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            10 => FindCoordinatorResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            11 => JoinGroupResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            12 => HeartbeatResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            13 => LeaveGroupResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            14 => SyncGroupResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            15 => DescribeGroupsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            16 => ListGroupsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            17 => SaslHandshakeResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            18 => ApiVersionsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            19 => CreateTopicsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            20 => DeleteTopicsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            21 => DeleteRecordsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            22 => InitProducerIdResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            23 => OffsetForLeaderEpochResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            24 => AddPartitionsToTxnResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            25 => AddOffsetsToTxnResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            26 => EndTxnResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            27 => WriteTxnMarkersResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            28 => TxnOffsetCommitResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            29 => DescribeAclsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            30 => CreateAclsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            31 => DeleteAclsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            32 => DescribeConfigsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            33 => AlterConfigsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            34 => AlterReplicaLogDirsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            35 => DescribeLogDirsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            36 => SaslAuthenticateResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            37 => CreatePartitionsResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            38 => CreateDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            39 => RenewDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            40 => ExpireDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            41 => DescribeDelegationTokenResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            42 => ElectLeadersResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-            _  => None,
-        }
+        MetadataResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}"))
     }));
     match result {
         Ok(Some(s)) => tracing::info!("← RES body: {s}"),
@@ -316,7 +280,7 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
                 parsed.size,
             );
             let frame_body = &remaining[4..consumed];
-            let is_flex = hdr.api_version >= 9;
+            let is_flex = frame::is_flexible_api(hdr.api_key, hdr.api_version);
             let body_off = frame::request_body_offset(frame_body, is_flex);
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
                 || log_request_body(hdr.api_key, hdr.api_version, &frame_body[body_off..]),
@@ -372,7 +336,9 @@ async fn inspect_and_rewrite_responses(
                     );
                     // Log the deserialized response body
                     let frame_body = &remaining[4..consumed];
-                    let is_flex = completion.api_version >= 9;
+                    // ApiVersionsResponse (api_key=18) always uses v0 header (KIP-511)
+                    let is_flex = completion.api_key != 18
+                        && frame::is_flexible_api(completion.api_key, completion.api_version);
                     let body_off = frame::response_body_offset(frame_body, is_flex);
                     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
                         || log_response_body(completion.api_key, completion.api_version, &frame_body[body_off..]),
