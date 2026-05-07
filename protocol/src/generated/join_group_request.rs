@@ -17,6 +17,9 @@ pub struct JoinGroupRequest {
     pub rebalance_timeout_ms: i32,
     /// The member id assigned by the group coordinator.
     pub member_id: String,
+    /// The unique identifier of the consumer instance provided by end user.
+    /// Available in version 5+.
+    pub group_instance_id: Option<String>,
     /// The unique name the for class of protocols implemented by the group we want to join.
     pub protocol_type: String,
     /// The list of protocols that the member supports.
@@ -40,12 +43,12 @@ impl ApiRequest for JoinGroupRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(4)
+        ApiVersion::new(5)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
-            "version {} is not supported by {} (supported: 0-4)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
@@ -63,6 +66,11 @@ impl ApiRequest for JoinGroupRequest {
         self.member_id
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        if (5) <= version.0 {
+            self.group_instance_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        }
         self.protocol_type
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
@@ -84,6 +92,12 @@ impl ApiRequest for JoinGroupRequest {
         };
         let member_id = <String as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
+        let group_instance_id = if (5) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode GroupInstanceId"))?
+        } else {
+            Default::default()
+        };
         let protocol_type = <String as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ProtocolType"))?;
         let protocols = <Vec<JoinGroupRequestProtocol> as KafkaDeserialize>::decode(buf)
@@ -93,6 +107,7 @@ impl ApiRequest for JoinGroupRequest {
             session_timeout_ms,
             rebalance_timeout_ms,
             member_id,
+            group_instance_id,
             protocol_type,
             protocols,
         })
@@ -119,6 +134,11 @@ impl KafkaSerialize for JoinGroupRequest {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MemberId".into(),
+            })?;
+        self.group_instance_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupInstanceId".into(),
             })?;
         self.protocol_type
             .encode(buf)
@@ -152,6 +172,12 @@ impl KafkaDeserialize for JoinGroupRequest {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        let group_instance_id =
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupInstanceId".into(),
+                }
+            })?;
         let protocol_type =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProtocolType".into(),
@@ -167,6 +193,7 @@ impl KafkaDeserialize for JoinGroupRequest {
             session_timeout_ms,
             rebalance_timeout_ms,
             member_id,
+            group_instance_id,
             protocol_type,
             protocols,
         })

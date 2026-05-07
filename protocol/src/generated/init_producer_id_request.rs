@@ -10,7 +10,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 pub struct InitProducerIdRequest {
     /// The transactional id, or null if the producer is not transactional.
     pub transactional_id: Option<String>,
-    /// The time in ms to wait for before aborting idle transactions sent by this producer.
+    /// The time in ms to wait for before aborting idle transactions sent by this producer. This is only relevant if a TransactionalId has been defined.
     pub transaction_timeout_ms: i32,
 }
 

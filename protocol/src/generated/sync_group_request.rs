@@ -14,6 +14,9 @@ pub struct SyncGroupRequest {
     pub generation_id: i32,
     /// The member ID assigned by the group.
     pub member_id: String,
+    /// The unique identifier of the consumer instance provided by end user.
+    /// Available in version 3+.
+    pub group_instance_id: Option<String>,
     /// Each assignment.
     pub assignments: Vec<SyncGroupRequestAssignment>,
 }
@@ -35,12 +38,12 @@ impl ApiRequest for SyncGroupRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(3)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)
         );
@@ -53,6 +56,11 @@ impl ApiRequest for SyncGroupRequest {
         self.member_id
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        if (3) <= version.0 {
+            self.group_instance_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        }
         self.assignments
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode Assignments"))?;
@@ -65,12 +73,19 @@ impl ApiRequest for SyncGroupRequest {
             .map_err(|_| SerializationError::Decode("failed to decode GenerationId"))?;
         let member_id = <String as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
+        let group_instance_id = if (3) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode GroupInstanceId"))?
+        } else {
+            Default::default()
+        };
         let assignments = <Vec<SyncGroupRequestAssignment> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Assignments"))?;
         Ok(Self {
             group_id,
             generation_id,
             member_id,
+            group_instance_id,
             assignments,
         })
     }
@@ -91,6 +106,11 @@ impl KafkaSerialize for SyncGroupRequest {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MemberId".into(),
+            })?;
+        self.group_instance_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupInstanceId".into(),
             })?;
         self.assignments
             .encode(buf)
@@ -115,6 +135,12 @@ impl KafkaDeserialize for SyncGroupRequest {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        let group_instance_id =
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupInstanceId".into(),
+                }
+            })?;
         let assignments = <Vec<SyncGroupRequestAssignment> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Assignments".into(),
@@ -123,6 +149,7 @@ impl KafkaDeserialize for SyncGroupRequest {
             group_id,
             generation_id,
             member_id,
+            group_instance_id,
             assignments,
         })
     }

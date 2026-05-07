@@ -21,6 +21,9 @@ pub struct MetadataResponse {
     pub controller_id: i32,
     /// Each topic in the response.
     pub topics: Vec<MetadataResponseTopic>,
+    /// 32-bit bitfield to represent authorized operations for this cluster.
+    /// Available in version 8+.
+    pub cluster_authorized_operations: i32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -67,6 +70,9 @@ pub struct MetadataResponseTopic {
     pub is_internal: bool,
     /// Each partition in the topic.
     pub partitions: Vec<MetadataResponsePartition>,
+    /// 32-bit bitfield to represent authorized operations for this topic.
+    /// Available in version 8+.
+    pub topic_authorized_operations: i32,
 }
 
 impl ApiResponse for MetadataResponse {
@@ -78,12 +84,12 @@ impl ApiResponse for MetadataResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(7)
+        ApiVersion::new(8)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (7),
-            "version {} is not supported by {} (supported: 0-7)",
+            (0) <= version.0 && version.0 <= (8),
+            "version {} is not supported by {} (supported: 0-8)",
             version.0,
             stringify!(Self)
         );
@@ -108,6 +114,13 @@ impl ApiResponse for MetadataResponse {
         self.topics
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        if (8) <= version.0 {
+            self.cluster_authorized_operations
+                .encode(buf)
+                .map_err(|_| {
+                    SerializationError::Encode("failed to encode ClusterAuthorizedOperations")
+                })?;
+        }
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
@@ -133,12 +146,20 @@ impl ApiResponse for MetadataResponse {
         };
         let topics = <Vec<MetadataResponseTopic> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let cluster_authorized_operations = if (8) <= version.0 {
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| {
+                SerializationError::Decode("failed to decode ClusterAuthorizedOperations")
+            })?
+        } else {
+            Default::default()
+        };
         Ok(Self {
             throttle_time_ms,
             brokers,
             cluster_id,
             controller_id,
             topics,
+            cluster_authorized_operations,
         })
     }
 }
@@ -168,6 +189,11 @@ impl KafkaSerialize for MetadataResponse {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topics".into(),
+            })?;
+        self.cluster_authorized_operations
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClusterAuthorizedOperations".into(),
             })?;
         Ok(())
     }
@@ -200,12 +226,17 @@ impl KafkaDeserialize for MetadataResponse {
                     message: "failed to decode Topics".into(),
                 }
             })?;
+        let cluster_authorized_operations =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ClusterAuthorizedOperations".into(),
+            })?;
         Ok(Self {
             throttle_time_ms,
             brokers,
             cluster_id,
             controller_id,
             topics,
+            cluster_authorized_operations,
         })
     }
 }
@@ -368,6 +399,11 @@ impl KafkaSerialize for MetadataResponseTopic {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Partitions".into(),
             })?;
+        self.topic_authorized_operations
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicAuthorizedOperations".into(),
+            })?;
         Ok(())
     }
 }
@@ -390,11 +426,16 @@ impl KafkaDeserialize for MetadataResponseTopic {
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
             })?;
+        let topic_authorized_operations =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TopicAuthorizedOperations".into(),
+            })?;
         Ok(Self {
             error_code,
             name,
             is_internal,
             partitions,
+            topic_authorized_operations,
         })
     }
 }

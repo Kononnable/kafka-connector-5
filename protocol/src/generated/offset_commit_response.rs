@@ -40,12 +40,12 @@ impl ApiResponse for OffsetCommitResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(6)
+        ApiVersion::new(7)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
-            "version {} is not supported by {} (supported: 0-6)",
+            (0) <= version.0 && version.0 <= (7),
+            "version {} is not supported by {} (supported: 0-7)",
             version.0,
             stringify!(Self)
         );

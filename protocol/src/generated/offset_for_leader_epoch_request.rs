@@ -8,6 +8,9 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OffsetForLeaderEpochRequest {
+    /// The broker ID of the follower, of -1 if this request is from a consumer.
+    /// Available in version 3+.
+    pub replica_id: i32,
     /// Each topic to get offsets for.
     pub topics: Vec<OffsetForLeaderTopic>,
 }
@@ -40,28 +43,44 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(3)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)
         );
+        if (3) <= version.0 {
+            self.replica_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode ReplicaId"))?;
+        }
         self.topics
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         Ok(())
     }
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+        let replica_id = if (3) <= version.0 {
+            <i32 as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode ReplicaId"))?
+        } else {
+            Default::default()
+        };
         let topics = <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
-        Ok(Self { topics })
+        Ok(Self { replica_id, topics })
     }
 }
 impl KafkaSerialize for OffsetForLeaderEpochRequest {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.replica_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ReplicaId".into(),
+            })?;
         self.topics
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -73,13 +92,17 @@ impl KafkaSerialize for OffsetForLeaderEpochRequest {
 
 impl KafkaDeserialize for OffsetForLeaderEpochRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let replica_id =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ReplicaId".into(),
+            })?;
         let topics =
             <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Topics".into(),
                 }
             })?;
-        Ok(Self { topics })
+        Ok(Self { replica_id, topics })
     }
 }
 

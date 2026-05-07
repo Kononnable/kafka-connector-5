@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Represents a Kafka protocol message structure
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct MessageStruct {
     /// The API key for this message
     #[serde(rename = "apiKey", default)]
@@ -37,6 +38,7 @@ pub enum MessageType {
 
 /// Represents a field in a Kafka message
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Field {
     /// The name of the field
     pub name: String,
@@ -58,7 +60,7 @@ pub struct Field {
 
     /// The default value for this field (if any)
     #[serde(default)]
-    pub default: Option<String>,
+    pub default: Option<FieldDefault>,
 
     /// About text for documentation
     #[serde(default)]
@@ -67,6 +69,10 @@ pub struct Field {
     /// Whether this field is a map key
     #[serde(rename = "mapKey", default)]
     pub map_key: bool,
+
+    /// The entity type (e.g. "transactionalId")
+    #[serde(rename = "entityType", default)]
+    pub entity_type: Option<String>,
 
     /// Nested fields for complex types (like arrays)
     #[serde(default)]
@@ -423,6 +429,14 @@ impl ErrorCode {
     }
 }
 
+/// Default value for a field - either a string literal or an integer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum FieldDefault {
+    Str(String),
+    Int(i64),
+}
+
 impl Field {
     /// Create a new field
     pub fn new(name: String, field_type: String, versions: String) -> Self {
@@ -435,6 +449,7 @@ impl Field {
             default: None,
             about: None,
             map_key: false,
+            entity_type: None,
             fields: Vec::new(),
         }
     }

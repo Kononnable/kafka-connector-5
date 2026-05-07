@@ -48,6 +48,9 @@ pub struct FetchablePartitionResponse {
     /// The aborted transactions.
     /// Available in version 4+.
     pub aborted: Option<Vec<AbortedTransaction>>,
+    /// The preferred read replica for the consumer to use on its next fetch request
+    /// Available in version 11+.
+    pub preferred_read_replica: i32,
     /// The record data.
     pub records: Option<Vec<u8>>,
 }
@@ -69,12 +72,12 @@ impl ApiResponse for FetchResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(10)
+        ApiVersion::new(11)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (10),
-            "version {} is not supported by {} (supported: 0-10)",
+            (0) <= version.0 && version.0 <= (11),
+            "version {} is not supported by {} (supported: 0-11)",
             version.0,
             stringify!(Self)
         );
@@ -247,6 +250,11 @@ impl KafkaSerialize for FetchablePartitionResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Aborted".into(),
             })?;
+        self.preferred_read_replica
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PreferredReadReplica".into(),
+            })?;
         self.records
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -284,6 +292,10 @@ impl KafkaDeserialize for FetchablePartitionResponse {
                     message: "failed to decode Aborted".into(),
                 }
             })?;
+        let preferred_read_replica =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PreferredReadReplica".into(),
+            })?;
         let records = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Records".into(),
@@ -296,6 +308,7 @@ impl KafkaDeserialize for FetchablePartitionResponse {
             last_stable_offset,
             log_start_offset,
             aborted,
+            preferred_read_replica,
             records,
         })
     }

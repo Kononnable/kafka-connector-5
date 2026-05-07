@@ -16,6 +16,9 @@ pub struct OffsetCommitRequest {
     /// The member ID assigned by the group coordinator.
     /// Available in version 1+.
     pub member_id: String,
+    /// The unique identifier of the consumer instance provided by end user.
+    /// Available in version 7+.
+    pub group_instance_id: Option<String>,
     /// The time period in ms to retain the offset.
     /// Available in version 2-4.
     pub retention_time_ms: i64,
@@ -56,12 +59,12 @@ impl ApiRequest for OffsetCommitRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(6)
+        ApiVersion::new(7)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
-            "version {} is not supported by {} (supported: 0-6)",
+            (0) <= version.0 && version.0 <= (7),
+            "version {} is not supported by {} (supported: 0-7)",
             version.0,
             stringify!(Self)
         );
@@ -77,6 +80,11 @@ impl ApiRequest for OffsetCommitRequest {
             self.member_id
                 .encode(buf)
                 .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        }
+        if (7) <= version.0 {
+            self.group_instance_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
         }
         if (2) <= version.0 && version.0 <= (4) {
             self.retention_time_ms
@@ -103,6 +111,12 @@ impl ApiRequest for OffsetCommitRequest {
         } else {
             Default::default()
         };
+        let group_instance_id = if (7) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode GroupInstanceId"))?
+        } else {
+            Default::default()
+        };
         let retention_time_ms = if (2) <= version.0 && version.0 <= (4) {
             <i64 as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode RetentionTimeMs"))?
@@ -115,6 +129,7 @@ impl ApiRequest for OffsetCommitRequest {
             group_id,
             generation_id,
             member_id,
+            group_instance_id,
             retention_time_ms,
             topics,
         })
@@ -136,6 +151,11 @@ impl KafkaSerialize for OffsetCommitRequest {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MemberId".into(),
+            })?;
+        self.group_instance_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupInstanceId".into(),
             })?;
         self.retention_time_ms
             .encode(buf)
@@ -165,6 +185,12 @@ impl KafkaDeserialize for OffsetCommitRequest {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        let group_instance_id =
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupInstanceId".into(),
+                }
+            })?;
         let retention_time_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RetentionTimeMs".into(),
@@ -179,6 +205,7 @@ impl KafkaDeserialize for OffsetCommitRequest {
             group_id,
             generation_id,
             member_id,
+            group_instance_id,
             retention_time_ms,
             topics,
         })

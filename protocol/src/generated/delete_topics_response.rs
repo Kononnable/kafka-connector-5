@@ -11,7 +11,7 @@ pub struct DeleteTopicsResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     /// Available in version 1+.
     pub throttle_time_ms: i32,
-    /// The results for each topic.
+    /// The results for each topic we tried to delete.
     pub responses: Vec<DeletableTopicResult>,
 }
 
@@ -44,7 +44,7 @@ impl ApiResponse for DeleteTopicsResponse {
         if (1) <= version.0 {
             self.throttle_time_ms
                 .encode(buf)
-                .map_err(|_| SerializationError::Encode("failed to encode throttleTimeMs"))?;
+                .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
         }
         self.responses
             .encode(buf)
@@ -54,7 +54,7 @@ impl ApiResponse for DeleteTopicsResponse {
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
             <i32 as KafkaDeserialize>::decode(buf)
-                .map_err(|_| SerializationError::Decode("failed to decode throttleTimeMs"))?
+                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
         } else {
             Default::default()
         };
@@ -71,7 +71,7 @@ impl KafkaSerialize for DeleteTopicsResponse {
         self.throttle_time_ms
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode throttleTimeMs".into(),
+                message: "failed to encode ThrottleTimeMs".into(),
             })?;
         self.responses
             .encode(buf)
@@ -86,7 +86,7 @@ impl KafkaDeserialize for DeleteTopicsResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode throttleTimeMs".into(),
+                message: "failed to decode ThrottleTimeMs".into(),
             })?;
         let responses =
             <Vec<DeletableTopicResult> as KafkaDeserialize>::decode(buf).map_err(|_| {

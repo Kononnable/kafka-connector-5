@@ -16,7 +16,7 @@ pub struct OffsetFetchRequest {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OffsetFetchRequestTopic {
-    /// Name. Type: string.
+    /// The topic name.
     pub name: String,
     /// The partition indexes we would like to fetch offsets for.
     pub partition_indexes: Vec<i32>,

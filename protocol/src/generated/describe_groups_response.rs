@@ -29,6 +29,9 @@ pub struct DescribedGroup {
     pub protocol_data: String,
     /// The group members.
     pub members: Vec<DescribedGroupMember>,
+    /// 32-bit bitfield to represent authorized operations for this group.
+    /// Available in version 3+.
+    pub authorized_operations: i32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -54,12 +57,12 @@ impl ApiResponse for DescribeGroupsResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+        ApiVersion::new(3)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
-            "version {} is not supported by {} (supported: 0-2)",
+            (0) <= version.0 && version.0 <= (3),
+            "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)
         );
@@ -154,6 +157,11 @@ impl KafkaSerialize for DescribedGroup {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Members".into(),
             })?;
+        self.authorized_operations
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode AuthorizedOperations".into(),
+            })?;
         Ok(())
     }
 }
@@ -186,6 +194,10 @@ impl KafkaDeserialize for DescribedGroup {
                     message: "failed to decode Members".into(),
                 }
             })?;
+        let authorized_operations =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode AuthorizedOperations".into(),
+            })?;
         Ok(Self {
             error_code,
             group_id,
@@ -193,6 +205,7 @@ impl KafkaDeserialize for DescribedGroup {
             protocol_type,
             protocol_data,
             members,
+            authorized_operations,
         })
     }
 }

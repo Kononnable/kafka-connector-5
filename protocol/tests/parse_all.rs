@@ -1,11 +1,10 @@
 use std::path::Path;
 
-/// Verify all 90 JSON files parse successfully
 #[test]
-fn test_all_90_json_files_parse() {
+fn test_all_json_files_parse() {
     let path = Path::new("messages/");
     let mut total = 0u32;
-    let mut parsed = 0u32;
+    let mut failed = Vec::new();
 
     for entry in std::fs::read_dir(path).unwrap() {
         let entry = entry.unwrap();
@@ -21,18 +20,19 @@ fn test_all_90_json_files_parse() {
 
             let result: Result<protocol::generator::structs::MessageStruct, _> =
                 serde_json::from_str(&cleaned);
-            assert!(
-                result.is_ok(),
-                "Failed to parse {:?}: {}",
-                path.file_name().unwrap(),
-                result.unwrap_err()
-            );
-            parsed += 1;
-            dbg!(&result);
+            if let Err(e) = result {
+                failed.push((path.file_name().unwrap().to_owned(), e));
+            }
         }
     }
 
-    assert_eq!(total, 90, "Expected 90 JSON files");
-    assert_eq!(parsed, 90, "All 90 JSON files should parse successfully");
-    println!("All {} JSON files parsed successfully!", parsed);
+    for (name, err) in &failed {
+        eprintln!("FAILED: {:?}: {err}", name);
+    }
+    assert!(
+        failed.is_empty(),
+        "{} of {total} files failed to parse",
+        failed.len()
+    );
+    println!("All {total} JSON files parsed successfully!");
 }

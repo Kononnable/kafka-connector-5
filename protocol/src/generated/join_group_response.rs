@@ -29,6 +29,9 @@ pub struct JoinGroupResponse {
 pub struct JoinGroupResponseMember {
     /// The group member ID.
     pub member_id: String,
+    /// The unique identifier of the consumer instance provided by end user.
+    /// Available in version 5+.
+    pub group_instance_id: Option<String>,
     /// The group member metadata.
     pub metadata: Vec<u8>,
 }
@@ -42,12 +45,12 @@ impl ApiResponse for JoinGroupResponse {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(4)
+        ApiVersion::new(5)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
-            "version {} is not supported by {} (supported: 0-4)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
@@ -198,6 +201,11 @@ impl KafkaSerialize for JoinGroupResponseMember {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MemberId".into(),
             })?;
+        self.group_instance_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode GroupInstanceId".into(),
+            })?;
         self.metadata
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -213,12 +221,19 @@ impl KafkaDeserialize for JoinGroupResponseMember {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        let group_instance_id =
+            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupInstanceId".into(),
+                }
+            })?;
         let metadata =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Metadata".into(),
             })?;
         Ok(Self {
             member_id,
+            group_instance_id,
             metadata,
         })
     }

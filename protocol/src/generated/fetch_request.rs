@@ -31,6 +31,9 @@ pub struct FetchRequest {
     /// In an incremental fetch request, the partitions to remove.
     /// Available in version 7+.
     pub forgotten: Vec<ForgottenTopic>,
+    /// Rack ID of the consumer making this request
+    /// Available in version 11+.
+    pub rack_id: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -76,12 +79,12 @@ impl ApiRequest for FetchRequest {
         ApiVersion::new(0)
     }
     fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(10)
+        ApiVersion::new(11)
     }
     fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (10),
-            "version {} is not supported by {} (supported: 0-10)",
+            (0) <= version.0 && version.0 <= (11),
+            "version {} is not supported by {} (supported: 0-11)",
             version.0,
             stringify!(Self)
         );
@@ -121,6 +124,11 @@ impl ApiRequest for FetchRequest {
             self.forgotten
                 .encode(buf)
                 .map_err(|_| SerializationError::Encode("failed to encode Forgotten"))?;
+        }
+        if (11) <= version.0 {
+            self.rack_id
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
         }
         Ok(())
     }
@@ -163,6 +171,12 @@ impl ApiRequest for FetchRequest {
         } else {
             Default::default()
         };
+        let rack_id = if (11) <= version.0 {
+            <String as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode RackId"))?
+        } else {
+            Default::default()
+        };
         Ok(Self {
             replica_id,
             max_wait,
@@ -173,6 +187,7 @@ impl ApiRequest for FetchRequest {
             epoch,
             topics,
             forgotten,
+            rack_id,
         })
     }
 }
@@ -223,6 +238,11 @@ impl KafkaSerialize for FetchRequest {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Forgotten".into(),
             })?;
+        self.rack_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode RackId".into(),
+            })?;
         Ok(())
     }
 }
@@ -266,6 +286,10 @@ impl KafkaDeserialize for FetchRequest {
                 message: "failed to decode Forgotten".into(),
             }
         })?;
+        let rack_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode RackId".into(),
+            })?;
         Ok(Self {
             replica_id,
             max_wait,
@@ -276,6 +300,7 @@ impl KafkaDeserialize for FetchRequest {
             epoch,
             topics,
             forgotten,
+            rack_id,
         })
     }
 }

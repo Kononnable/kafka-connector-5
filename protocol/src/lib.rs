@@ -8,5 +8,5 @@ pub mod generator;
 pub mod protocol;
 pub mod traits;
 
-pub use generator::structs::{ErrorCode, Field, MessageStruct, MessageType};
+pub use generator::structs::{ErrorCode, Field, FieldDefault, MessageStruct, MessageType};
 pub use traits::*;

@@ -55,7 +55,7 @@ pub struct UpdateMetadataPartitionState {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct UpdateMetadataRequestBroker {
-    /// Id. Type: int32.
+    /// The broker id.
     pub id: i32,
     /// The broker hostname.
     /// Available in version 0.
