@@ -29,6 +29,10 @@ pub struct MessageStruct {
     #[serde(rename = "commonStructs", default)]
     pub common_structs: Vec<Field>,
 
+    /// Listeners that this message is allowed on
+    #[serde(default)]
+    pub listeners: Vec<String>,
+
     /// Fields in this message
     pub fields: Vec<Field>,
 }
@@ -70,7 +74,10 @@ pub struct Field {
     pub flexible_versions: Option<String>,
 
     /// Whether this field is ignorable
-    #[serde(default = "default_true")]
+    #[serde(
+        default = "default_true",
+        deserialize_with = "deserialize_bool_or_string"
+    )]
     pub ignorable: bool,
 
     /// The default value for this field (if any)
@@ -108,6 +115,28 @@ pub struct Field {
 
 fn default_true() -> bool {
     true
+}
+
+/// Deserialize a field that can be either a boolean or a string like "true".
+fn deserialize_bool_or_string<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de;
+    struct BoolOrString;
+    impl<'de> de::Visitor<'de> for BoolOrString {
+        type Value = bool;
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("a boolean or a string")
+        }
+        fn visit_bool<E: de::Error>(self, v: bool) -> Result<bool, E> {
+            Ok(v)
+        }
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<bool, E> {
+            Ok(v == "true")
+        }
+    }
+    deserializer.deserialize_any(BoolOrString)
 }
 
 /// Kafka protocol error codes.
@@ -501,6 +530,7 @@ impl MessageStruct {
             valid_versions,
             flexible_versions: None,
             common_structs: Vec::new(),
+            listeners: Vec::new(),
             fields: Vec::new(),
         }
     }

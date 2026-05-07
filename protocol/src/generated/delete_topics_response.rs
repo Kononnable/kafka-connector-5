@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -18,7 +18,10 @@ pub struct DeleteTopicsResponse {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeletableTopicResult {
     /// The topic name
-    pub name: String,
+    pub name: Option<String>,
+    /// the unique topic ID
+    /// Available in version 6+.
+    pub topic_id: [u8; 16],
     /// The deletion error, or 0 if the deletion succeeded.
     pub error_code: i16,
     /// The error message, or null if there was no error.
@@ -31,16 +34,20 @@ impl ApiResponse for DeleteTopicsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(20)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(5)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(6)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
-            "version {} is not supported by {} (supported: 0-5)",
+            (0) <= version.0 && version.0 <= (6),
+            "version {} is not supported by {} (supported: 0-6)",
             version.0,
             stringify!(Self)
         );
@@ -54,7 +61,10 @@ impl ApiResponse for DeleteTopicsResponse {
             .map_err(|_| SerializationError::Encode("failed to encode Responses"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
             <i32 as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
@@ -111,6 +121,11 @@ impl KafkaSerialize for DeletableTopicResult {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
+        self.topic_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
         self.error_code
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -127,9 +142,14 @@ impl KafkaSerialize for DeletableTopicResult {
 
 impl KafkaDeserialize for DeletableTopicResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+        let name = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
                 message: "failed to decode Name".into(),
+            }
+        })?;
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TopicId".into(),
             })?;
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -142,6 +162,7 @@ impl KafkaDeserialize for DeletableTopicResult {
         })?;
         Ok(Self {
             name,
+            topic_id,
             error_code,
             error_message,
         })

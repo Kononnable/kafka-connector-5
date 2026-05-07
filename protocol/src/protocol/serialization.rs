@@ -219,6 +219,22 @@ impl KafkaDeserialize for u32 {
     }
 }
 
+impl KafkaSerialize for u16 {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        buf.put_u16(*self);
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for u16 {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        if buf.remaining() < 2 {
+            return Err(DecodeError::InsufficientBytes);
+        }
+        Ok(buf.get_u16())
+    }
+}
+
 // ---------------------------------------------------------------------------
 // bool → int8 (0 / 1)
 // ---------------------------------------------------------------------------

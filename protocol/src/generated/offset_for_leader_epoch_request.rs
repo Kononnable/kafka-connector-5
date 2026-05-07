@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -18,8 +18,8 @@ pub struct OffsetForLeaderEpochRequest {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OffsetForLeaderPartition {
     /// The partition index.
-    pub partition_index: i32,
-    /// An epoch used to fence consumers/replicas with old metadata.  If the epoch provided by the client is larger than the current epoch known to the broker, then the UNKNOWN_LEADER_EPOCH error code will be returned. If the provided epoch is smaller, then the FENCED_LEADER_EPOCH error code will be returned.
+    pub partition: i32,
+    /// An epoch used to fence consumers/replicas with old metadata. If the epoch provided by the client is larger than the current epoch known to the broker, then the UNKNOWN_LEADER_EPOCH error code will be returned. If the provided epoch is smaller, then the FENCED_LEADER_EPOCH error code will be returned.
     /// Available in version 2+.
     pub current_leader_epoch: i32,
     /// The epoch to look up an offset for.
@@ -29,7 +29,7 @@ pub struct OffsetForLeaderPartition {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OffsetForLeaderTopic {
     /// The topic name.
-    pub name: String,
+    pub topic: String,
     /// Each partition to get offsets for.
     pub partitions: Vec<OffsetForLeaderPartition>,
 }
@@ -39,16 +39,20 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(23)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(4)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
-            "version {} is not supported by {} (supported: 0-3)",
+            (0) <= version.0 && version.0 <= (4),
+            "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
         );
@@ -62,7 +66,10 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let replica_id = if (3) <= version.0 {
             <i32 as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode ReplicaId"))?
@@ -108,10 +115,10 @@ impl KafkaDeserialize for OffsetForLeaderEpochRequest {
 
 impl KafkaSerialize for OffsetForLeaderPartition {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_index
+        self.partition
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Partition".into(),
             })?;
         self.current_leader_epoch
             .encode(buf)
@@ -129,9 +136,9 @@ impl KafkaSerialize for OffsetForLeaderPartition {
 
 impl KafkaDeserialize for OffsetForLeaderPartition {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition_index =
+        let partition =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
+                message: "failed to decode Partition".into(),
             })?;
         let current_leader_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -142,7 +149,7 @@ impl KafkaDeserialize for OffsetForLeaderPartition {
                 message: "failed to decode LeaderEpoch".into(),
             })?;
         Ok(Self {
-            partition_index,
+            partition,
             current_leader_epoch,
             leader_epoch,
         })
@@ -151,10 +158,10 @@ impl KafkaDeserialize for OffsetForLeaderPartition {
 
 impl KafkaSerialize for OffsetForLeaderTopic {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
+        self.topic
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+                message: "failed to encode Topic".into(),
             })?;
         self.partitions
             .encode(buf)
@@ -167,9 +174,9 @@ impl KafkaSerialize for OffsetForLeaderTopic {
 
 impl KafkaDeserialize for OffsetForLeaderTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
+        let topic =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+                message: "failed to decode Topic".into(),
             })?;
         let partitions =
             <Vec<OffsetForLeaderPartition> as KafkaDeserialize>::decode(buf).map_err(|_| {
@@ -177,6 +184,6 @@ impl KafkaDeserialize for OffsetForLeaderTopic {
                     message: "failed to decode Partitions".into(),
                 }
             })?;
-        Ok(Self { name, partitions })
+        Ok(Self { topic, partitions })
     }
 }

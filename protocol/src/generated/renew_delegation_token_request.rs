@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -19,13 +19,17 @@ impl ApiRequest for RenewDelegationTokenRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(39)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(2)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (2),
             "version {} is not supported by {} (supported: 0-2)",
@@ -40,7 +44,10 @@ impl ApiRequest for RenewDelegationTokenRequest {
             .map_err(|_| SerializationError::Encode("failed to encode RenewPeriodMs"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Hmac"))?;
         let renew_period_ms = <i64 as KafkaDeserialize>::decode(buf)

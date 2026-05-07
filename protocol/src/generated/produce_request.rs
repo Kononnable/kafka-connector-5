@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -16,13 +16,13 @@ pub struct ProduceRequest {
     /// The timeout to await a response in miliseconds.
     pub timeout_ms: i32,
     /// Each topic to produce to.
-    pub topics: Vec<TopicProduceData>,
+    pub topic_data: Vec<TopicProduceData>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PartitionProduceData {
     /// The partition index.
-    pub partition_index: i32,
+    pub index: i32,
     /// The record data to be produced.
     pub records: Option<Vec<u8>>,
 }
@@ -32,7 +32,7 @@ pub struct TopicProduceData {
     /// The topic name.
     pub name: String,
     /// Each partition to produce to.
-    pub partitions: Vec<PartitionProduceData>,
+    pub partition_data: Vec<PartitionProduceData>,
 }
 
 impl ApiRequest for ProduceRequest {
@@ -40,16 +40,20 @@ impl ApiRequest for ProduceRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(0)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(8)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(9)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (8),
-            "version {} is not supported by {} (supported: 0-8)",
+            (0) <= version.0 && version.0 <= (9),
+            "version {} is not supported by {} (supported: 0-9)",
             version.0,
             stringify!(Self)
         );
@@ -64,12 +68,15 @@ impl ApiRequest for ProduceRequest {
         self.timeout_ms
             .encode(buf)
             .map_err(|_| SerializationError::Encode("failed to encode TimeoutMs"))?;
-        self.topics
+        self.topic_data
             .encode(buf)
-            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+            .map_err(|_| SerializationError::Encode("failed to encode TopicData"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let transactional_id = if (3) <= version.0 {
             <Option<String> as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode TransactionalId"))?
@@ -80,13 +87,13 @@ impl ApiRequest for ProduceRequest {
             .map_err(|_| SerializationError::Decode("failed to decode Acks"))?;
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode TimeoutMs"))?;
-        let topics = <Vec<TopicProduceData> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topic_data = <Vec<TopicProduceData> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode TopicData"))?;
         Ok(Self {
             transactional_id,
             acks,
             timeout_ms,
-            topics,
+            topic_data,
         })
     }
 }
@@ -107,10 +114,10 @@ impl KafkaSerialize for ProduceRequest {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TimeoutMs".into(),
             })?;
-        self.topics
+        self.topic_data
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
+                message: "failed to encode TopicData".into(),
             })?;
         Ok(())
     }
@@ -130,26 +137,27 @@ impl KafkaDeserialize for ProduceRequest {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TimeoutMs".into(),
             })?;
-        let topics = <Vec<TopicProduceData> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            }
-        })?;
+        let topic_data =
+            <Vec<TopicProduceData> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicData".into(),
+                }
+            })?;
         Ok(Self {
             transactional_id,
             acks,
             timeout_ms,
-            topics,
+            topic_data,
         })
     }
 }
 
 impl KafkaSerialize for PartitionProduceData {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_index
+        self.index
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Index".into(),
             })?;
         self.records
             .encode(buf)
@@ -162,19 +170,15 @@ impl KafkaSerialize for PartitionProduceData {
 
 impl KafkaDeserialize for PartitionProduceData {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition_index =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
+        let index = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Index".into(),
+        })?;
         let records = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Records".into(),
             }
         })?;
-        Ok(Self {
-            partition_index,
-            records,
-        })
+        Ok(Self { index, records })
     }
 }
 
@@ -185,10 +189,10 @@ impl KafkaSerialize for TopicProduceData {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
-        self.partitions
+        self.partition_data
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
+                message: "failed to encode PartitionData".into(),
             })?;
         Ok(())
     }
@@ -200,12 +204,15 @@ impl KafkaDeserialize for TopicProduceData {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
-        let partitions =
+        let partition_data =
             <Vec<PartitionProduceData> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
+                    message: "failed to decode PartitionData".into(),
                 }
             })?;
-        Ok(Self { name, partitions })
+        Ok(Self {
+            name,
+            partition_data,
+        })
     }
 }

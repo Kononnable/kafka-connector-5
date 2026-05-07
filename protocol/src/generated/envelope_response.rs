@@ -1,0 +1,93 @@
+#![allow(unused_imports, unused_variables)]
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
+// -------------------------------------------------------
+// EnvelopeResponse
+// -------------------------------------------------------
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct EnvelopeResponse {
+    /// The embedded response header and data.
+    pub response_data: Option<Vec<u8>>,
+    /// The error code, or 0 if there was no error.
+    pub error_code: i16,
+}
+
+impl ApiResponse for EnvelopeResponse {
+    type Request = crate::generated::EnvelopeRequest;
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(58)
+    }
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
+        assert!(
+            (0) <= version.0 && version.0 <= (0),
+            "version {} is not supported by {} (supported: 0-0)",
+            version.0,
+            stringify!(Self)
+        );
+        self.response_data
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ResponseData"))?;
+        self.error_code
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        Ok(())
+    }
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
+        let response_data = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ResponseData"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        Ok(Self {
+            response_data,
+            error_code,
+        })
+    }
+}
+impl KafkaSerialize for EnvelopeResponse {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.response_data
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ResponseData".into(),
+            })?;
+        self.error_code
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for EnvelopeResponse {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let response_data = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ResponseData".into(),
+            }
+        })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
+            })?;
+        Ok(Self {
+            response_data,
+            error_code,
+        })
+    }
+}

@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -18,9 +18,7 @@ pub struct EndQuorumEpochRequest {
 pub struct PartitionData {
     /// The partition index.
     pub partition_index: i32,
-    /// The ID of the replica sending this request
-    pub replica_id: i32,
-    /// The current leader ID or -1 if there is a vote in progress
+    /// The current leader ID that is resigning
     pub leader_id: i32,
     /// The current epoch
     pub leader_epoch: i32,
@@ -41,13 +39,17 @@ impl ApiRequest for EndQuorumEpochRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(54)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (0),
             "version {} is not supported by {} (supported: 0-0)",
@@ -62,7 +64,10 @@ impl ApiRequest for EndQuorumEpochRequest {
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?;
         let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf)
@@ -109,11 +114,6 @@ impl KafkaSerialize for PartitionData {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PartitionIndex".into(),
             })?;
-        self.replica_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ReplicaId".into(),
-            })?;
         self.leader_id
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -139,10 +139,6 @@ impl KafkaDeserialize for PartitionData {
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
-        let replica_id =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ReplicaId".into(),
-            })?;
         let leader_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LeaderId".into(),
@@ -157,7 +153,6 @@ impl KafkaDeserialize for PartitionData {
             })?;
         Ok(Self {
             partition_index,
-            replica_id,
             leader_id,
             leader_epoch,
             preferred_successors,

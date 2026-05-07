@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -16,11 +16,11 @@ pub struct OffsetForLeaderEpochResponse {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct OffsetForLeaderPartitionResult {
+pub struct EpochEndOffset {
     /// The error code 0, or if there was no error.
     pub error_code: i16,
     /// The partition index.
-    pub partition_index: i32,
+    pub partition: i32,
     /// The leader epoch of the partition.
     /// Available in version 1+.
     pub leader_epoch: i32,
@@ -31,9 +31,9 @@ pub struct OffsetForLeaderPartitionResult {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OffsetForLeaderTopicResult {
     /// The topic name.
-    pub name: String,
+    pub topic: String,
     /// Each partition in the topic we fetched offsets for.
-    pub partitions: Vec<OffsetForLeaderPartitionResult>,
+    pub partitions: Vec<EpochEndOffset>,
 }
 
 impl ApiResponse for OffsetForLeaderEpochResponse {
@@ -41,16 +41,20 @@ impl ApiResponse for OffsetForLeaderEpochResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(23)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(4)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
-            "version {} is not supported by {} (supported: 0-3)",
+            (0) <= version.0 && version.0 <= (4),
+            "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
         );
@@ -64,7 +68,10 @@ impl ApiResponse for OffsetForLeaderEpochResponse {
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if (2) <= version.0 {
             <i32 as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
@@ -114,17 +121,17 @@ impl KafkaDeserialize for OffsetForLeaderEpochResponse {
     }
 }
 
-impl KafkaSerialize for OffsetForLeaderPartitionResult {
+impl KafkaSerialize for EpochEndOffset {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.error_code
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ErrorCode".into(),
             })?;
-        self.partition_index
+        self.partition
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Partition".into(),
             })?;
         self.leader_epoch
             .encode(buf)
@@ -140,15 +147,15 @@ impl KafkaSerialize for OffsetForLeaderPartitionResult {
     }
 }
 
-impl KafkaDeserialize for OffsetForLeaderPartitionResult {
+impl KafkaDeserialize for EpochEndOffset {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
-        let partition_index =
+        let partition =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
+                message: "failed to decode Partition".into(),
             })?;
         let leader_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
@@ -160,7 +167,7 @@ impl KafkaDeserialize for OffsetForLeaderPartitionResult {
             })?;
         Ok(Self {
             error_code,
-            partition_index,
+            partition,
             leader_epoch,
             end_offset,
         })
@@ -169,10 +176,10 @@ impl KafkaDeserialize for OffsetForLeaderPartitionResult {
 
 impl KafkaSerialize for OffsetForLeaderTopicResult {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
+        self.topic
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+                message: "failed to encode Topic".into(),
             })?;
         self.partitions
             .encode(buf)
@@ -185,14 +192,15 @@ impl KafkaSerialize for OffsetForLeaderTopicResult {
 
 impl KafkaDeserialize for OffsetForLeaderTopicResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
+        let topic =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+                message: "failed to decode Topic".into(),
             })?;
-        let partitions = <Vec<OffsetForLeaderPartitionResult> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| DecodeError::Protocol {
+        let partitions = <Vec<EpochEndOffset> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
-            })?;
-        Ok(Self { name, partitions })
+            }
+        })?;
+        Ok(Self { topic, partitions })
     }
 }

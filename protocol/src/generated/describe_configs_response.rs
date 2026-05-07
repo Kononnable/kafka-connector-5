@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -73,16 +73,20 @@ impl ApiResponse for DescribeConfigsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(32)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(4)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
-            "version {} is not supported by {} (supported: 0-3)",
+            (0) <= version.0 && version.0 <= (4),
+            "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
         );
@@ -94,7 +98,10 @@ impl ApiResponse for DescribeConfigsResponse {
             .map_err(|_| SerializationError::Encode("failed to encode Results"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
         let results = <Vec<DescribeConfigsResult> as KafkaDeserialize>::decode(buf)

@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -61,6 +61,9 @@ pub struct FetchablePartitionResponse {
     /// CurrentLeader. Type: LeaderIdAndEpoch.
     /// Available in version 12+.
     pub current_leader: LeaderIdAndEpoch,
+    /// In the case of fetching an offset less than the LogStartOffset, this is the end offset and epoch that should be used in the FetchSnapshot request.
+    /// Available in version 12+.
+    pub snapshot_id: SnapshotId,
     /// The aborted transactions.
     /// Available in version 4+.
     pub aborted_transactions: Option<Vec<AbortedTransaction>>,
@@ -89,18 +92,30 @@ pub struct LeaderIdAndEpoch {
     pub leader_epoch: i32,
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SnapshotId {
+    /// EndOffset. Type: int64.
+    pub end_offset: i64,
+    /// Epoch. Type: int32.
+    pub epoch: i32,
+}
+
 impl ApiResponse for FetchResponse {
     type Request = crate::generated::FetchRequest;
     fn get_api_key() -> ApiKey {
         ApiKey::new(1)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(12)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(12)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (12),
             "version {} is not supported by {} (supported: 0-12)",
@@ -127,7 +142,10 @@ impl ApiResponse for FetchResponse {
             .map_err(|_| SerializationError::Encode("failed to encode Responses"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
             <i32 as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
@@ -310,6 +328,11 @@ impl KafkaSerialize for FetchablePartitionResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode CurrentLeader".into(),
             })?;
+        self.snapshot_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode SnapshotId".into(),
+            })?;
         self.aborted_transactions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -361,6 +384,10 @@ impl KafkaDeserialize for FetchablePartitionResponse {
                 message: "failed to decode CurrentLeader".into(),
             }
         })?;
+        let snapshot_id =
+            <SnapshotId as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode SnapshotId".into(),
+            })?;
         let aborted_transactions =
             <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -384,6 +411,7 @@ impl KafkaDeserialize for FetchablePartitionResponse {
             log_start_offset,
             diverging_epoch,
             current_leader,
+            snapshot_id,
             aborted_transactions,
             preferred_read_replica,
             record_set,
@@ -456,5 +484,34 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
             leader_id,
             leader_epoch,
         })
+    }
+}
+
+impl KafkaSerialize for SnapshotId {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.end_offset
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode EndOffset".into(),
+            })?;
+        self.epoch
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Epoch".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for SnapshotId {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let end_offset =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode EndOffset".into(),
+            })?;
+        let epoch = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Epoch".into(),
+        })?;
+        Ok(Self { end_offset, epoch })
     }
 }

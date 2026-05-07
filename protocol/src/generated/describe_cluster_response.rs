@@ -1,0 +1,254 @@
+#![allow(unused_imports, unused_variables)]
+use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
+// -------------------------------------------------------
+// DescribeClusterResponse
+// -------------------------------------------------------
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DescribeClusterResponse {
+    /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
+    pub throttle_time_ms: i32,
+    /// The top-level error code, or 0 if there was no error
+    pub error_code: i16,
+    /// The top-level error message, or null if there was no error.
+    pub error_message: Option<String>,
+    /// The cluster ID that responding broker belongs to.
+    pub cluster_id: String,
+    /// The ID of the controller broker.
+    pub controller_id: i32,
+    /// Each broker in the response.
+    pub brokers: Vec<DescribeClusterBroker>,
+    /// 32-bit bitfield to represent authorized operations for this cluster.
+    pub cluster_authorized_operations: i32,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DescribeClusterBroker {
+    /// The broker ID.
+    pub broker_id: i32,
+    /// The broker hostname.
+    pub host: String,
+    /// The broker port.
+    pub port: i32,
+    /// The rack of the broker, or null if it has not been assigned to a rack.
+    pub rack: Option<String>,
+}
+
+impl ApiResponse for DescribeClusterResponse {
+    type Request = crate::generated::DescribeClusterRequest;
+    fn get_api_key() -> ApiKey {
+        ApiKey::new(60)
+    }
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
+        assert!(
+            (0) <= version.0 && version.0 <= (0),
+            "version {} is not supported by {} (supported: 0-0)",
+            version.0,
+            stringify!(Self)
+        );
+        self.throttle_time_ms
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        self.error_code
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        self.error_message
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ErrorMessage"))?;
+        self.cluster_id
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
+        self.controller_id
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode ControllerId"))?;
+        self.brokers
+            .encode(buf)
+            .map_err(|_| SerializationError::Encode("failed to encode Brokers"))?;
+        self.cluster_authorized_operations
+            .encode(buf)
+            .map_err(|_| {
+                SerializationError::Encode("failed to encode ClusterAuthorizedOperations")
+            })?;
+        Ok(())
+    }
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?;
+        let cluster_id = <String as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?;
+        let controller_id = <i32 as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?;
+        let brokers = <Vec<DescribeClusterBroker> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| SerializationError::Decode("failed to decode Brokers"))?;
+        let cluster_authorized_operations =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| {
+                SerializationError::Decode("failed to decode ClusterAuthorizedOperations")
+            })?;
+        Ok(Self {
+            throttle_time_ms,
+            error_code,
+            error_message,
+            cluster_id,
+            controller_id,
+            brokers,
+            cluster_authorized_operations,
+        })
+    }
+}
+impl KafkaSerialize for DescribeClusterResponse {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.throttle_time_ms
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ThrottleTimeMs".into(),
+            })?;
+        self.error_code
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.error_message
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorMessage".into(),
+            })?;
+        self.cluster_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClusterId".into(),
+            })?;
+        self.controller_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ControllerId".into(),
+            })?;
+        self.brokers
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Brokers".into(),
+            })?;
+        self.cluster_authorized_operations
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ClusterAuthorizedOperations".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for DescribeClusterResponse {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let throttle_time_ms =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
+            })?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ErrorMessage".into(),
+            }
+        })?;
+        let cluster_id =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ClusterId".into(),
+            })?;
+        let controller_id =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ControllerId".into(),
+            })?;
+        let brokers =
+            <Vec<DescribeClusterBroker> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Brokers".into(),
+                }
+            })?;
+        let cluster_authorized_operations =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ClusterAuthorizedOperations".into(),
+            })?;
+        Ok(Self {
+            throttle_time_ms,
+            error_code,
+            error_message,
+            cluster_id,
+            controller_id,
+            brokers,
+            cluster_authorized_operations,
+        })
+    }
+}
+
+impl KafkaSerialize for DescribeClusterBroker {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.broker_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode BrokerId".into(),
+            })?;
+        self.host
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Host".into(),
+            })?;
+        self.port
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Port".into(),
+            })?;
+        self.rack
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Rack".into(),
+            })?;
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for DescribeClusterBroker {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let broker_id =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode BrokerId".into(),
+            })?;
+        let host =
+            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Host".into(),
+            })?;
+        let port = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Port".into(),
+        })?;
+        let rack = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Rack".into(),
+            }
+        })?;
+        Ok(Self {
+            broker_id,
+            host,
+            port,
+            rack,
+        })
+    }
+}

@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -28,7 +28,7 @@ pub struct BatchIndexAndErrorMessage {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PartitionProduceResponse {
     /// The partition index.
-    pub partition_index: i32,
+    pub index: i32,
     /// The error code, or 0 if there was no error.
     pub error_code: i16,
     /// The base offset.
@@ -52,7 +52,7 @@ pub struct TopicProduceResponse {
     /// The topic name
     pub name: String,
     /// Each partition that we produced to within the topic.
-    pub partitions: Vec<PartitionProduceResponse>,
+    pub partition_responses: Vec<PartitionProduceResponse>,
 }
 
 impl ApiResponse for ProduceResponse {
@@ -60,16 +60,20 @@ impl ApiResponse for ProduceResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(0)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(8)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(9)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (8),
-            "version {} is not supported by {} (supported: 0-8)",
+            (0) <= version.0 && version.0 <= (9),
+            "version {} is not supported by {} (supported: 0-9)",
             version.0,
             stringify!(Self)
         );
@@ -83,7 +87,10 @@ impl ApiResponse for ProduceResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let responses = <Vec<TopicProduceResponse> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Responses"))?;
         let throttle_time_ms = if (1) <= version.0 {
@@ -170,10 +177,10 @@ impl KafkaDeserialize for BatchIndexAndErrorMessage {
 
 impl KafkaSerialize for PartitionProduceResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_index
+        self.index
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Index".into(),
             })?;
         self.error_code
             .encode(buf)
@@ -211,10 +218,9 @@ impl KafkaSerialize for PartitionProduceResponse {
 
 impl KafkaDeserialize for PartitionProduceResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition_index =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
+        let index = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Index".into(),
+        })?;
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
@@ -241,7 +247,7 @@ impl KafkaDeserialize for PartitionProduceResponse {
             }
         })?;
         Ok(Self {
-            partition_index,
+            index,
             error_code,
             base_offset,
             log_append_time_ms,
@@ -259,10 +265,10 @@ impl KafkaSerialize for TopicProduceResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
-        self.partitions
+        self.partition_responses
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
+                message: "failed to encode PartitionResponses".into(),
             })?;
         Ok(())
     }
@@ -274,12 +280,13 @@ impl KafkaDeserialize for TopicProduceResponse {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
-        let partitions =
-            <Vec<PartitionProduceResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                }
+        let partition_responses = <Vec<PartitionProduceResponse> as KafkaDeserialize>::decode(buf)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionResponses".into(),
             })?;
-        Ok(Self { name, partitions })
+        Ok(Self {
+            name,
+            partition_responses,
+        })
     }
 }

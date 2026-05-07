@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -30,13 +30,17 @@ impl ApiRequest for DescribeAclsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(29)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(2)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(2)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (2),
             "version {} is not supported by {} (supported: 0-2)",
@@ -68,7 +72,10 @@ impl ApiRequest for DescribeAclsRequest {
             .map_err(|_| SerializationError::Encode("failed to encode PermissionType"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let resource_type_filter = <i8 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ResourceTypeFilter"))?;
         let resource_name_filter = <Option<String> as KafkaDeserialize>::decode(buf)

@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -14,7 +14,7 @@ pub struct MetadataRequest {
     /// Available in version 4+.
     pub allow_auto_topic_creation: bool,
     /// Whether to include cluster authorized operations.
-    /// Available in version 8+.
+    /// Available in version 8-10.
     pub include_cluster_authorized_operations: bool,
     /// Whether to include topic authorized operations.
     /// Available in version 8+.
@@ -23,8 +23,11 @@ pub struct MetadataRequest {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MetadataRequestTopic {
+    /// The topic id.
+    /// Available in version 10+.
+    pub topic_id: [u8; 16],
     /// The topic name.
-    pub name: String,
+    pub name: Option<String>,
 }
 
 impl ApiRequest for MetadataRequest {
@@ -32,16 +35,20 @@ impl ApiRequest for MetadataRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(3)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(9)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(11)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (9),
-            "version {} is not supported by {} (supported: 0-9)",
+            (0) <= version.0 && version.0 <= (11),
+            "version {} is not supported by {} (supported: 0-11)",
             version.0,
             stringify!(Self)
         );
@@ -53,7 +60,7 @@ impl ApiRequest for MetadataRequest {
                 SerializationError::Encode("failed to encode AllowAutoTopicCreation")
             })?;
         }
-        if (8) <= version.0 {
+        if (8) <= version.0 && version.0 <= (10) {
             self.include_cluster_authorized_operations
                 .encode(buf)
                 .map_err(|_| {
@@ -71,7 +78,10 @@ impl ApiRequest for MetadataRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let topics = <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         let allow_auto_topic_creation = if (4) <= version.0 {
@@ -81,7 +91,7 @@ impl ApiRequest for MetadataRequest {
         } else {
             Default::default()
         };
-        let include_cluster_authorized_operations = if (8) <= version.0 {
+        let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| {
                 SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
             })?
@@ -160,6 +170,11 @@ impl KafkaDeserialize for MetadataRequest {
 
 impl KafkaSerialize for MetadataRequestTopic {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.topic_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
         self.name
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -171,10 +186,15 @@ impl KafkaSerialize for MetadataRequestTopic {
 
 impl KafkaDeserialize for MetadataRequestTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TopicId".into(),
             })?;
-        Ok(Self { name })
+        let name = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Name".into(),
+            }
+        })?;
+        Ok(Self { topic_id, name })
     }
 }

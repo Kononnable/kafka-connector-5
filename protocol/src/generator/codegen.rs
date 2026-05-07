@@ -141,9 +141,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
     // Module-level allow for unused imports (not all traits are used in every file).
     code.push_str("#![allow(unused_imports, unused_variables)]\n");
     code.push_str("use crate::protocol::serialization::{EncodeError, DecodeError, KafkaSerialize, KafkaDeserialize};\n");
-    code.push_str(
-        "use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};\n",
-    );
+    code.push_str("use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};\n");
     code.push_str("use bytes::{Buf, BufMut, Bytes, BytesMut};\n");
     code.push('\n');
 
@@ -209,16 +207,16 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 ak
             ));
             code.push_str(&format!(
-                "    fn get_min_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                "    fn get_min_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
                 min_v
             ));
             code.push_str(&format!(
-                "    fn get_max_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                "    fn get_max_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
                 max_v
             ));
 
             // serialize
-            code.push_str("    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+            code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
             code.push_str("        assert!((");
             code.push_str(&format!(
                 "{}) <= version.0 && version.0 <= ({})",
@@ -232,7 +230,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             code.push_str("    }\n");
 
             // deserialize
-            code.push_str("    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+            code.push_str("    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
             for field in &msg.fields {
                 code.push_str(&generate_deserialize_field(field));
             }
@@ -281,16 +279,16 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 ak
             ));
             code.push_str(&format!(
-                "    fn get_min_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                "    fn get_min_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
                 min_v
             ));
             code.push_str(&format!(
-                "    fn get_max_supported_version() -> ApiVersion {{ ApiVersion::new({}) }}\n",
+                "    fn get_max_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
                 max_v
             ));
 
             // serialize
-            code.push_str("    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+            code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
             code.push_str("        assert!((");
             code.push_str(&format!(
                 "{}) <= version.0 && version.0 <= ({})",
@@ -304,7 +302,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             code.push_str("    }\n");
 
             // deserialize
-            code.push_str("    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+            code.push_str("    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
             for field in &msg.fields {
                 code.push_str(&generate_deserialize_field(field));
             }
@@ -525,6 +523,7 @@ fn resolve_type(t: &str) -> String {
 
     match t {
         "int8" => "i8".into(),
+        "uint16" => "u16".into(),
         "float64" => "f64".into(),
         "int16" => "i16".into(),
         "int32" => "i32".into(),
@@ -734,6 +733,7 @@ mod tests {
             valid_versions: "0-1".into(),
             flexible_versions: None,
             common_structs: Vec::new(),
+            listeners: Vec::new(),
             fields: vec![Field::new(
                 "throttleTimeMs".into(),
                 "int32".into(),

@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -15,6 +15,9 @@ pub struct LeaderAndIsrRequest {
     /// The current broker epoch.
     /// Available in version 2+.
     pub broker_epoch: i64,
+    /// The type that indicates whether all topics are included in the request
+    /// Available in version 5+.
+    pub r#type: i8,
     /// The state of each partition, in a v0 or v1 message.
     /// Available in version 0-1.
     pub ungrouped_partition_states: Vec<LeaderAndIsrPartitionState>,
@@ -70,6 +73,9 @@ pub struct LeaderAndIsrTopicState {
     /// The topic name.
     /// Available in version 2+.
     pub topic_name: String,
+    /// The unique topic ID.
+    /// Available in version 5+.
+    pub topic_id: [u8; 16],
     /// The state of each partition
     /// Available in version 2+.
     pub partition_states: Vec<LeaderAndIsrPartitionState>,
@@ -80,16 +86,20 @@ impl ApiRequest for LeaderAndIsrRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(4)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(4)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(5)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
-            "version {} is not supported by {} (supported: 0-4)",
+            (0) <= version.0 && version.0 <= (5),
+            "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
@@ -103,6 +113,11 @@ impl ApiRequest for LeaderAndIsrRequest {
             self.broker_epoch
                 .encode(buf)
                 .map_err(|_| SerializationError::Encode("failed to encode BrokerEpoch"))?;
+        }
+        if (5) <= version.0 {
+            self.r#type
+                .encode(buf)
+                .map_err(|_| SerializationError::Encode("failed to encode Type"))?;
         }
         if (0) <= version.0 && version.0 <= (1) {
             self.ungrouped_partition_states.encode(buf).map_err(|_| {
@@ -119,7 +134,10 @@ impl ApiRequest for LeaderAndIsrRequest {
             .map_err(|_| SerializationError::Encode("failed to encode LiveLeaders"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let controller_id = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?;
         let controller_epoch = <i32 as KafkaDeserialize>::decode(buf)
@@ -127,6 +145,12 @@ impl ApiRequest for LeaderAndIsrRequest {
         let broker_epoch = if (2) <= version.0 {
             <i64 as KafkaDeserialize>::decode(buf)
                 .map_err(|_| SerializationError::Decode("failed to decode BrokerEpoch"))?
+        } else {
+            Default::default()
+        };
+        let r#type = if (5) <= version.0 {
+            <i8 as KafkaDeserialize>::decode(buf)
+                .map_err(|_| SerializationError::Decode("failed to decode Type"))?
         } else {
             Default::default()
         };
@@ -149,6 +173,7 @@ impl ApiRequest for LeaderAndIsrRequest {
             controller_id,
             controller_epoch,
             broker_epoch,
+            r#type,
             ungrouped_partition_states,
             topic_states,
             live_leaders,
@@ -171,6 +196,11 @@ impl KafkaSerialize for LeaderAndIsrRequest {
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode BrokerEpoch".into(),
+            })?;
+        self.r#type
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Type".into(),
             })?;
         self.ungrouped_partition_states
             .encode(buf)
@@ -205,6 +235,9 @@ impl KafkaDeserialize for LeaderAndIsrRequest {
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode BrokerEpoch".into(),
             })?;
+        let r#type = <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+            message: "failed to decode Type".into(),
+        })?;
         let ungrouped_partition_states =
             <Vec<LeaderAndIsrPartitionState> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -227,6 +260,7 @@ impl KafkaDeserialize for LeaderAndIsrRequest {
             controller_id,
             controller_epoch,
             broker_epoch,
+            r#type,
             ungrouped_partition_states,
             topic_states,
             live_leaders,
@@ -405,6 +439,11 @@ impl KafkaSerialize for LeaderAndIsrTopicState {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TopicName".into(),
             })?;
+        self.topic_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
         self.partition_states
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -420,12 +459,17 @@ impl KafkaDeserialize for LeaderAndIsrTopicState {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TopicName".into(),
             })?;
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TopicId".into(),
+            })?;
         let partition_states = <Vec<LeaderAndIsrPartitionState> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode PartitionStates".into(),
         })?;
         Ok(Self {
             topic_name,
+            topic_id,
             partition_states,
         })
     }

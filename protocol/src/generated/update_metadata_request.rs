@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -88,6 +88,9 @@ pub struct UpdateMetadataTopicState {
     /// The topic name.
     /// Available in version 5+.
     pub topic_name: String,
+    /// The topic id.
+    /// Available in version 7+.
+    pub topic_id: [u8; 16],
     /// The partition that we would like to update.
     /// Available in version 5+.
     pub partition_states: Vec<UpdateMetadataPartitionState>,
@@ -98,16 +101,20 @@ impl ApiRequest for UpdateMetadataRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(6)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(6)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(7)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
-            "version {} is not supported by {} (supported: 0-6)",
+            (0) <= version.0 && version.0 <= (7),
+            "version {} is not supported by {} (supported: 0-7)",
             version.0,
             stringify!(Self)
         );
@@ -137,7 +144,10 @@ impl ApiRequest for UpdateMetadataRequest {
             .map_err(|_| SerializationError::Encode("failed to encode LiveBrokers"))?;
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let controller_id = <i32 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?;
         let controller_epoch = <i32 as KafkaDeserialize>::decode(buf)
@@ -476,6 +486,11 @@ impl KafkaSerialize for UpdateMetadataTopicState {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TopicName".into(),
             })?;
+        self.topic_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode TopicId".into(),
+            })?;
         self.partition_states
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
@@ -491,12 +506,17 @@ impl KafkaDeserialize for UpdateMetadataTopicState {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TopicName".into(),
             })?;
+        let topic_id =
+            <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode TopicId".into(),
+            })?;
         let partition_states = <Vec<UpdateMetadataPartitionState> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionStates".into(),
             })?;
         Ok(Self {
             topic_name,
+            topic_id,
             partition_states,
         })
     }

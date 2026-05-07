@@ -1,6 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -11,7 +11,7 @@ pub struct ApiVersionsResponse {
     /// The top-level error code.
     pub error_code: i16,
     /// The APIs supported by the broker.
-    pub api_keys: Vec<ApiVersionsResponseKey>,
+    pub api_keys: Vec<ApiVersion>,
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     /// Available in version 1+.
     pub throttle_time_ms: i32,
@@ -27,7 +27,7 @@ pub struct ApiVersionsResponse {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ApiVersionsResponseKey {
+pub struct ApiVersion {
     /// The API index.
     pub api_key: i16,
     /// The minimum supported version, inclusive.
@@ -67,13 +67,17 @@ impl ApiResponse for ApiVersionsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(18)
     }
-    fn get_min_supported_version() -> ApiVersion {
-        ApiVersion::new(0)
+    fn get_min_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
     }
-    fn get_max_supported_version() -> ApiVersion {
-        ApiVersion::new(3)
+    fn get_max_supported_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(3)
     }
-    fn serialize(&self, version: ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {
+    fn serialize(
+        &self,
+        version: crate::traits::ApiVersion,
+        buf: &mut BytesMut,
+    ) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (3),
             "version {} is not supported by {} (supported: 0-3)",
@@ -108,10 +112,13 @@ impl ApiResponse for ApiVersionsResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(
+        version: crate::traits::ApiVersion,
+        buf: &mut Bytes,
+    ) -> Result<Self, SerializationError> {
         let error_code = <i16 as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let api_keys = <Vec<ApiVersionsResponseKey> as KafkaDeserialize>::decode(buf)
+        let api_keys = <Vec<ApiVersion> as KafkaDeserialize>::decode(buf)
             .map_err(|_| SerializationError::Decode("failed to decode ApiKeys"))?;
         let throttle_time_ms = if (1) <= version.0 {
             <i32 as KafkaDeserialize>::decode(buf)
@@ -190,12 +197,11 @@ impl KafkaDeserialize for ApiVersionsResponse {
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
-        let api_keys =
-            <Vec<ApiVersionsResponseKey> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ApiKeys".into(),
-                }
-            })?;
+        let api_keys = <Vec<ApiVersion> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode ApiKeys".into(),
+            }
+        })?;
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
@@ -223,7 +229,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
     }
 }
 
-impl KafkaSerialize for ApiVersionsResponseKey {
+impl KafkaSerialize for ApiVersion {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.api_key
             .encode(buf)
@@ -244,7 +250,7 @@ impl KafkaSerialize for ApiVersionsResponseKey {
     }
 }
 
-impl KafkaDeserialize for ApiVersionsResponseKey {
+impl KafkaDeserialize for ApiVersion {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
         let api_key =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
