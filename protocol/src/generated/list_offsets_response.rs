@@ -52,7 +52,7 @@ impl ApiResponse for ListOffsetsResponse {
         crate::traits::ApiVersion::new(0)
     }
     fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(6)
+        crate::traits::ApiVersion::new(7)
     }
     fn serialize(
         &self,
@@ -60,8 +60,8 @@ impl ApiResponse for ListOffsetsResponse {
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
-            "version {} is not supported by {} (supported: 0-6)",
+            (0) <= version.0 && version.0 <= (7),
+            "version {} is not supported by {} (supported: 0-7)",
             version.0,
             stringify!(Self)
         );

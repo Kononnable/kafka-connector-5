@@ -42,9 +42,27 @@ pub struct EpochEndOffset {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct FetchablePartitionResponse {
+pub struct FetchableTopicResponse {
+    /// The topic name.
+    pub topic: String,
+    /// The topic partitions.
+    pub partitions: Vec<PartitionData>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LeaderIdAndEpoch {
+    /// The ID of the current leader or -1 if the leader is unknown.
+    /// Available in version 12+.
+    pub leader_id: i32,
+    /// The latest known leader epoch
+    /// Available in version 12+.
+    pub leader_epoch: i32,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PartitionData {
     /// The partition index.
-    pub partition: i32,
+    pub partition_index: i32,
     /// The error code, or 0 if there was no fetch error.
     pub error_code: i16,
     /// The current high water mark.
@@ -71,25 +89,7 @@ pub struct FetchablePartitionResponse {
     /// Available in version 11+.
     pub preferred_read_replica: i32,
     /// The record data.
-    pub record_set: Option<Vec<u8>>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct FetchableTopicResponse {
-    /// The topic name.
-    pub topic: String,
-    /// The topic partitions.
-    pub partition_responses: Vec<FetchablePartitionResponse>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct LeaderIdAndEpoch {
-    /// The ID of the current leader or -1 if the leader is unknown.
-    /// Available in version 12+.
-    pub leader_id: i32,
-    /// The latest known leader epoch
-    /// Available in version 12+.
-    pub leader_epoch: i32,
+    pub records: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -444,277 +444,6 @@ impl KafkaDeserialize for EpochEndOffset {
     }
 }
 
-impl KafkaSerialize for FetchablePartitionResponse {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partition".into(),
-            })?;
-        self.error_code
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.high_watermark
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode HighWatermark".into(),
-            })?;
-        self.last_stable_offset
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LastStableOffset".into(),
-            })?;
-        self.log_start_offset
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LogStartOffset".into(),
-            })?;
-        self.diverging_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode DivergingEpoch".into(),
-            })?;
-        self.current_leader
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CurrentLeader".into(),
-            })?;
-        self.snapshot_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SnapshotId".into(),
-            })?;
-        self.aborted_transactions
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode AbortedTransactions".into(),
-            })?;
-        self.preferred_read_replica
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PreferredReadReplica".into(),
-            })?;
-        self.record_set
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RecordSet".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
-        &self,
-        buf: &mut B,
-        is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partition".into(),
-            })?;
-        self.error_code
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.high_watermark
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode HighWatermark".into(),
-            })?;
-        self.last_stable_offset
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LastStableOffset".into(),
-            })?;
-        self.log_start_offset
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LogStartOffset".into(),
-            })?;
-        self.diverging_epoch
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode DivergingEpoch".into(),
-            })?;
-        self.current_leader
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CurrentLeader".into(),
-            })?;
-        self.snapshot_id
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SnapshotId".into(),
-            })?;
-        self.aborted_transactions
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode AbortedTransactions".into(),
-            })?;
-        self.preferred_read_replica
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PreferredReadReplica".into(),
-            })?;
-        self.record_set
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RecordSet".into(),
-            })?;
-        if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-        }
-        Ok(())
-    }
-}
-
-impl KafkaDeserialize for FetchablePartitionResponse {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        let partition =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Partition".into(),
-            })?;
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorCode".into(),
-            })?;
-        let high_watermark =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode HighWatermark".into(),
-            })?;
-        let last_stable_offset =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LastStableOffset".into(),
-            })?;
-        let log_start_offset =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LogStartOffset".into(),
-            })?;
-        let diverging_epoch = <EpochEndOffset as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode DivergingEpoch".into(),
-            }
-        })?;
-        let current_leader = <LeaderIdAndEpoch as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode CurrentLeader".into(),
-            }
-        })?;
-        let snapshot_id =
-            <SnapshotId as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SnapshotId".into(),
-            })?;
-        let aborted_transactions =
-            <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode AbortedTransactions".into(),
-                }
-            })?;
-        let preferred_read_replica =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PreferredReadReplica".into(),
-            })?;
-        let record_set = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode RecordSet".into(),
-            }
-        })?;
-        Ok(Self {
-            partition,
-            error_code,
-            high_watermark,
-            last_stable_offset,
-            log_start_offset,
-            diverging_epoch,
-            current_leader,
-            snapshot_id,
-            aborted_transactions,
-            preferred_read_replica,
-            record_set,
-        })
-    }
-    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
-        let partition =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partition".into(),
-                }
-            })?;
-        let error_code =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
-        let high_watermark =
-            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode HighWatermark".into(),
-                }
-            })?;
-        let last_stable_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LastStableOffset".into(),
-            })?;
-        let log_start_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LogStartOffset".into(),
-            })?;
-        let diverging_epoch =
-            <EpochEndOffset as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode DivergingEpoch".into(),
-                },
-            )?;
-        let current_leader =
-            <LeaderIdAndEpoch as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode CurrentLeader".into(),
-                },
-            )?;
-        let snapshot_id = <SnapshotId as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SnapshotId".into(),
-            })?;
-        let aborted_transactions =
-            <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode_flexible(
-                buf,
-                is_flexible,
-            )
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode AbortedTransactions".into(),
-            })?;
-        let preferred_read_replica = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode PreferredReadReplica".into(),
-        })?;
-        let record_set = <Option<Vec<u8>> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode RecordSet".into(),
-        })?;
-        if is_flexible {
-            // Tagged fields (skip)
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-        }
-        Ok(Self {
-            partition,
-            error_code,
-            high_watermark,
-            last_stable_offset,
-            log_start_offset,
-            diverging_epoch,
-            current_leader,
-            snapshot_id,
-            aborted_transactions,
-            preferred_read_replica,
-            record_set,
-        })
-    }
-}
-
 impl KafkaSerialize for FetchableTopicResponse {
     fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
         self.topic
@@ -722,10 +451,10 @@ impl KafkaSerialize for FetchableTopicResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topic".into(),
             })?;
-        self.partition_responses
+        self.partitions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionResponses".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         Ok(())
     }
@@ -739,10 +468,10 @@ impl KafkaSerialize for FetchableTopicResponse {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topic".into(),
             })?;
-        self.partition_responses
+        self.partitions
             .encode_flexible(buf, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionResponses".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -758,16 +487,12 @@ impl KafkaDeserialize for FetchableTopicResponse {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topic".into(),
             })?;
-        let partition_responses =
-            <Vec<FetchablePartitionResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode PartitionResponses".into(),
-                }
-            })?;
-        Ok(Self {
-            topic,
-            partition_responses,
-        })
+        let partitions = <Vec<PartitionData> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Partitions".into(),
+            }
+        })?;
+        Ok(Self { topic, partitions })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
         let topic =
@@ -776,22 +501,17 @@ impl KafkaDeserialize for FetchableTopicResponse {
                     message: "failed to decode Topic".into(),
                 }
             })?;
-        let partition_responses =
-            <Vec<FetchablePartitionResponse> as KafkaDeserialize>::decode_flexible(
-                buf,
-                is_flexible,
-            )
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionResponses".into(),
-            })?;
+        let partitions =
+            <Vec<PartitionData> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode Partitions".into(),
+                },
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            topic,
-            partition_responses,
-        })
+        Ok(Self { topic, partitions })
     }
 }
 
@@ -867,6 +587,275 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
         Ok(Self {
             leader_id,
             leader_epoch,
+        })
+    }
+}
+
+impl KafkaSerialize for PartitionData {
+    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+        self.partition_index
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndex".into(),
+            })?;
+        self.error_code
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.high_watermark
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode HighWatermark".into(),
+            })?;
+        self.last_stable_offset
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LastStableOffset".into(),
+            })?;
+        self.log_start_offset
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LogStartOffset".into(),
+            })?;
+        self.diverging_epoch
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode DivergingEpoch".into(),
+            })?;
+        self.current_leader
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode CurrentLeader".into(),
+            })?;
+        self.snapshot_id
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode SnapshotId".into(),
+            })?;
+        self.aborted_transactions
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode AbortedTransactions".into(),
+            })?;
+        self.preferred_read_replica
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PreferredReadReplica".into(),
+            })?;
+        self.records
+            .encode(buf)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Records".into(),
+            })?;
+        Ok(())
+    }
+    fn encode_flexible<B: BufMut>(
+        &self,
+        buf: &mut B,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
+        self.partition_index
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PartitionIndex".into(),
+            })?;
+        self.error_code
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode ErrorCode".into(),
+            })?;
+        self.high_watermark
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode HighWatermark".into(),
+            })?;
+        self.last_stable_offset
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LastStableOffset".into(),
+            })?;
+        self.log_start_offset
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode LogStartOffset".into(),
+            })?;
+        self.diverging_epoch
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode DivergingEpoch".into(),
+            })?;
+        self.current_leader
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode CurrentLeader".into(),
+            })?;
+        self.snapshot_id
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode SnapshotId".into(),
+            })?;
+        self.aborted_transactions
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode AbortedTransactions".into(),
+            })?;
+        self.preferred_read_replica
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode PreferredReadReplica".into(),
+            })?;
+        self.records
+            .encode_flexible(buf, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode Records".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (none yet)
+            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for PartitionData {
+    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        let partition_index =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionIndex".into(),
+            })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorCode".into(),
+            })?;
+        let high_watermark =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode HighWatermark".into(),
+            })?;
+        let last_stable_offset =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LastStableOffset".into(),
+            })?;
+        let log_start_offset =
+            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LogStartOffset".into(),
+            })?;
+        let diverging_epoch = <EpochEndOffset as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode DivergingEpoch".into(),
+            }
+        })?;
+        let current_leader = <LeaderIdAndEpoch as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode CurrentLeader".into(),
+            }
+        })?;
+        let snapshot_id =
+            <SnapshotId as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode SnapshotId".into(),
+            })?;
+        let aborted_transactions =
+            <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode(buf).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode AbortedTransactions".into(),
+                }
+            })?;
+        let preferred_read_replica =
+            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PreferredReadReplica".into(),
+            })?;
+        let records = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
+            DecodeError::Protocol {
+                message: "failed to decode Records".into(),
+            }
+        })?;
+        Ok(Self {
+            partition_index,
+            error_code,
+            high_watermark,
+            last_stable_offset,
+            log_start_offset,
+            diverging_epoch,
+            current_leader,
+            snapshot_id,
+            aborted_transactions,
+            preferred_read_replica,
+            records,
+        })
+    }
+    fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PartitionIndex".into(),
+            })?;
+        let error_code =
+            <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorCode".into(),
+                }
+            })?;
+        let high_watermark =
+            <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode HighWatermark".into(),
+                }
+            })?;
+        let last_stable_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LastStableOffset".into(),
+            })?;
+        let log_start_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode LogStartOffset".into(),
+            })?;
+        let diverging_epoch =
+            <EpochEndOffset as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode DivergingEpoch".into(),
+                },
+            )?;
+        let current_leader =
+            <LeaderIdAndEpoch as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode CurrentLeader".into(),
+                },
+            )?;
+        let snapshot_id = <SnapshotId as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode SnapshotId".into(),
+            })?;
+        let aborted_transactions =
+            <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode_flexible(
+                buf,
+                is_flexible,
+            )
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode AbortedTransactions".into(),
+            })?;
+        let preferred_read_replica = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+            message: "failed to decode PreferredReadReplica".into(),
+        })?;
+        let records = <Option<Vec<u8>> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Records".into(),
+            })?;
+        if is_flexible {
+            // Tagged fields (skip)
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            partition_index,
+            error_code,
+            high_watermark,
+            last_stable_offset,
+            log_start_offset,
+            diverging_epoch,
+            current_leader,
+            snapshot_id,
+            aborted_transactions,
+            preferred_read_replica,
+            records,
         })
     }
 }

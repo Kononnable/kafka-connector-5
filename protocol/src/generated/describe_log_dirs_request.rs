@@ -17,7 +17,7 @@ pub struct DescribableLogDirTopic {
     /// The topic name
     pub topic: String,
     /// The partition indxes.
-    pub partition_index: Vec<i32>,
+    pub partitions: Vec<i32>,
 }
 
 impl ApiRequest for DescribeLogDirsRequest {
@@ -123,10 +123,10 @@ impl KafkaSerialize for DescribableLogDirTopic {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topic".into(),
             })?;
-        self.partition_index
+        self.partitions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         Ok(())
     }
@@ -140,10 +140,10 @@ impl KafkaSerialize for DescribableLogDirTopic {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topic".into(),
             })?;
-        self.partition_index
+        self.partitions
             .encode_flexible(buf, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -159,14 +159,11 @@ impl KafkaDeserialize for DescribableLogDirTopic {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topic".into(),
             })?;
-        let partition_index =
+        let partitions =
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
+                message: "failed to decode Partitions".into(),
             })?;
-        Ok(Self {
-            topic,
-            partition_index,
-        })
+        Ok(Self { topic, partitions })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
         let topic =
@@ -175,17 +172,14 @@ impl KafkaDeserialize for DescribableLogDirTopic {
                     message: "failed to decode Topic".into(),
                 }
             })?;
-        let partition_index = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
+                message: "failed to decode Partitions".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            topic,
-            partition_index,
-        })
+        Ok(Self { topic, partitions })
     }
 }

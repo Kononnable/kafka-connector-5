@@ -13,7 +13,7 @@ pub struct ProduceRequest {
     pub transactional_id: Option<String>,
     /// The number of acknowledgments the producer requires the leader to have received before considering a request complete. Allowed values: 0 for no acknowledgments, 1 for only the leader and -1 for the full ISR.
     pub acks: i16,
-    /// The timeout to await a response in miliseconds.
+    /// The timeout to await a response in milliseconds.
     pub timeout_ms: i32,
     /// Each topic to produce to.
     pub topic_data: Vec<TopicProduceData>,

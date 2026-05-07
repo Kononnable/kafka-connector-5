@@ -22,7 +22,7 @@ pub struct TopicPartitions {
     /// The name of a topic.
     pub topic: String,
     /// The partitions of this topic whose leader should be elected.
-    pub partition_id: Vec<i32>,
+    pub partitions: Vec<i32>,
 }
 
 impl ApiRequest for ElectLeadersRequest {
@@ -192,10 +192,10 @@ impl KafkaSerialize for TopicPartitions {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topic".into(),
             })?;
-        self.partition_id
+        self.partitions
             .encode(buf)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionId".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         Ok(())
     }
@@ -209,10 +209,10 @@ impl KafkaSerialize for TopicPartitions {
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topic".into(),
             })?;
-        self.partition_id
+        self.partitions
             .encode_flexible(buf, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionId".into(),
+                message: "failed to encode Partitions".into(),
             })?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -228,14 +228,11 @@ impl KafkaDeserialize for TopicPartitions {
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topic".into(),
             })?;
-        let partition_id =
+        let partitions =
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionId".into(),
+                message: "failed to decode Partitions".into(),
             })?;
-        Ok(Self {
-            topic,
-            partition_id,
-        })
+        Ok(Self { topic, partitions })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
         let topic =
@@ -244,17 +241,14 @@ impl KafkaDeserialize for TopicPartitions {
                     message: "failed to decode Topic".into(),
                 }
             })?;
-        let partition_id = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionId".into(),
+                message: "failed to decode Partitions".into(),
             })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            topic,
-            partition_id,
-        })
+        Ok(Self { topic, partitions })
     }
 }

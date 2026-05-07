@@ -8,6 +8,8 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 // -------------------------------------------------------
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LeaderChangeMessage {
+    /// The version of the leader change message
+    pub version: i16,
     /// The ID of the newly elected leader
     pub leader_id: i32,
     /// The set of voters in the quorum for this epoch
