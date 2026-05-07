@@ -159,18 +159,38 @@ impl KafkaSerialize for HeartbeatRequest {
 
 impl KafkaDeserialize for HeartbeatRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `GenerationId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let generation_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GenerationId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MemberId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `GroupInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_instance_id =
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -185,24 +205,44 @@ impl KafkaDeserialize for HeartbeatRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GroupId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `GenerationId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let generation_id =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GenerationId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MemberId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode MemberId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `GroupInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_instance_id = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {

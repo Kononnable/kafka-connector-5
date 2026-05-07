@@ -121,14 +121,29 @@ impl KafkaSerialize for BrokerRegistrationResponse {
 
 impl KafkaDeserialize for BrokerRegistrationResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `BrokerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let broker_epoch =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode BrokerEpoch".into(),
@@ -140,16 +155,31 @@ impl KafkaDeserialize for BrokerRegistrationResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `BrokerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let broker_epoch =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

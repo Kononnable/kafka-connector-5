@@ -137,10 +137,20 @@ impl KafkaSerialize for DeleteAclsResponse {
 
 impl KafkaDeserialize for DeleteAclsResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `FilterResults` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let filter_results = <Vec<DeleteAclsFilterResult> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode FilterResults".into(),
@@ -151,10 +161,20 @@ impl KafkaDeserialize for DeleteAclsResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `FilterResults` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let filter_results =
             <Vec<DeleteAclsFilterResult> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
@@ -233,15 +253,30 @@ impl KafkaSerialize for DeleteAclsFilterResult {
 
 impl KafkaDeserialize for DeleteAclsFilterResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MatchingAcls` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let matching_acls =
             <Vec<DeleteAclsMatchingAcl> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -255,12 +290,22 @@ impl KafkaDeserialize for DeleteAclsFilterResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -274,6 +319,11 @@ impl KafkaDeserialize for DeleteAclsFilterResult {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `MatchingAcls` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let matching_acls =
             <Vec<DeleteAclsMatchingAcl> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
@@ -413,39 +463,84 @@ impl KafkaSerialize for DeleteAclsMatchingAcl {
 
 impl KafkaDeserialize for DeleteAclsMatchingAcl {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PatternType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let pattern_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PatternType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Principal` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Principal".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Host` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Host".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Operation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let operation =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Operation".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PermissionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let permission_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PermissionType".into(),
@@ -463,12 +558,22 @@ impl KafkaDeserialize for DeleteAclsMatchingAcl {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -482,40 +587,75 @@ impl KafkaDeserialize for DeleteAclsMatchingAcl {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `ResourceType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ResourceType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResourceName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PatternType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let pattern_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode PatternType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Principal` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Principal".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Host` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Host".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Operation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let operation =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Operation".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PermissionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let permission_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

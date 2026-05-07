@@ -83,6 +83,11 @@ impl KafkaSerialize for DeleteGroupsRequest {
 
 impl KafkaDeserialize for DeleteGroupsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `GroupsNames` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let groups_names =
             <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupsNames".into(),
@@ -90,6 +95,11 @@ impl KafkaDeserialize for DeleteGroupsRequest {
         Ok(Self { groups_names })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `GroupsNames` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let groups_names = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupsNames".into(),

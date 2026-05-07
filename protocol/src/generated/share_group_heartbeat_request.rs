@@ -184,23 +184,48 @@ impl KafkaSerialize for ShareGroupHeartbeatRequest {
 
 impl KafkaDeserialize for ShareGroupHeartbeatRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MemberId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MemberEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `RackId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let rack_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode RackId".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `SubscribedTopicNames` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let subscribed_topic_names = <Option<Vec<String>> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SubscribedTopicNames".into(),
@@ -214,24 +239,44 @@ impl KafkaDeserialize for ShareGroupHeartbeatRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GroupId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MemberId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode MemberId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MemberEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_epoch =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode MemberEpoch".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `RackId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let rack_id = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -245,6 +290,11 @@ impl KafkaDeserialize for ShareGroupHeartbeatRequest {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `SubscribedTopicNames` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let subscribed_topic_names = if is_flexible {
             <Option<Vec<String>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {

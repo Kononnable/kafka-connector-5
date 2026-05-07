@@ -597,6 +597,7 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
+        code.push_str(&format!("        tracing::trace!(\"  [{{}}] classic decode field `{}` ({{}} bytes remaining)\", stringify!(Self), buf.remaining());\n", f.name));
         if f.nullable_versions.is_some() && !nullable_has_builtin_flex(f) {
             let inner_type = strip_option_wrapper(&rust_type);
             code.push_str(&format!("        let {} = Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?);\n", rust_name, inner_type, f.name));
@@ -618,6 +619,8 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
+        // Debug: log field being decoded with remaining bytes
+        code.push_str(&format!("        tracing::trace!(\"  [{{}}] decoding field `{}` ({{}} bytes remaining)\", stringify!(Self), buf.remaining());\n", f.name));
         if f.nullable_versions.is_some() {
             // Nullable field
             let inner_type = strip_option_wrapper(&rust_type);

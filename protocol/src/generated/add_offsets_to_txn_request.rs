@@ -139,18 +139,38 @@ impl KafkaSerialize for AddOffsetsToTxnRequest {
 
 impl KafkaDeserialize for AddOffsetsToTxnRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `TransactionalId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TransactionalId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ProducerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_epoch =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupId".into(),
@@ -163,22 +183,42 @@ impl KafkaDeserialize for AddOffsetsToTxnRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `TransactionalId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TransactionalId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ProducerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_epoch =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerEpoch".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

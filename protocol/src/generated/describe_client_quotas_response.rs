@@ -190,19 +190,39 @@ impl KafkaSerialize for DescribeClientQuotasResponse {
 
 impl KafkaDeserialize for DescribeClientQuotasResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Entries` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entries = <Option<Vec<EntryData>> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Entries".into(),
@@ -216,16 +236,31 @@ impl KafkaDeserialize for DescribeClientQuotasResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -239,6 +274,11 @@ impl KafkaDeserialize for DescribeClientQuotasResponse {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `Entries` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entries = if is_flexible {
             <Option<Vec<EntryData>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
                 |_| DecodeError::Protocol {
@@ -317,10 +357,20 @@ impl KafkaSerialize for EntityData {
 
 impl KafkaDeserialize for EntityData {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `EntityType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entity_type =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode EntityType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `EntityName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entity_name = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode EntityName".into(),
@@ -332,12 +382,22 @@ impl KafkaDeserialize for EntityData {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `EntityType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entity_type =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode EntityType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `EntityName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entity_name = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -401,11 +461,21 @@ impl KafkaSerialize for EntryData {
 
 impl KafkaDeserialize for EntryData {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Entity` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entity = <Vec<EntityData> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Entity".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Values` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let values = <Vec<ValueData> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Values".into(),
@@ -414,10 +484,20 @@ impl KafkaDeserialize for EntryData {
         Ok(Self { entity, values })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Entity` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let entity = <Vec<EntityData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Entity".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Values` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let values = <Vec<ValueData> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Values".into(),
@@ -469,21 +549,41 @@ impl KafkaSerialize for ValueData {
 
 impl KafkaDeserialize for ValueData {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Key` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let key = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
             message: "failed to decode Key".into(),
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Value` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let value = <f64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
             message: "failed to decode Value".into(),
         })?;
         Ok(Self { key, value })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Key` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let key =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Key".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Value` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let value = <f64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Value".into(),

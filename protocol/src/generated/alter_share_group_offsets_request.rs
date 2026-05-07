@@ -120,10 +120,20 @@ impl KafkaSerialize for AlterShareGroupOffsetsRequest {
 
 impl KafkaDeserialize for AlterShareGroupOffsetsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics = <Vec<AlterShareGroupOffsetsRequestTopic> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topics".into(),
@@ -131,12 +141,22 @@ impl KafkaDeserialize for AlterShareGroupOffsetsRequest {
         Ok(Self { group_id, topics })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GroupId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics =
             <Vec<AlterShareGroupOffsetsRequestTopic> as KafkaDeserialize>::decode_flexible(
                 buf,
@@ -192,10 +212,20 @@ impl KafkaSerialize for AlterShareGroupOffsetsRequestPartition {
 
 impl KafkaDeserialize for AlterShareGroupOffsetsRequestPartition {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `StartOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let start_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode StartOffset".into(),
@@ -206,10 +236,20 @@ impl KafkaDeserialize for AlterShareGroupOffsetsRequestPartition {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `StartOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let start_offset =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -266,10 +306,20 @@ impl KafkaSerialize for AlterShareGroupOffsetsRequestTopic {
 
 impl KafkaDeserialize for AlterShareGroupOffsetsRequestTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `TopicName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TopicName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions =
             <Vec<AlterShareGroupOffsetsRequestPartition> as KafkaDeserialize>::decode(buf)
                 .map_err(|_| DecodeError::Protocol {
@@ -281,12 +331,22 @@ impl KafkaDeserialize for AlterShareGroupOffsetsRequestTopic {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `TopicName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode TopicName".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions =
             <Vec<AlterShareGroupOffsetsRequestPartition> as KafkaDeserialize>::decode_flexible(
                 buf,

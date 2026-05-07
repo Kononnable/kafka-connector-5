@@ -117,10 +117,20 @@ impl KafkaSerialize for ListGroupsRequest {
 
 impl KafkaDeserialize for ListGroupsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `StatesFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let states_filter =
             <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode StatesFilter".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TypesFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let types_filter =
             <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TypesFilter".into(),
@@ -131,10 +141,20 @@ impl KafkaDeserialize for ListGroupsRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `StatesFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let states_filter = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode StatesFilter".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `TypesFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let types_filter = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TypesFilter".into(),

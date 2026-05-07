@@ -90,6 +90,11 @@ impl KafkaSerialize for ListConfigResourcesRequest {
 
 impl KafkaDeserialize for ListConfigResourcesRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceTypes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_types =
             <Vec<i8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceTypes".into(),
@@ -97,6 +102,11 @@ impl KafkaDeserialize for ListConfigResourcesRequest {
         Ok(Self { resource_types })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ResourceTypes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_types = <Vec<i8> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceTypes".into(),

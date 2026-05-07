@@ -84,6 +84,11 @@ impl KafkaSerialize for DescribeTransactionsRequest {
 
 impl KafkaDeserialize for DescribeTransactionsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `TransactionalIds` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_ids =
             <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TransactionalIds".into(),
@@ -91,6 +96,11 @@ impl KafkaDeserialize for DescribeTransactionsRequest {
         Ok(Self { transactional_ids })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `TransactionalIds` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_ids =
             <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

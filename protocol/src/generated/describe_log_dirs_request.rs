@@ -107,6 +107,11 @@ impl KafkaSerialize for DescribeLogDirsRequest {
 
 impl KafkaDeserialize for DescribeLogDirsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics = <Option<Vec<DescribableLogDirTopic>> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topics".into(),
@@ -114,6 +119,11 @@ impl KafkaDeserialize for DescribeLogDirsRequest {
         Ok(Self { topics })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics = if is_flexible {
             <Option<Vec<DescribableLogDirTopic>> as KafkaDeserialize>::decode_flexible(buf, true)
                 .map_err(|_| DecodeError::Protocol {
@@ -173,10 +183,20 @@ impl KafkaSerialize for DescribableLogDirTopic {
 
 impl KafkaDeserialize for DescribableLogDirTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Topic` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topic".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions =
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
@@ -184,12 +204,22 @@ impl KafkaDeserialize for DescribableLogDirTopic {
         Ok(Self { topic, partitions })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Topic` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Topic".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),

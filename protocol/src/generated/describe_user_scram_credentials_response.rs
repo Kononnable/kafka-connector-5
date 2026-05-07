@@ -176,19 +176,39 @@ impl KafkaSerialize for DescribeUserScramCredentialsResponse {
 
 impl KafkaDeserialize for DescribeUserScramCredentialsResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Results` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results = <Vec<DescribeUserScramCredentialsResult> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Results".into(),
@@ -201,16 +221,31 @@ impl KafkaDeserialize for DescribeUserScramCredentialsResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -224,6 +259,11 @@ impl KafkaDeserialize for DescribeUserScramCredentialsResponse {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `Results` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results =
             <Vec<DescribeUserScramCredentialsResult> as KafkaDeserialize>::decode_flexible(
                 buf,
@@ -284,10 +324,20 @@ impl KafkaSerialize for CredentialInfo {
 
 impl KafkaDeserialize for CredentialInfo {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Mechanism` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let mechanism =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Mechanism".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Iterations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let iterations =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Iterations".into(),
@@ -298,12 +348,22 @@ impl KafkaDeserialize for CredentialInfo {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Mechanism` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let mechanism =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Mechanism".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Iterations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let iterations =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -393,19 +453,39 @@ impl KafkaSerialize for DescribeUserScramCredentialsResult {
 
 impl KafkaDeserialize for DescribeUserScramCredentialsResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `User` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let user =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode User".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CredentialInfos` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let credential_infos =
             <Vec<CredentialInfo> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -420,18 +500,33 @@ impl KafkaDeserialize for DescribeUserScramCredentialsResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `User` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let user =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode User".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -445,6 +540,11 @@ impl KafkaDeserialize for DescribeUserScramCredentialsResult {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `CredentialInfos` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let credential_infos =
             <Vec<CredentialInfo> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
                 |_| DecodeError::Protocol {

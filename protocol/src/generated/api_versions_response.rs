@@ -267,31 +267,66 @@ impl KafkaSerialize for ApiVersionsResponse {
 
 impl KafkaDeserialize for ApiVersionsResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ApiKeys` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let api_keys = <Vec<ApiVersion> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ApiKeys".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `SupportedFeatures` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let supported_features = <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SupportedFeatures".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `FinalizedFeaturesEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let finalized_features_epoch =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode FinalizedFeaturesEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `FinalizedFeatures` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let finalized_features = <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode FinalizedFeatures".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ZkMigrationReady` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let zk_migration_ready =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ZkMigrationReady".into(),
@@ -307,34 +342,69 @@ impl KafkaDeserialize for ApiVersionsResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ApiKeys` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let api_keys = <Vec<ApiVersion> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ApiKeys".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `SupportedFeatures` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let supported_features =
             <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode SupportedFeatures".into(),
                 })?;
+        tracing::trace!(
+            "  [{}] decoding field `FinalizedFeaturesEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let finalized_features_epoch = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode FinalizedFeaturesEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `FinalizedFeatures` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let finalized_features =
             <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode FinalizedFeatures".into(),
                 })?;
+        tracing::trace!(
+            "  [{}] decoding field `ZkMigrationReady` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let zk_migration_ready = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ZkMigrationReady".into(),
@@ -404,14 +474,29 @@ impl KafkaSerialize for ApiVersion {
 
 impl KafkaDeserialize for ApiVersion {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ApiKey` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let api_key =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ApiKey".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MinVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let min_version =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MinVersion".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MaxVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxVersion".into(),
@@ -423,18 +508,33 @@ impl KafkaDeserialize for ApiVersion {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ApiKey` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let api_key =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ApiKey".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MinVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let min_version =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode MinVersion".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MaxVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -502,14 +602,29 @@ impl KafkaSerialize for FinalizedFeatureKey {
 
 impl KafkaDeserialize for FinalizedFeatureKey {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MaxVersionLevel` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version_level =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxVersionLevel".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MinVersionLevel` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let min_version_level =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MinVersionLevel".into(),
@@ -521,16 +636,31 @@ impl KafkaDeserialize for FinalizedFeatureKey {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MaxVersionLevel` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version_level = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxVersionLevel".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MinVersionLevel` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let min_version_level = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MinVersionLevel".into(),
@@ -596,14 +726,29 @@ impl KafkaSerialize for SupportedFeatureKey {
 
 impl KafkaDeserialize for SupportedFeatureKey {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MinVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let min_version =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MinVersion".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MaxVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxVersion".into(),
@@ -615,18 +760,33 @@ impl KafkaDeserialize for SupportedFeatureKey {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MinVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let min_version =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode MinVersion".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MaxVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

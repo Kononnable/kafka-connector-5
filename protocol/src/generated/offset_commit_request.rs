@@ -245,28 +245,58 @@ impl KafkaSerialize for OffsetCommitRequest {
 
 impl KafkaDeserialize for OffsetCommitRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `GenerationIdOrMemberEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let generation_id_or_member_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GenerationIdOrMemberEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MemberId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MemberId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `GroupInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_instance_id =
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GroupInstanceId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `RetentionTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let retention_time_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RetentionTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics =
             <Vec<OffsetCommitRequestTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -283,24 +313,44 @@ impl KafkaDeserialize for OffsetCommitRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `GroupId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GroupId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `GenerationIdOrMemberEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let generation_id_or_member_epoch =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GenerationIdOrMemberEpoch".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MemberId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let member_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode MemberId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `GroupInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_instance_id = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -314,10 +364,20 @@ impl KafkaDeserialize for OffsetCommitRequest {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `RetentionTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let retention_time_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RetentionTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics =
             <Vec<OffsetCommitRequestTopic> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
@@ -410,18 +470,38 @@ impl KafkaSerialize for OffsetCommitRequestPartition {
 
 impl KafkaDeserialize for OffsetCommitRequestPartition {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CommittedOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let committed_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CommittedOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CommittedLeaderEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let committed_leader_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CommittedLeaderEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CommittedMetadata` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let committed_metadata =
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -436,18 +516,38 @@ impl KafkaDeserialize for OffsetCommitRequestPartition {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `CommittedOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let committed_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CommittedOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `CommittedLeaderEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let committed_leader_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode CommittedLeaderEpoch".into(),
         })?;
+        tracing::trace!(
+            "  [{}] decoding field `CommittedMetadata` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let committed_metadata = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -523,14 +623,29 @@ impl KafkaSerialize for OffsetCommitRequestTopic {
 
 impl KafkaDeserialize for OffsetCommitRequestTopic {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TopicId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_id =
             <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TopicId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions = <Vec<OffsetCommitRequestPartition> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
@@ -542,18 +657,33 @@ impl KafkaDeserialize for OffsetCommitRequestTopic {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `TopicId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_id =
             <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode TopicId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions = <Vec<OffsetCommitRequestPartition> as KafkaDeserialize>::decode_flexible(
             buf,
             is_flexible,

@@ -108,6 +108,11 @@ impl KafkaSerialize for WriteTxnMarkersResponse {
 
 impl KafkaDeserialize for WriteTxnMarkersResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Markers` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let markers =
             <Vec<WritableTxnMarkerResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -117,6 +122,11 @@ impl KafkaDeserialize for WriteTxnMarkersResponse {
         Ok(Self { markers })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Markers` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let markers =
             <Vec<WritableTxnMarkerResult> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
@@ -169,10 +179,20 @@ impl KafkaSerialize for WritableTxnMarkerPartitionResult {
 
 impl KafkaDeserialize for WritableTxnMarkerPartitionResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
@@ -183,10 +203,20 @@ impl KafkaDeserialize for WritableTxnMarkerPartitionResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -243,10 +273,20 @@ impl KafkaSerialize for WritableTxnMarkerResult {
 
 impl KafkaDeserialize for WritableTxnMarkerResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics =
             <Vec<WritableTxnMarkerTopicResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -259,12 +299,22 @@ impl KafkaDeserialize for WritableTxnMarkerResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics = <Vec<WritableTxnMarkerTopicResult> as KafkaDeserialize>::decode_flexible(
             buf,
             is_flexible,
@@ -322,10 +372,20 @@ impl KafkaSerialize for WritableTxnMarkerTopicResult {
 
 impl KafkaDeserialize for WritableTxnMarkerTopicResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions = <Vec<WritableTxnMarkerPartitionResult> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode Partitions".into(),
@@ -333,12 +393,22 @@ impl KafkaDeserialize for WritableTxnMarkerTopicResult {
         Ok(Self { name, partitions })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions =
             <Vec<WritableTxnMarkerPartitionResult> as KafkaDeserialize>::decode_flexible(
                 buf,

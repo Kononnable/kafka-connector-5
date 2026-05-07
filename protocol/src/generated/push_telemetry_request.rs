@@ -157,22 +157,47 @@ impl KafkaSerialize for PushTelemetryRequest {
 
 impl KafkaDeserialize for PushTelemetryRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ClientInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_instance_id =
             <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientInstanceId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `SubscriptionId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let subscription_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SubscriptionId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Terminating` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let terminating =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Terminating".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CompressionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let compression_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CompressionType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Metrics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let metrics =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Metrics".into(),
@@ -186,24 +211,49 @@ impl KafkaDeserialize for PushTelemetryRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ClientInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientInstanceId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `SubscriptionId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let subscription_id = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SubscriptionId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Terminating` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let terminating =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Terminating".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `CompressionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let compression_type = <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CompressionType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Metrics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let metrics =
             <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

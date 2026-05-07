@@ -137,7 +137,18 @@ where
 
 // ── Request inspection (read-only) ────────────────────────────────────
 
-use protocol::generated::*;
+use protocol::generated::{ProduceRequest, FetchRequest, ListOffsetsRequest, MetadataRequest,
+    OffsetCommitRequest, OffsetFetchRequest, FindCoordinatorRequest, JoinGroupRequest,
+    HeartbeatRequest, LeaveGroupRequest, SyncGroupRequest, DescribeGroupsRequest,
+    ListGroupsRequest, SaslHandshakeRequest, ApiVersionsRequest, CreateTopicsRequest,
+    DeleteTopicsRequest, DeleteRecordsRequest, InitProducerIdRequest,
+    OffsetForLeaderEpochRequest, AddPartitionsToTxnRequest, AddOffsetsToTxnRequest,
+    EndTxnRequest, WriteTxnMarkersRequest, TxnOffsetCommitRequest, DescribeAclsRequest,
+    CreateAclsRequest, DeleteAclsRequest, DescribeConfigsRequest, AlterConfigsRequest,
+    AlterReplicaLogDirsRequest, DescribeLogDirsRequest, SaslAuthenticateRequest,
+    CreatePartitionsRequest, CreateDelegationTokenRequest, RenewDelegationTokenRequest,
+    ExpireDelegationTokenRequest, DescribeDelegationTokenRequest, ElectLeadersRequest,
+    MetadataResponse};
 
 /// Try to deserialize and debug-log a request body.
 fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
@@ -193,53 +204,20 @@ fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
 
 /// Try to deserialize and debug-log a response body.
 fn log_response_body(api_key: i16, version: i16, body: &[u8]) {
-    let version = ApiVersion::new(version);
-    let mut buf = Bytes::copy_from_slice(body);
-    let result = match api_key {
-        0  => ProduceResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        1  => FetchResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        2  => ListOffsetsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        3  => MetadataResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        8  => OffsetCommitResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        9  => OffsetFetchResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        10 => FindCoordinatorResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        11 => JoinGroupResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        12 => HeartbeatResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        13 => LeaveGroupResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        14 => SyncGroupResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        15 => DescribeGroupsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        16 => ListGroupsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        17 => SaslHandshakeResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        18 => ApiVersionsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        19 => CreateTopicsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        20 => DeleteTopicsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        21 => DeleteRecordsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        22 => InitProducerIdResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        23 => OffsetForLeaderEpochResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        24 => AddPartitionsToTxnResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        25 => AddOffsetsToTxnResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        26 => EndTxnResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        27 => WriteTxnMarkersResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        28 => TxnOffsetCommitResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        29 => DescribeAclsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        30 => CreateAclsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        31 => DeleteAclsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        32 => DescribeConfigsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        33 => AlterConfigsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        34 => AlterReplicaLogDirsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        35 => DescribeLogDirsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        36 => SaslAuthenticateResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        37 => CreatePartitionsResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        38 => CreateDelegationTokenResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        39 => RenewDelegationTokenResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        40 => ExpireDelegationTokenResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        41 => DescribeDelegationTokenResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        42 => ElectLeadersResponse::deserialize(version, &mut buf).ok().map(|v| format!("{v:?}")),
-        _  => None,
-    };
-    match result {
-        Some(s) => tracing::info!("← RES body: {s}"),
-        None => tracing::info!("← RES body: {} bytes (undecoded)", body.len()),
+    // Only Metadata responses (api_key=3) are safely decoded for now.
+    // Other response types may use protocol versions or formats that
+    // the generated code doesn't support, causing OOM from misaligned
+    // varint parsing.
+    if api_key == 3 {
+        let ver = ApiVersion::new(version);
+        let mut buf = Bytes::copy_from_slice(body);
+        let result = MetadataResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}"));
+        match result {
+            Some(s) => tracing::info!("← RES body: {s}"),
+            None => tracing::info!("← RES body: {} bytes (undecoded)", body.len()),
+        }
+    } else {
+        tracing::info!("← RES body: {} bytes (undecoded)", body.len());
     }
 }
 
@@ -274,7 +252,9 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
             let frame_body = &remaining[4..consumed];
             let is_flex = hdr.api_version >= 9;
             let body_off = frame::request_body_offset(frame_body, is_flex);
-            let _ = log_request_body(hdr.api_key, hdr.api_version, &frame_body[body_off..]);
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                || log_request_body(hdr.api_key, hdr.api_version, &frame_body[body_off..]),
+            ));
             let mut t = tracker.lock().await;
             let inflight = t.track_request(hdr);
             tracing::trace!(
@@ -328,7 +308,9 @@ async fn inspect_and_rewrite_responses(
                     let frame_body = &remaining[4..consumed];
                     let is_flex = completion.api_version >= 9;
                     let body_off = frame::response_body_offset(frame_body, is_flex);
-                    let _ = log_response_body(completion.api_key, completion.api_version, &frame_body[body_off..]);
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                        || log_response_body(completion.api_key, completion.api_version, &frame_body[body_off..]),
+                    ));
                     // Return metadata info for rewrite
                     if completion.api_key == 3 {
                         (Some(completion.api_version), completion.api_key, completion.api_version)

@@ -182,26 +182,56 @@ impl KafkaSerialize for BrokerHeartbeatRequest {
 
 impl KafkaDeserialize for BrokerHeartbeatRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `BrokerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let broker_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode BrokerId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `BrokerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let broker_epoch =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode BrokerEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CurrentMetadataOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let current_metadata_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CurrentMetadataOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `WantFence` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let want_fence =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode WantFence".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `WantShutDown` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let want_shut_down =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode WantShutDown".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `OfflineLogDirs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let offline_log_dirs = <Vec<[u8; 16]> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode OfflineLogDirs".into(),
@@ -217,32 +247,62 @@ impl KafkaDeserialize for BrokerHeartbeatRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `BrokerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let broker_id =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode BrokerId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `BrokerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let broker_epoch =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode BrokerEpoch".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `CurrentMetadataOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let current_metadata_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CurrentMetadataOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `WantFence` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let want_fence =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode WantFence".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `WantShutDown` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let want_shut_down = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode WantShutDown".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `OfflineLogDirs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let offline_log_dirs =
             <Vec<[u8; 16]> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
                 |_| DecodeError::Protocol {

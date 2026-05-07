@@ -107,10 +107,20 @@ impl KafkaSerialize for StreamsGroupDescribeRequest {
 
 impl KafkaDeserialize for StreamsGroupDescribeRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `GroupIds` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_ids =
             <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupIds".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `IncludeAuthorizedOperations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let include_authorized_operations =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IncludeAuthorizedOperations".into(),
@@ -121,10 +131,20 @@ impl KafkaDeserialize for StreamsGroupDescribeRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `GroupIds` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let group_ids = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode GroupIds".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `IncludeAuthorizedOperations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let include_authorized_operations =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

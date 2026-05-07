@@ -142,13 +142,28 @@ impl KafkaSerialize for FindCoordinatorRequest {
 
 impl KafkaDeserialize for FindCoordinatorRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Key` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let key = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
             message: "failed to decode Key".into(),
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `KeyType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let key_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode KeyType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CoordinatorKeys` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let coordinator_keys =
             <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CoordinatorKeys".into(),
@@ -160,18 +175,33 @@ impl KafkaDeserialize for FindCoordinatorRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Key` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let key =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Key".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `KeyType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let key_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode KeyType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `CoordinatorKeys` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let coordinator_keys = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode CoordinatorKeys".into(),

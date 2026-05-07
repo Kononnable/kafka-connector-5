@@ -191,20 +191,40 @@ impl KafkaSerialize for AddPartitionsToTxnResponse {
 
 impl KafkaDeserialize for AddPartitionsToTxnResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResultsByTransaction` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results_by_transaction =
             <Vec<AddPartitionsToTxnResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ResultsByTransaction".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResultsByTopicV3AndBelow` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results_by_topic_v3_and_below =
             <Vec<AddPartitionsToTxnTopicResult> as KafkaDeserialize>::decode(buf).map_err(
                 |_| DecodeError::Protocol {
@@ -219,21 +239,41 @@ impl KafkaDeserialize for AddPartitionsToTxnResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResultsByTransaction` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results_by_transaction =
             <Vec<AddPartitionsToTxnResult> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode ResultsByTransaction".into(),
                 })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResultsByTopicV3AndBelow` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results_by_topic_v3_and_below =
             <Vec<AddPartitionsToTxnTopicResult> as KafkaDeserialize>::decode_flexible(
                 buf,
@@ -294,10 +334,20 @@ impl KafkaSerialize for AddPartitionsToTxnPartitionResult {
 
 impl KafkaDeserialize for AddPartitionsToTxnPartitionResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PartitionErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionErrorCode".into(),
@@ -308,10 +358,20 @@ impl KafkaDeserialize for AddPartitionsToTxnPartitionResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PartitionErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionErrorCode".into(),
@@ -366,10 +426,20 @@ impl KafkaSerialize for AddPartitionsToTxnResult {
 
 impl KafkaDeserialize for AddPartitionsToTxnResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `TransactionalId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TransactionalId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TopicResults` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_results = <Vec<AddPartitionsToTxnTopicResult> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode TopicResults".into(),
@@ -380,10 +450,20 @@ impl KafkaDeserialize for AddPartitionsToTxnResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `TransactionalId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_id = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TransactionalId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `TopicResults` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_results =
             <Vec<AddPartitionsToTxnTopicResult> as KafkaDeserialize>::decode_flexible(
                 buf,
@@ -442,10 +522,20 @@ impl KafkaSerialize for AddPartitionsToTxnTopicResult {
 
 impl KafkaDeserialize for AddPartitionsToTxnTopicResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResultsByPartition` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results_by_partition =
             <Vec<AddPartitionsToTxnPartitionResult> as KafkaDeserialize>::decode(buf).map_err(
                 |_| DecodeError::Protocol {
@@ -458,12 +548,22 @@ impl KafkaDeserialize for AddPartitionsToTxnTopicResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResultsByPartition` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results_by_partition =
             <Vec<AddPartitionsToTxnPartitionResult> as KafkaDeserialize>::decode_flexible(
                 buf,

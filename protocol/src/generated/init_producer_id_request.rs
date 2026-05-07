@@ -218,27 +218,57 @@ impl KafkaSerialize for InitProducerIdRequest {
 
 impl KafkaDeserialize for InitProducerIdRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `TransactionalId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode TransactionalId".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TransactionTimeoutMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transaction_timeout_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TransactionTimeoutMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ProducerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_epoch =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerEpoch".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Enable2Pc` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let enable2_pc =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Enable2Pc".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `KeepPreparedTxn` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let keep_prepared_txn =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode KeepPreparedTxn".into(),
@@ -253,6 +283,11 @@ impl KafkaDeserialize for InitProducerIdRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `TransactionalId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transactional_id = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -266,28 +301,53 @@ impl KafkaDeserialize for InitProducerIdRequest {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `TransactionTimeoutMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let transaction_timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode TransactionTimeoutMs".into(),
         })?;
+        tracing::trace!(
+            "  [{}] decoding field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ProducerEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_epoch =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerEpoch".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Enable2Pc` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let enable2_pc =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Enable2Pc".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `KeepPreparedTxn` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let keep_prepared_txn = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode KeepPreparedTxn".into(),

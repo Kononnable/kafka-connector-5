@@ -155,10 +155,20 @@ impl KafkaSerialize for DescribeConfigsResponse {
 
 impl KafkaDeserialize for DescribeConfigsResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Results` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results =
             <Vec<DescribeConfigsResult> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -171,10 +181,20 @@ impl KafkaDeserialize for DescribeConfigsResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Results` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let results =
             <Vec<DescribeConfigsResult> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
@@ -316,37 +336,77 @@ impl KafkaSerialize for DescribeConfigsResourceResult {
 
 impl KafkaDeserialize for DescribeConfigsResourceResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Value` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let value = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Value".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ReadOnly` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let read_only =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ReadOnly".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ConfigSource` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let config_source =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ConfigSource".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `IsSensitive` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let is_sensitive =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IsSensitive".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Synonyms` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let synonyms =
             <Vec<DescribeConfigsSynonym> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Synonyms".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ConfigType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let config_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ConfigType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Documentation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let documentation = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Documentation".into(),
@@ -364,12 +424,22 @@ impl KafkaDeserialize for DescribeConfigsResourceResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Value` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let value = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -383,35 +453,65 @@ impl KafkaDeserialize for DescribeConfigsResourceResult {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `ReadOnly` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let read_only =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ReadOnly".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ConfigSource` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let config_source =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ConfigSource".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `IsSensitive` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let is_sensitive =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode IsSensitive".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Synonyms` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let synonyms =
             <Vec<DescribeConfigsSynonym> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode Synonyms".into(),
                 })?;
+        tracing::trace!(
+            "  [{}] decoding field `ConfigType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let config_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ConfigType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Documentation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let documentation = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -524,23 +624,48 @@ impl KafkaSerialize for DescribeConfigsResult {
 
 impl KafkaDeserialize for DescribeConfigsResult {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Configs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let configs = <Vec<DescribeConfigsResourceResult> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Configs".into(),
@@ -554,12 +679,22 @@ impl KafkaDeserialize for DescribeConfigsResult {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -573,16 +708,31 @@ impl KafkaDeserialize for DescribeConfigsResult {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `ResourceType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ResourceType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResourceName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Configs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let configs = <Vec<DescribeConfigsResourceResult> as KafkaDeserialize>::decode_flexible(
             buf,
             is_flexible,
@@ -666,15 +816,30 @@ impl KafkaSerialize for DescribeConfigsSynonym {
 
 impl KafkaDeserialize for DescribeConfigsSynonym {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Value` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let value = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Value".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Source` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let source = <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
             message: "failed to decode Source".into(),
         })?;
@@ -685,12 +850,22 @@ impl KafkaDeserialize for DescribeConfigsSynonym {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Value` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let value = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -704,6 +879,11 @@ impl KafkaDeserialize for DescribeConfigsSynonym {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `Source` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let source = <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Source".into(),

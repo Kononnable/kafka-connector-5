@@ -135,16 +135,31 @@ impl KafkaSerialize for EnvelopeRequest {
 
 impl KafkaDeserialize for EnvelopeRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `RequestData` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let request_data =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RequestData".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `RequestPrincipal` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let request_principal =
             <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode RequestPrincipal".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ClientHostAddress` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_host_address =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientHostAddress".into(),
@@ -156,10 +171,20 @@ impl KafkaDeserialize for EnvelopeRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `RequestData` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let request_data = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RequestData".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `RequestPrincipal` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let request_principal = if is_flexible {
             <Option<Vec<u8>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -173,6 +198,11 @@ impl KafkaDeserialize for EnvelopeRequest {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `ClientHostAddress` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_host_address = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientHostAddress".into(),

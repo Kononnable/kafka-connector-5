@@ -134,15 +134,30 @@ impl KafkaSerialize for RemoveRaftVoterRequest {
 
 impl KafkaDeserialize for RemoveRaftVoterRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ClusterId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ClusterId".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `VoterId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let voter_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode VoterId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `VoterDirectoryId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let voter_directory_id =
             <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode VoterDirectoryId".into(),
@@ -154,6 +169,11 @@ impl KafkaDeserialize for RemoveRaftVoterRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ClusterId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let cluster_id = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -167,12 +187,22 @@ impl KafkaDeserialize for RemoveRaftVoterRequest {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `VoterId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let voter_id =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode VoterId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `VoterDirectoryId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode VoterDirectoryId".into(),

@@ -139,14 +139,29 @@ impl KafkaSerialize for DescribeClusterRequest {
 
 impl KafkaDeserialize for DescribeClusterRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `IncludeClusterAuthorizedOperations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let include_cluster_authorized_operations = <bool as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IncludeClusterAuthorizedOperations".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `EndpointType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let endpoint_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode EndpointType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `IncludeFencedBrokers` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let include_fenced_brokers =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IncludeFencedBrokers".into(),
@@ -158,18 +173,33 @@ impl KafkaDeserialize for DescribeClusterRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `IncludeClusterAuthorizedOperations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let include_cluster_authorized_operations =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode IncludeClusterAuthorizedOperations".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `EndpointType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let endpoint_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode EndpointType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `IncludeFencedBrokers` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let include_fenced_brokers = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IncludeFencedBrokers".into(),

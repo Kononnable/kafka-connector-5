@@ -143,16 +143,31 @@ impl KafkaSerialize for UpdateFeaturesRequest {
 
 impl KafkaDeserialize for UpdateFeaturesRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `timeoutMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let timeout_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode timeoutMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `FeatureUpdates` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let feature_updates =
             <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode FeatureUpdates".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ValidateOnly` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let validate_only =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ValidateOnly".into(),
@@ -164,17 +179,32 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `timeoutMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let timeout_ms =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode timeoutMs".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `FeatureUpdates` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let feature_updates =
             <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode FeatureUpdates".into(),
                 })?;
+        tracing::trace!(
+            "  [{}] decoding field `ValidateOnly` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let validate_only =
             <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -252,18 +282,38 @@ impl KafkaSerialize for FeatureUpdateKey {
 
 impl KafkaDeserialize for FeatureUpdateKey {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Feature` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let feature =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Feature".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MaxVersionLevel` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version_level =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxVersionLevel".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `AllowDowngrade` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let allow_downgrade =
             <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode AllowDowngrade".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `UpgradeType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let upgrade_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode UpgradeType".into(),
@@ -276,20 +326,40 @@ impl KafkaDeserialize for FeatureUpdateKey {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Feature` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let feature =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Feature".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MaxVersionLevel` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_version_level = <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxVersionLevel".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `AllowDowngrade` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let allow_downgrade = <bool as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode AllowDowngrade".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `UpgradeType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let upgrade_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

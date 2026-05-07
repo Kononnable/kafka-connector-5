@@ -83,6 +83,11 @@ impl KafkaSerialize for SaslAuthenticateRequest {
 
 impl KafkaDeserialize for SaslAuthenticateRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `AuthBytes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let auth_bytes =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode AuthBytes".into(),
@@ -90,6 +95,11 @@ impl KafkaDeserialize for SaslAuthenticateRequest {
         Ok(Self { auth_bytes })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `AuthBytes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let auth_bytes =
             <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

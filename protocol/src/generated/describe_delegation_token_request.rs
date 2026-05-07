@@ -108,6 +108,11 @@ impl KafkaSerialize for DescribeDelegationTokenRequest {
 
 impl KafkaDeserialize for DescribeDelegationTokenRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Owners` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let owners = <Option<Vec<DescribeDelegationTokenOwner>> as KafkaDeserialize>::decode(buf)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode Owners".into(),
@@ -115,6 +120,11 @@ impl KafkaDeserialize for DescribeDelegationTokenRequest {
         Ok(Self { owners })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Owners` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let owners = if is_flexible {
             <Option<Vec<DescribeDelegationTokenOwner>> as KafkaDeserialize>::decode_flexible(
                 buf, true,
@@ -176,10 +186,20 @@ impl KafkaSerialize for DescribeDelegationTokenOwner {
 
 impl KafkaDeserialize for DescribeDelegationTokenOwner {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `PrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_type =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalName".into(),
@@ -190,10 +210,20 @@ impl KafkaDeserialize for DescribeDelegationTokenOwner {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `PrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalName".into(),

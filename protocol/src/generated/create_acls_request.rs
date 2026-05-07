@@ -102,6 +102,11 @@ impl KafkaSerialize for CreateAclsRequest {
 
 impl KafkaDeserialize for CreateAclsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Creations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let creations = <Vec<AclCreation> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Creations".into(),
@@ -110,6 +115,11 @@ impl KafkaDeserialize for CreateAclsRequest {
         Ok(Self { creations })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Creations` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let creations = <Vec<AclCreation> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode Creations".into(),
@@ -211,30 +221,65 @@ impl KafkaSerialize for AclCreation {
 
 impl KafkaDeserialize for AclCreation {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResourcePatternType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_pattern_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourcePatternType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Principal` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Principal".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Host` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Host".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Operation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let operation =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Operation".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PermissionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let permission_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PermissionType".into(),
@@ -250,38 +295,73 @@ impl KafkaDeserialize for AclCreation {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ResourceType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ResourceType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResourceName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResourcePatternType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_pattern_type = <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourcePatternType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Principal` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Principal".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Host` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Host".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Operation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let operation =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Operation".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PermissionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let permission_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

@@ -103,6 +103,11 @@ impl KafkaSerialize for DeleteAclsRequest {
 
 impl KafkaDeserialize for DeleteAclsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Filters` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let filters = <Vec<DeleteAclsFilter> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Filters".into(),
@@ -111,6 +116,11 @@ impl KafkaDeserialize for DeleteAclsRequest {
         Ok(Self { filters })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Filters` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let filters =
             <Vec<DeleteAclsFilter> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
@@ -252,34 +262,69 @@ impl KafkaSerialize for DeleteAclsFilter {
 
 impl KafkaDeserialize for DeleteAclsFilter {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceTypeFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type_filter =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceTypeFilter".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ResourceNameFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name_filter =
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ResourceNameFilter".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PatternTypeFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let pattern_type_filter =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PatternTypeFilter".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PrincipalFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_filter = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode PrincipalFilter".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `HostFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host_filter = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode HostFilter".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Operation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let operation =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Operation".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PermissionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let permission_type =
             <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PermissionType".into(),
@@ -295,10 +340,20 @@ impl KafkaDeserialize for DeleteAclsFilter {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ResourceTypeFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_type_filter = <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ResourceTypeFilter".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ResourceNameFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let resource_name_filter = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -312,10 +367,20 @@ impl KafkaDeserialize for DeleteAclsFilter {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `PatternTypeFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let pattern_type_filter = <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PatternTypeFilter".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PrincipalFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_filter = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -329,6 +394,11 @@ impl KafkaDeserialize for DeleteAclsFilter {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `HostFilter` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host_filter = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -342,12 +412,22 @@ impl KafkaDeserialize for DeleteAclsFilter {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `Operation` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let operation =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Operation".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PermissionType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let permission_type =
             <i8 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

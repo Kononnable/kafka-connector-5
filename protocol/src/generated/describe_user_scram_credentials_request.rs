@@ -102,6 +102,11 @@ impl KafkaSerialize for DescribeUserScramCredentialsRequest {
 
 impl KafkaDeserialize for DescribeUserScramCredentialsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Users` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let users = <Option<Vec<UserName>> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Users".into(),
@@ -110,6 +115,11 @@ impl KafkaDeserialize for DescribeUserScramCredentialsRequest {
         Ok(Self { users })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Users` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let users = if is_flexible {
             <Option<Vec<UserName>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(
                 |_| DecodeError::Protocol {
@@ -160,6 +170,11 @@ impl KafkaSerialize for UserName {
 
 impl KafkaDeserialize for UserName {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
@@ -167,6 +182,11 @@ impl KafkaDeserialize for UserName {
         Ok(Self { name })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

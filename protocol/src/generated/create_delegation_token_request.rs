@@ -188,23 +188,43 @@ impl KafkaSerialize for CreateDelegationTokenRequest {
 
 impl KafkaDeserialize for CreateDelegationTokenRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `OwnerPrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let owner_principal_type =
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode OwnerPrincipalType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `OwnerPrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let owner_principal_name =
             <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode OwnerPrincipalName".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Renewers` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let renewers = <Vec<CreatableRenewers> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Renewers".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MaxLifetimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_lifetime_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxLifetimeMs".into(),
@@ -217,6 +237,11 @@ impl KafkaDeserialize for CreateDelegationTokenRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `OwnerPrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let owner_principal_type = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -230,6 +255,11 @@ impl KafkaDeserialize for CreateDelegationTokenRequest {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `OwnerPrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let owner_principal_name = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -243,11 +273,21 @@ impl KafkaDeserialize for CreateDelegationTokenRequest {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `Renewers` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let renewers =
             <Vec<CreatableRenewers> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode Renewers".into(),
                 })?;
+        tracing::trace!(
+            "  [{}] decoding field `MaxLifetimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_lifetime_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxLifetimeMs".into(),
@@ -304,10 +344,20 @@ impl KafkaSerialize for CreatableRenewers {
 
 impl KafkaDeserialize for CreatableRenewers {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `PrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_type =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalName".into(),
@@ -318,10 +368,20 @@ impl KafkaDeserialize for CreatableRenewers {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `PrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalName".into(),

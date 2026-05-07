@@ -285,24 +285,49 @@ impl KafkaSerialize for FetchResponse {
 
 impl KafkaDeserialize for FetchResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `SessionId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let session_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SessionId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Responses` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let responses =
             <Vec<FetchableTopicResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Responses".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `NodeEndpoints` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let node_endpoints =
             <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
@@ -318,27 +343,52 @@ impl KafkaDeserialize for FetchResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `SessionId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let session_id =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode SessionId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Responses` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let responses =
             <Vec<FetchableTopicResponse> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
                 .map_err(|_| DecodeError::Protocol {
                     message: "failed to decode Responses".into(),
                 })?;
+        tracing::trace!(
+            "  [{}] decoding field `NodeEndpoints` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let node_endpoints =
             <Vec<NodeEndpoint> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
                 |_| DecodeError::Protocol {
@@ -398,10 +448,20 @@ impl KafkaSerialize for AbortedTransaction {
 
 impl KafkaDeserialize for AbortedTransaction {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ProducerId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `FirstOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let first_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode FirstOffset".into(),
@@ -412,12 +472,22 @@ impl KafkaDeserialize for AbortedTransaction {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ProducerId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let producer_id =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ProducerId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `FirstOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let first_offset =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -474,9 +544,19 @@ impl KafkaSerialize for EpochEndOffset {
 
 impl KafkaDeserialize for EpochEndOffset {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Epoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let epoch = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
             message: "failed to decode Epoch".into(),
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `EndOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let end_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode EndOffset".into(),
@@ -484,11 +564,21 @@ impl KafkaDeserialize for EpochEndOffset {
         Ok(Self { epoch, end_offset })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Epoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Epoch".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] decoding field `EndOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let end_offset =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -552,14 +642,29 @@ impl KafkaSerialize for FetchableTopicResponse {
 
 impl KafkaDeserialize for FetchableTopicResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Topic` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Topic".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TopicId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_id =
             <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TopicId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions = <Vec<PartitionData> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Partitions".into(),
@@ -572,18 +677,33 @@ impl KafkaDeserialize for FetchableTopicResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Topic` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Topic".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `TopicId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topic_id =
             <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode TopicId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Partitions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partitions =
             <Vec<PartitionData> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
                 |_| DecodeError::Protocol {
@@ -641,10 +761,20 @@ impl KafkaSerialize for LeaderIdAndEpoch {
 
 impl KafkaDeserialize for LeaderIdAndEpoch {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `LeaderId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let leader_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LeaderId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `LeaderEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let leader_epoch =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LeaderEpoch".into(),
@@ -655,12 +785,22 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `LeaderId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let leader_id =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode LeaderId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `LeaderEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let leader_epoch =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
@@ -750,17 +890,37 @@ impl KafkaSerialize for NodeEndpoint {
 
 impl KafkaDeserialize for NodeEndpoint {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `NodeId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let node_id =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode NodeId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Host` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Host".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Port` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let port = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
             message: "failed to decode Port".into(),
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Rack` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let rack = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Rack".into(),
@@ -774,23 +934,43 @@ impl KafkaDeserialize for NodeEndpoint {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `NodeId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let node_id =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode NodeId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Host` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let host =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Host".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Port` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let port = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Port".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] decoding field `Rack` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let rack = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -972,50 +1152,105 @@ impl KafkaSerialize for PartitionData {
 
 impl KafkaDeserialize for PartitionData {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `HighWatermark` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let high_watermark =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode HighWatermark".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `LastStableOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let last_stable_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LastStableOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `LogStartOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let log_start_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LogStartOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `DivergingEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let diverging_epoch = <EpochEndOffset as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode DivergingEpoch".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `CurrentLeader` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let current_leader = <LeaderIdAndEpoch as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode CurrentLeader".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `SnapshotId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let snapshot_id =
             <SnapshotId as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SnapshotId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `AbortedTransactions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let aborted_transactions =
             <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode(buf).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode AbortedTransactions".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PreferredReadReplica` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let preferred_read_replica =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PreferredReadReplica".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Records` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let records = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Records".into(),
@@ -1036,46 +1271,91 @@ impl KafkaDeserialize for PartitionData {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `HighWatermark` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let high_watermark =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode HighWatermark".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `LastStableOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let last_stable_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LastStableOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `LogStartOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let log_start_offset = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode LogStartOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `DivergingEpoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let diverging_epoch =
             <EpochEndOffset as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
                 |_| DecodeError::Protocol {
                     message: "failed to decode DivergingEpoch".into(),
                 },
             )?;
+        tracing::trace!(
+            "  [{}] decoding field `CurrentLeader` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let current_leader =
             <LeaderIdAndEpoch as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(
                 |_| DecodeError::Protocol {
                     message: "failed to decode CurrentLeader".into(),
                 },
             )?;
+        tracing::trace!(
+            "  [{}] decoding field `SnapshotId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let snapshot_id = <SnapshotId as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SnapshotId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `AbortedTransactions` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let aborted_transactions = if is_flexible {
             <Option<Vec<AbortedTransaction>> as KafkaDeserialize>::decode_flexible(buf, true)
                 .map_err(|_| DecodeError::Protocol {
@@ -1088,10 +1368,20 @@ impl KafkaDeserialize for PartitionData {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `PreferredReadReplica` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let preferred_read_replica = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode PreferredReadReplica".into(),
         })?;
+        tracing::trace!(
+            "  [{}] decoding field `Records` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let records = if is_flexible {
             <Option<Vec<u8>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -1164,22 +1454,42 @@ impl KafkaSerialize for SnapshotId {
 
 impl KafkaDeserialize for SnapshotId {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `EndOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let end_offset =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode EndOffset".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Epoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let epoch = <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
             message: "failed to decode Epoch".into(),
         })?;
         Ok(Self { end_offset, epoch })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `EndOffset` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let end_offset =
             <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode EndOffset".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Epoch` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode Epoch".into(),

@@ -125,10 +125,20 @@ impl KafkaSerialize for ListPartitionReassignmentsRequest {
 
 impl KafkaDeserialize for ListPartitionReassignmentsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `TimeoutMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let timeout_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TimeoutMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics =
             <Option<Vec<ListPartitionReassignmentsTopics>> as KafkaDeserialize>::decode(buf)
                 .map_err(|_| DecodeError::Protocol {
@@ -137,12 +147,22 @@ impl KafkaDeserialize for ListPartitionReassignmentsRequest {
         Ok(Self { timeout_ms, topics })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `TimeoutMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let timeout_ms =
             <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode TimeoutMs".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Topics` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let topics = if is_flexible {
             <Option<Vec<ListPartitionReassignmentsTopics>> as KafkaDeserialize>::decode_flexible(
                 buf, true,
@@ -203,10 +223,20 @@ impl KafkaSerialize for ListPartitionReassignmentsTopics {
 
 impl KafkaDeserialize for ListPartitionReassignmentsTopics {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Name".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PartitionIndexes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_indexes =
             <Vec<i32> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndexes".into(),
@@ -217,12 +247,22 @@ impl KafkaDeserialize for ListPartitionReassignmentsTopics {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Name` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Name".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PartitionIndexes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let partition_indexes = <Vec<i32> as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
             message: "failed to decode PartitionIndexes".into(),

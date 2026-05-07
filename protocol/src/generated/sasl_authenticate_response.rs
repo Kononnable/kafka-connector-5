@@ -159,19 +159,39 @@ impl KafkaSerialize for SaslAuthenticateResponse {
 
 impl KafkaDeserialize for SaslAuthenticateResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ErrorMessage".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `AuthBytes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let auth_bytes =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode AuthBytes".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `SessionLifetimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let session_lifetime_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SessionLifetimeMs".into(),
@@ -184,12 +204,22 @@ impl KafkaDeserialize for SaslAuthenticateResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_message = if is_flexible {
             <Option<String> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -203,12 +233,22 @@ impl KafkaDeserialize for SaslAuthenticateResponse {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `AuthBytes` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let auth_bytes =
             <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode AuthBytes".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `SessionLifetimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let session_lifetime_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode SessionLifetimeMs".into(),

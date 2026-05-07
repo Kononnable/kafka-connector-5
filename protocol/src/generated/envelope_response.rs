@@ -117,11 +117,21 @@ impl KafkaSerialize for EnvelopeResponse {
 
 impl KafkaDeserialize for EnvelopeResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ResponseData` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let response_data = <Option<Vec<u8>> as KafkaDeserialize>::decode(buf).map_err(|_| {
             DecodeError::Protocol {
                 message: "failed to decode ResponseData".into(),
             }
         })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
@@ -132,6 +142,11 @@ impl KafkaDeserialize for EnvelopeResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ResponseData` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let response_data = if is_flexible {
             <Option<Vec<u8>> as KafkaDeserialize>::decode_flexible(buf, true).map_err(|_| {
                 DecodeError::Protocol {
@@ -145,6 +160,11 @@ impl KafkaDeserialize for EnvelopeResponse {
                 }
             })?
         };
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

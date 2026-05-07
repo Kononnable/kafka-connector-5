@@ -83,6 +83,11 @@ impl KafkaSerialize for GetTelemetrySubscriptionsRequest {
 
 impl KafkaDeserialize for GetTelemetrySubscriptionsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ClientInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_instance_id =
             <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientInstanceId".into(),
@@ -90,6 +95,11 @@ impl KafkaDeserialize for GetTelemetrySubscriptionsRequest {
         Ok(Self { client_instance_id })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ClientInstanceId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientInstanceId".into(),

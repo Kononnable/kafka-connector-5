@@ -119,10 +119,20 @@ impl KafkaSerialize for ApiVersionsRequest {
 
 impl KafkaDeserialize for ApiVersionsRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ClientSoftwareName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_software_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientSoftwareName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ClientSoftwareVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_software_version =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientSoftwareVersion".into(),
@@ -133,10 +143,20 @@ impl KafkaDeserialize for ApiVersionsRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ClientSoftwareName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_software_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ClientSoftwareName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ClientSoftwareVersion` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let client_software_version =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {

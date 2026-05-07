@@ -103,10 +103,20 @@ impl KafkaSerialize for RenewDelegationTokenRequest {
 
 impl KafkaDeserialize for RenewDelegationTokenRequest {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `Hmac` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let hmac =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Hmac".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `RenewPeriodMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let renew_period_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RenewPeriodMs".into(),
@@ -117,12 +127,22 @@ impl KafkaDeserialize for RenewDelegationTokenRequest {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `Hmac` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let hmac =
             <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Hmac".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `RenewPeriodMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let renew_period_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode RenewPeriodMs".into(),

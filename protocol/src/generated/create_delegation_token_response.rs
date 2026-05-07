@@ -285,46 +285,101 @@ impl KafkaSerialize for CreateDelegationTokenResponse {
 
 impl KafkaDeserialize for CreateDelegationTokenResponse {
     fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ErrorCode".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_type =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `PrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TokenRequesterPrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let token_requester_principal_type =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TokenRequesterPrincipalType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TokenRequesterPrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let token_requester_principal_name =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TokenRequesterPrincipalName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `IssueTimestampMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let issue_timestamp_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IssueTimestampMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ExpiryTimestampMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let expiry_timestamp_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ExpiryTimestampMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `MaxTimestampMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_timestamp_ms =
             <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxTimestampMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `TokenId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let token_id =
             <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode TokenId".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `Hmac` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let hmac =
             <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode Hmac".into(),
             })?;
+        tracing::trace!(
+            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms =
             <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
@@ -344,56 +399,111 @@ impl KafkaDeserialize for CreateDelegationTokenResponse {
         })
     }
     fn decode_flexible<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, DecodeError> {
+        tracing::trace!(
+            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let error_code =
             <i16 as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode ErrorCode".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_type = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalType".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `PrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let principal_name = <String as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PrincipalName".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `TokenRequesterPrincipalType` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let token_requester_principal_type =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode TokenRequesterPrincipalType".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `TokenRequesterPrincipalName` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let token_requester_principal_name =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode TokenRequesterPrincipalName".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `IssueTimestampMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let issue_timestamp_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode IssueTimestampMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ExpiryTimestampMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let expiry_timestamp_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ExpiryTimestampMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `MaxTimestampMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let max_timestamp_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxTimestampMs".into(),
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `TokenId` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let token_id =
             <String as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode TokenId".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `Hmac` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let hmac =
             <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode Hmac".into(),
                 }
             })?;
+        tracing::trace!(
+            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
+            stringify!(Self),
+            buf.remaining()
+        );
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode ThrottleTimeMs".into(),
