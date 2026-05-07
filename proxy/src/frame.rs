@@ -119,6 +119,39 @@ pub struct ParsedResponseHeader {
 }
 
 // ---------------------------------------------------------------------------
+/// Return the byte offset where the request body starts after the request header.
+///
+/// RequestHeader v0:  api_key (i16) + api_version (i16) + correlation_id (i32)
+///                    + client_id (nullable string) = variable
+/// RequestHeader v1+ (flexible): same but client_id is compact nullable string
+///                               + tag_buffer (unsigned varint).
+/// The tag buffer is always varint(0) = 1 byte for request headers (no tagged
+/// fields defined). We assume 1 byte rather than iterating, to avoid bleeding
+/// into the body bytes when the body happens to start with a non-zero byte.
+pub fn request_body_offset(data: &[u8], is_flexible: bool) -> usize {
+    use protocol::protocol::serialization::KafkaDeserialize;
+    use bytes::Buf;
+    let mut cur: &[u8] = data;
+    let _ = cur.get_i16(); // api_key
+    let _ = cur.get_i16(); // api_version
+    let _ = cur.get_i32(); // correlation_id
+    if is_flexible {
+        // client_id as compact nullable string
+        let _: Option<String> = match KafkaDeserialize::decode_flexible(&mut cur, true) {
+            Ok(v) => v,
+            Err(_) => return data.len(),
+        };
+        // tag_buffer: read and skip the varint (always 0 for request headers)
+        let (_tag_count, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
+    } else {
+        let _: String = match KafkaDeserialize::decode(&mut cur) {
+            Ok(v) => v,
+            Err(_) => return data.len(),
+        };
+    }
+    data.len() - cur.len()
+}
+
 // In-flight tracking
 // ---------------------------------------------------------------------------
 
