@@ -241,20 +241,22 @@ fn rewrite_metadata_in_buf(
     api_version: i16,
     config: &ProxyConfig,
 ) -> Result<(), ProxyError> {
-    // Frame layout: [4-byte size] [ResponseHeader: correlation_id(i32)] [ResponseBody]
+    // Frame layout: [4-byte size] [ResponseHeader] [ResponseBody]
+    // ResponseHeader v0:  correlation_id (i32) = 4 bytes
+    // ResponseHeader v1+: correlation_id (i32) + tag_buffer (varint) = 5+ bytes
+    let is_flexible = api_version >= 9;
     let frame_body = &buf[offset + 4..offset + frame_size];
-    let header_len = 4; // correlation_id: i32
+    let header_len = if is_flexible { 5 } else { 4 };
     let body_bytes = &frame_body[header_len..];
 
-    // Deserialize response body using version-blind KafkaDeserialize.
-    // This works for any version as long as existing fields haven't been
-    // reordered (new Kafka versions only append fields).
+    let version = ApiVersion::new(api_version);
+
     let mut body_buf = Bytes::copy_from_slice(body_bytes);
-    let mut response = match MetadataResponse::decode(&mut body_buf) {
+    let mut response = match MetadataResponse::deserialize(version, &mut body_buf) {
         Ok(r) => r,
         Err(e) => {
             tracing::warn!(
-                "failed to decode MetadataResponse (v{api_version}): {e} — forwarding unchanged"
+                "failed to deserialize MetadataResponse v{api_version}: {e} — forwarding unchanged"
             );
             return Ok(());
         }
@@ -276,10 +278,10 @@ fn rewrite_metadata_in_buf(
         broker.port = proxy_port;
     }
 
-    // Re-serialize the body (version-blind KafkaSerialize)
+    // Re-serialize the body using version-aware ApiResponse::serialize
     let mut new_body = BytesMut::new();
-    if let Err(e) = MetadataResponse::encode(&response, &mut new_body) {
-        tracing::warn!("failed to encode MetadataResponse (v{api_version}): {e}");
+    if let Err(e) = response.serialize(version, &mut new_body) {
+        tracing::warn!("failed to serialize MetadataResponse v{api_version}: {e}");
         return Ok(());
     }
 
