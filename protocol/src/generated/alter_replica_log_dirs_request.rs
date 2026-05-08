@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -33,18 +35,18 @@ impl ApiRequest for AlterReplicaLogDirsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(34)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(1)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(1)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -60,10 +62,7 @@ impl ApiRequest for AlterReplicaLogDirsRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let dirs = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -76,9 +75,9 @@ impl KafkaSerialize for AlterReplicaLogDirsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.dirs.encode(buf, version, is_flexible)?;
         if is_flexible {
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -90,9 +89,9 @@ impl KafkaSerialize for AlterReplicaLogDirsRequest {
 impl KafkaDeserialize for AlterReplicaLogDirsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let dirs = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -105,9 +104,9 @@ impl KafkaSerialize for AlterReplicaLogDir {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.path.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -120,9 +119,9 @@ impl KafkaSerialize for AlterReplicaLogDir {
 impl KafkaDeserialize for AlterReplicaLogDir {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let path = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -136,9 +135,9 @@ impl KafkaSerialize for AlterReplicaLogDirTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -151,9 +150,9 @@ impl KafkaSerialize for AlterReplicaLogDirTopic {
 impl KafkaDeserialize for AlterReplicaLogDirTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {

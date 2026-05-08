@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -44,18 +46,18 @@ impl ApiRequest for ListOffsetsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(2)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(1)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(1)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(10)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(10)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(6)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(6)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -86,10 +88,7 @@ impl ApiRequest for ListOffsetsRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let isolation_level = if (2) <= version.0 {
@@ -118,9 +117,9 @@ impl KafkaSerialize for ListOffsetsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.replica_id.encode(buf, version, is_flexible)?;
         if (2) <= version.0 {
             self.isolation_level.encode(buf, version, is_flexible)?;
@@ -139,9 +138,9 @@ impl KafkaSerialize for ListOffsetsRequest {
 impl KafkaDeserialize for ListOffsetsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let isolation_level = if (2) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -170,9 +169,9 @@ impl KafkaSerialize for ListOffsetsPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
         if (4) <= version.0 {
             self.current_leader_epoch
@@ -189,9 +188,9 @@ impl KafkaSerialize for ListOffsetsPartition {
 impl KafkaDeserialize for ListOffsetsPartition {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let current_leader_epoch = if (4) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -214,9 +213,9 @@ impl KafkaSerialize for ListOffsetsTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -229,9 +228,9 @@ impl KafkaSerialize for ListOffsetsTopic {
 impl KafkaDeserialize for ListOffsetsTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {

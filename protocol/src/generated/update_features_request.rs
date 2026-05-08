@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -36,18 +38,18 @@ impl ApiRequest for UpdateFeaturesRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(57)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -71,10 +73,7 @@ impl ApiRequest for UpdateFeaturesRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -97,9 +96,9 @@ impl KafkaSerialize for UpdateFeaturesRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.feature_updates.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
@@ -115,9 +114,9 @@ impl KafkaSerialize for UpdateFeaturesRequest {
 impl KafkaDeserialize for UpdateFeaturesRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = if (1) <= version.0 {
@@ -140,9 +139,9 @@ impl KafkaSerialize for FeatureUpdateKey {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.feature.encode(buf, version, is_flexible)?;
         self.max_version_level.encode(buf, version, is_flexible)?;
         if version.0 == (0) {
@@ -161,9 +160,9 @@ impl KafkaSerialize for FeatureUpdateKey {
 impl KafkaDeserialize for FeatureUpdateKey {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_version_level = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let allow_downgrade = if version.0 == (0) {

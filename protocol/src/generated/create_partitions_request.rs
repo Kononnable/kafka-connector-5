@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -37,18 +39,18 @@ impl ApiRequest for CreatePartitionsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(37)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(3)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(3)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -66,10 +68,7 @@ impl ApiRequest for CreatePartitionsRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -88,9 +87,9 @@ impl KafkaSerialize for CreatePartitionsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.topics.encode(buf, version, is_flexible)?;
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
@@ -104,9 +103,9 @@ impl KafkaSerialize for CreatePartitionsRequest {
 impl KafkaDeserialize for CreatePartitionsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -125,9 +124,9 @@ impl KafkaSerialize for CreatePartitionsAssignment {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.broker_ids.encode(buf, version, is_flexible)?;
         if is_flexible {
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -139,9 +138,9 @@ impl KafkaSerialize for CreatePartitionsAssignment {
 impl KafkaDeserialize for CreatePartitionsAssignment {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let broker_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -154,9 +153,9 @@ impl KafkaSerialize for CreatePartitionsTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.count.encode(buf, version, is_flexible)?;
         self.assignments.encode(buf, version, is_flexible)?;
@@ -170,9 +169,9 @@ impl KafkaSerialize for CreatePartitionsTopic {
 impl KafkaDeserialize for CreatePartitionsTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let count = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let assignments = KafkaDeserialize::decode(buf, version, is_flexible)?;

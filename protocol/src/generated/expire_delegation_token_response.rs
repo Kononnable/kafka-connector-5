@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -21,18 +23,18 @@ impl ApiResponse for ExpireDelegationTokenResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(40)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(1)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(1)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -50,10 +52,7 @@ impl ApiResponse for ExpireDelegationTokenResponse {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let expiry_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -72,9 +71,9 @@ impl KafkaSerialize for ExpireDelegationTokenResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
         self.expiry_timestamp_ms.encode(buf, version, is_flexible)?;
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
@@ -88,9 +87,9 @@ impl KafkaSerialize for ExpireDelegationTokenResponse {
 impl KafkaDeserialize for ExpireDelegationTokenResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let expiry_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;

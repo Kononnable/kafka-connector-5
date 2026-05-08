@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -21,18 +23,18 @@ impl ApiRequest for EnvelopeRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(58)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -50,10 +52,7 @@ impl ApiRequest for EnvelopeRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let request_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let request_principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -72,9 +71,9 @@ impl KafkaSerialize for EnvelopeRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.request_data.encode(buf, version, is_flexible)?;
         self.request_principal.encode(buf, version, is_flexible)?;
         self.client_host_address.encode(buf, version, is_flexible)?;
@@ -88,9 +87,9 @@ impl KafkaSerialize for EnvelopeRequest {
 impl KafkaDeserialize for EnvelopeRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let request_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let request_principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let client_host_address = KafkaDeserialize::decode(buf, version, is_flexible)?;

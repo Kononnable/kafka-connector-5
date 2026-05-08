@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -33,18 +35,18 @@ impl ApiRequest for CreateDelegationTokenRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(38)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(1)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(1)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(3)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(3)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -77,10 +79,7 @@ impl ApiRequest for CreateDelegationTokenRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let owner_principal_type = if (3) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -109,9 +108,9 @@ impl KafkaSerialize for CreateDelegationTokenRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         if (3) <= version.0 {
             self.owner_principal_type
                 .encode(buf, version, is_flexible)?;
@@ -132,9 +131,9 @@ impl KafkaSerialize for CreateDelegationTokenRequest {
 impl KafkaDeserialize for CreateDelegationTokenRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let owner_principal_type = if (3) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
@@ -163,9 +162,9 @@ impl KafkaSerialize for CreatableRenewers {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.principal_type.encode(buf, version, is_flexible)?;
         self.principal_name.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -178,9 +177,9 @@ impl KafkaSerialize for CreatableRenewers {
 impl KafkaDeserialize for CreatableRenewers {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {

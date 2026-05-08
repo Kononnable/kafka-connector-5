@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -35,18 +37,18 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(75)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -76,10 +78,7 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let response_partition_limit = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -107,9 +106,9 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.topics.encode(buf, version, is_flexible)?;
         self.response_partition_limit
             .encode(buf, version, is_flexible)?;
@@ -135,9 +134,9 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
 impl KafkaDeserialize for DescribeTopicPartitionsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let response_partition_limit = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let cursor = if is_flexible {
@@ -165,9 +164,9 @@ impl KafkaSerialize for Cursor {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.topic_name.encode(buf, version, is_flexible)?;
         self.partition_index.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -180,9 +179,9 @@ impl KafkaSerialize for Cursor {
 impl KafkaDeserialize for Cursor {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let topic_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -199,9 +198,9 @@ impl KafkaSerialize for TopicRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         if is_flexible {
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -213,9 +212,9 @@ impl KafkaSerialize for TopicRequest {
 impl KafkaDeserialize for TopicRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

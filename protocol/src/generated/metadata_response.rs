@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -86,18 +88,18 @@ impl ApiResponse for MetadataResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(3)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(13)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(13)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(9)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(9)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -150,10 +152,7 @@ impl ApiResponse for MetadataResponse {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (3) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -200,9 +199,9 @@ impl KafkaSerialize for MetadataResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         if (3) <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
@@ -231,9 +230,9 @@ impl KafkaSerialize for MetadataResponse {
 impl KafkaDeserialize for MetadataResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if (3) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
@@ -280,9 +279,9 @@ impl KafkaSerialize for MetadataResponseBroker {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.node_id.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
@@ -299,9 +298,9 @@ impl KafkaSerialize for MetadataResponseBroker {
 impl KafkaDeserialize for MetadataResponseBroker {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let node_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -326,9 +325,9 @@ impl KafkaSerialize for MetadataResponsePartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
         self.partition_index.encode(buf, version, is_flexible)?;
         self.leader_id.encode(buf, version, is_flexible)?;
@@ -350,9 +349,9 @@ impl KafkaSerialize for MetadataResponsePartition {
 impl KafkaDeserialize for MetadataResponsePartition {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let leader_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -387,9 +386,9 @@ impl KafkaSerialize for MetadataResponseTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
         self.name.encode(buf, version, is_flexible)?;
         if (10) <= version.0 {
@@ -413,9 +412,9 @@ impl KafkaSerialize for MetadataResponseTopic {
 impl KafkaDeserialize for MetadataResponseTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topic_id = if (10) <= version.0 {

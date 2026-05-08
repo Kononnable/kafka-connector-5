@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -45,18 +47,18 @@ impl ApiRequest for AlterClientQuotasRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(49)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(1)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(1)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(1)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(1)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -73,10 +75,7 @@ impl ApiRequest for AlterClientQuotasRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -93,9 +92,9 @@ impl KafkaSerialize for AlterClientQuotasRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.entries.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -108,9 +107,9 @@ impl KafkaSerialize for AlterClientQuotasRequest {
 impl KafkaDeserialize for AlterClientQuotasRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -127,9 +126,9 @@ impl KafkaSerialize for EntityData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.entity_type.encode(buf, version, is_flexible)?;
         self.entity_name.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -142,9 +141,9 @@ impl KafkaSerialize for EntityData {
 impl KafkaDeserialize for EntityData {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let entity_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let entity_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -161,9 +160,9 @@ impl KafkaSerialize for EntryData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.entity.encode(buf, version, is_flexible)?;
         self.ops.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -176,9 +175,9 @@ impl KafkaSerialize for EntryData {
 impl KafkaDeserialize for EntryData {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let entity = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let ops = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -192,9 +191,9 @@ impl KafkaSerialize for OpData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.key.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         self.remove.encode(buf, version, is_flexible)?;
@@ -208,9 +207,9 @@ impl KafkaSerialize for OpData {
 impl KafkaDeserialize for OpData {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let key = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let value = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let remove = KafkaDeserialize::decode(buf, version, is_flexible)?;

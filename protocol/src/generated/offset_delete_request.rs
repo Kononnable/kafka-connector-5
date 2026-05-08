@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -33,18 +35,18 @@ impl ApiRequest for OffsetDeleteRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(47)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(32767)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(32767)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -61,10 +63,7 @@ impl ApiRequest for OffsetDeleteRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -78,9 +77,9 @@ impl KafkaSerialize for OffsetDeleteRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.group_id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -93,9 +92,9 @@ impl KafkaSerialize for OffsetDeleteRequest {
 impl KafkaDeserialize for OffsetDeleteRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -109,9 +108,9 @@ impl KafkaSerialize for OffsetDeleteRequestPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
         if is_flexible {
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -123,9 +122,9 @@ impl KafkaSerialize for OffsetDeleteRequestPartition {
 impl KafkaDeserialize for OffsetDeleteRequestPartition {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -138,9 +137,9 @@ impl KafkaSerialize for OffsetDeleteRequestTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -153,9 +152,9 @@ impl KafkaSerialize for OffsetDeleteRequestTopic {
 impl KafkaDeserialize for OffsetDeleteRequestTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {

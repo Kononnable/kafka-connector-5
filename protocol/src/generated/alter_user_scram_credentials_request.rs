@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -41,18 +43,18 @@ impl ApiRequest for AlterUserScramCredentialsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(51)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -69,10 +71,7 @@ impl ApiRequest for AlterUserScramCredentialsRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let deletions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let upsertions = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -89,9 +88,9 @@ impl KafkaSerialize for AlterUserScramCredentialsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.deletions.encode(buf, version, is_flexible)?;
         self.upsertions.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -104,9 +103,9 @@ impl KafkaSerialize for AlterUserScramCredentialsRequest {
 impl KafkaDeserialize for AlterUserScramCredentialsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let deletions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let upsertions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -123,9 +122,9 @@ impl KafkaSerialize for ScramCredentialDeletion {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.mechanism.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -138,9 +137,9 @@ impl KafkaSerialize for ScramCredentialDeletion {
 impl KafkaDeserialize for ScramCredentialDeletion {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mechanism = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -154,9 +153,9 @@ impl KafkaSerialize for ScramCredentialUpsertion {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.mechanism.encode(buf, version, is_flexible)?;
         self.iterations.encode(buf, version, is_flexible)?;
@@ -172,9 +171,9 @@ impl KafkaSerialize for ScramCredentialUpsertion {
 impl KafkaDeserialize for ScramCredentialUpsertion {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mechanism = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let iterations = KafkaDeserialize::decode(buf, version, is_flexible)?;

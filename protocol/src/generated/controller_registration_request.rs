@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -47,18 +49,18 @@ impl ApiRequest for ControllerRegistrationRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(70)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -78,10 +80,7 @@ impl ApiRequest for ControllerRegistrationRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let controller_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let incarnation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -104,9 +103,9 @@ impl KafkaSerialize for ControllerRegistrationRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.controller_id.encode(buf, version, is_flexible)?;
         self.incarnation_id.encode(buf, version, is_flexible)?;
         self.zk_migration_ready.encode(buf, version, is_flexible)?;
@@ -122,9 +121,9 @@ impl KafkaSerialize for ControllerRegistrationRequest {
 impl KafkaDeserialize for ControllerRegistrationRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let controller_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let incarnation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let zk_migration_ready = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -147,9 +146,9 @@ impl KafkaSerialize for Feature {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.min_supported_version
             .encode(buf, version, is_flexible)?;
@@ -165,9 +164,9 @@ impl KafkaSerialize for Feature {
 impl KafkaDeserialize for Feature {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let min_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -186,9 +185,9 @@ impl KafkaSerialize for Listener {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
@@ -203,9 +202,9 @@ impl KafkaSerialize for Listener {
 impl KafkaDeserialize for Listener {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let port = KafkaDeserialize::decode(buf, version, is_flexible)?;

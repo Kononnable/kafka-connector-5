@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -30,18 +32,18 @@ impl ApiRequest for ElectLeadersRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(43)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(2)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(2)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -65,10 +67,7 @@ impl ApiRequest for ElectLeadersRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let election_type = if (1) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -91,9 +90,9 @@ impl KafkaSerialize for ElectLeadersRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         if (1) <= version.0 {
             self.election_type.encode(buf, version, is_flexible)?;
         }
@@ -109,9 +108,9 @@ impl KafkaSerialize for ElectLeadersRequest {
 impl KafkaDeserialize for ElectLeadersRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let election_type = if (1) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
@@ -134,9 +133,9 @@ impl KafkaSerialize for TopicPartitions {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -149,9 +148,9 @@ impl KafkaSerialize for TopicPartitions {
 impl KafkaDeserialize for TopicPartitions {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {

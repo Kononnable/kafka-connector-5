@@ -403,8 +403,7 @@ pub use write_share_group_state_response::WriteShareGroupStateResponse;
 pub use write_txn_markers_request::WriteTxnMarkersRequest;
 pub use write_txn_markers_response::WriteTxnMarkersResponse;
 
-use crate::traits::ApiRequest;
-use crate::traits::ApiResponse;
+use crate::traits::{ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait};
 use bytes::Bytes;
 /// Look up whether a given API key + version uses flexible (compact) wire encoding.
 /// Generated from each message's `flexibleVersions` field.
@@ -509,7 +508,7 @@ pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
 
 /// Deserialize a request body for the given API key and version.
 pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {
-    let ver = crate::traits::ApiVersion::new(version);
+    let ver = ApiVersionTrait::new(version);
     let mut buf = Bytes::copy_from_slice(body);
     match api_key {
         25 => AddOffsetsToTxnRequest::deserialize(ver, &mut buf)
@@ -797,7 +796,7 @@ pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<St
 
 /// Deserialize a response body for the given API key and version.
 pub fn decode_response_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {
-    let ver = crate::traits::ApiVersion::new(version);
+    let ver = ApiVersionTrait::new(version);
     let mut buf = Bytes::copy_from_slice(body);
     match api_key {
         25 => AddOffsetsToTxnResponse::deserialize(ver, &mut buf)

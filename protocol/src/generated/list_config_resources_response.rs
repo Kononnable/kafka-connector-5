@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -30,18 +32,18 @@ impl ApiResponse for ListConfigResourcesResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(74)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(1)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(1)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -59,10 +61,7 @@ impl ApiResponse for ListConfigResourcesResponse {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -81,9 +80,9 @@ impl KafkaSerialize for ListConfigResourcesResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.config_resources.encode(buf, version, is_flexible)?;
@@ -97,9 +96,9 @@ impl KafkaSerialize for ListConfigResourcesResponse {
 impl KafkaDeserialize for ListConfigResourcesResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let config_resources = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -118,9 +117,9 @@ impl KafkaSerialize for ConfigResource {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.resource_name.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
             self.resource_type.encode(buf, version, is_flexible)?;
@@ -135,9 +134,9 @@ impl KafkaSerialize for ConfigResource {
 impl KafkaDeserialize for ConfigResource {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let resource_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let resource_type = if (1) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?

@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -20,18 +22,18 @@ impl ApiRequest for DescribeGroupsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(15)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(6)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(6)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(5)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(5)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -55,10 +57,7 @@ impl ApiRequest for DescribeGroupsRequest {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let include_authorized_operations = if (3) <= version.0 {
@@ -79,9 +78,9 @@ impl KafkaSerialize for DescribeGroupsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.groups.encode(buf, version, is_flexible)?;
         if (3) <= version.0 {
             self.include_authorized_operations
@@ -97,9 +96,9 @@ impl KafkaSerialize for DescribeGroupsRequest {
 impl KafkaDeserialize for DescribeGroupsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let include_authorized_operations = if (3) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?

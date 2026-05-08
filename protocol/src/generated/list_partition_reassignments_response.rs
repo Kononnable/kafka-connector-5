@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
+use crate::traits::{
+    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -43,18 +45,18 @@ impl ApiResponse for ListPartitionReassignmentsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(46)
     }
-    fn get_min_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_max_supported_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_max_supported_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
-    fn get_min_flexible_version() -> crate::traits::ApiVersion {
-        crate::traits::ApiVersion::new(0)
+    fn get_min_flexible_version() -> ApiVersionTrait {
+        ApiVersionTrait::new(0)
     }
     fn serialize(
         &self,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
         assert!(
@@ -73,10 +75,7 @@ impl ApiResponse for ListPartitionReassignmentsResponse {
         }
         Ok(())
     }
-    fn deserialize(
-        version: crate::traits::ApiVersion,
-        buf: &mut Bytes,
-    ) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -97,9 +96,9 @@ impl KafkaSerialize for ListPartitionReassignmentsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
@@ -114,9 +113,9 @@ impl KafkaSerialize for ListPartitionReassignmentsResponse {
 impl KafkaDeserialize for ListPartitionReassignmentsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -137,9 +136,9 @@ impl KafkaSerialize for OngoingPartitionReassignment {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.replicas.encode(buf, version, is_flexible)?;
         self.adding_replicas.encode(buf, version, is_flexible)?;
@@ -154,9 +153,9 @@ impl KafkaSerialize for OngoingPartitionReassignment {
 impl KafkaDeserialize for OngoingPartitionReassignment {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let replicas = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let adding_replicas = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -177,9 +176,9 @@ impl KafkaSerialize for OngoingTopicReassignment {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<(), crate::traits::SerializationError> {
+    ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -192,9 +191,9 @@ impl KafkaSerialize for OngoingTopicReassignment {
 impl KafkaDeserialize for OngoingTopicReassignment {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: crate::traits::ApiVersion,
+        version: ApiVersionTrait,
         is_flexible: bool,
-    ) -> Result<Self, crate::traits::SerializationError> {
+    ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {

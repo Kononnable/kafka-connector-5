@@ -111,8 +111,8 @@ pub fn generate_all() -> GeneratedFiles {
     mod_rs.push('\n');
 
     // Generate is_flexible_api dispatch function
-    mod_rs.push_str("use crate::traits::ApiRequest;\n");
-    mod_rs.push_str("use crate::traits::ApiResponse;\n");
+    mod_rs
+        .push_str("use crate::traits::{ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait};\n");
     mod_rs.push_str("use bytes::Bytes;\n");
     mod_rs.push_str(
         "/// Look up whether a given API key + version uses flexible (compact) wire encoding.\n",
@@ -141,7 +141,7 @@ pub fn generate_all() -> GeneratedFiles {
     // ----- decode_request_body -----
     mod_rs.push_str("/// Deserialize a request body for the given API key and version.\n");
     mod_rs.push_str("pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {\n");
-    mod_rs.push_str("    let ver = crate::traits::ApiVersion::new(version);\n");
+    mod_rs.push_str("    let ver = ApiVersionTrait::new(version);\n");
     mod_rs.push_str("    let mut buf = Bytes::copy_from_slice(body);\n");
     mod_rs.push_str("    match api_key {\n");
     for msg in &parsed {
@@ -164,7 +164,7 @@ pub fn generate_all() -> GeneratedFiles {
     // ----- decode_response_body -----
     mod_rs.push_str("/// Deserialize a response body for the given API key and version.\n");
     mod_rs.push_str("pub fn decode_response_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {\n");
-    mod_rs.push_str("    let ver = crate::traits::ApiVersion::new(version);\n");
+    mod_rs.push_str("    let ver = ApiVersionTrait::new(version);\n");
     mod_rs.push_str("    let mut buf = Bytes::copy_from_slice(body);\n");
     mod_rs.push_str("    match api_key {\n");
     for msg in &parsed {
@@ -215,7 +215,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
     // Module-level allow for unused imports (not all traits are used in every file).
     code.push_str("#![allow(unused_imports, unused_variables)]\n");
     code.push_str("use crate::protocol::serialization::{KafkaSerialize, KafkaDeserialize};\n");
-    code.push_str("use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};\n");
+    code.push_str("use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError};\n");
     code.push_str("use bytes::{Buf, BufMut, Bytes, BytesMut};\n");
     code.push('\n');
 
@@ -281,20 +281,20 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 ak
             ));
             code.push_str(&format!(
-                "    fn get_min_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                "    fn get_min_supported_version() -> ApiVersionTrait {{ ApiVersionTrait::new({}) }}\n",
                 min_v
             ));
             code.push_str(&format!(
-                "    fn get_max_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                "    fn get_max_supported_version() -> ApiVersionTrait {{ ApiVersionTrait::new({}) }}\n",
                 max_v
             ));
             code.push_str(&format!(
-                "    fn get_min_flexible_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                "    fn get_min_flexible_version() -> ApiVersionTrait {{ ApiVersionTrait::new({}) }}\n",
                 min_flex_version(&msg.flexible_versions)
             ));
 
             // serialize
-            code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+            code.push_str("    fn serialize(&self, version: ApiVersionTrait, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
             if max_v >= min_v {
                 code.push_str("        assert!((");
                 code.push_str(&format!(
@@ -317,7 +317,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             code.push_str("    }\n");
 
             // deserialize
-            code.push_str("    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+            code.push_str("    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
             code.push_str(
                 "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
             );
@@ -372,20 +372,20 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 ak
             ));
             code.push_str(&format!(
-                "    fn get_min_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                "    fn get_min_supported_version() -> ApiVersionTrait {{ ApiVersionTrait::new({}) }}\n",
                 min_v
             ));
             code.push_str(&format!(
-                "    fn get_max_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                "    fn get_max_supported_version() -> ApiVersionTrait {{ ApiVersionTrait::new({}) }}\n",
                 max_v
             ));
             code.push_str(&format!(
-                "    fn get_min_flexible_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                "    fn get_min_flexible_version() -> ApiVersionTrait {{ ApiVersionTrait::new({}) }}\n",
                 min_flex_version(&msg.flexible_versions)
             ));
 
             // serialize
-            code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+            code.push_str("    fn serialize(&self, version: ApiVersionTrait, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
             if max_v >= min_v {
                 code.push_str("        assert!((");
                 code.push_str(&format!(
@@ -408,7 +408,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             code.push_str("    }\n");
 
             // deserialize
-            code.push_str("    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+            code.push_str("    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
             code.push_str(
                 "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
             );
@@ -793,7 +793,7 @@ fn generate_deserialize_field(field: &Field) -> String {
 fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String {
     let mut code = String::new();
     code.push_str(&format!("impl KafkaSerialize for {} {{\n", struct_name));
-    code.push_str("    fn encode<B: BufMut>(&self, buf: &mut B, version: crate::traits::ApiVersion, is_flexible: bool) -> Result<(), crate::traits::SerializationError> {\n");
+    code.push_str("    fn encode<B: BufMut>(&self, buf: &mut B, version: ApiVersionTrait, is_flexible: bool) -> Result<(), SerializationError> {\n");
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let cond = field_version_condition(f);
@@ -856,7 +856,7 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
 fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> String {
     let mut code = String::new();
     code.push_str(&format!("impl KafkaDeserialize for {} {{\n", struct_name));
-    code.push_str("    fn decode<B: Buf>(buf: &mut B, version: crate::traits::ApiVersion, is_flexible: bool) -> Result<Self, crate::traits::SerializationError> {\n");
+    code.push_str("    fn decode<B: Buf>(buf: &mut B, version: ApiVersionTrait, is_flexible: bool) -> Result<Self, SerializationError> {\n");
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
