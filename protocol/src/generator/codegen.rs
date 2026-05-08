@@ -28,8 +28,8 @@ pub fn generate_all() -> GeneratedFiles {
     }
 
     let mut entries: Vec<_> = std::fs::read_dir(messages_dir)
-        .into_iter()
-        .flat_map(|rd| rd.flatten())
+        .unwrap_or_else(|e| panic!("failed to read messages directory {:?}: {e}", messages_dir))
+        .map(|e| e.unwrap_or_else(|e| panic!("failed to read directory entry: {e}")))
         .filter(|e| e.path().extension().is_some_and(|ext| ext == "json"))
         .collect();
     entries.sort_by_key(|e| e.path());
@@ -41,10 +41,8 @@ pub fn generate_all() -> GeneratedFiles {
     let mut parsed: Vec<MessageStruct> = Vec::new();
     for entry in &entries {
         let path = entry.path();
-        let content = match std::fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("failed to read {:?}: {e}", path));
         let cleaned: String = content
             .lines()
             .filter(|line| !line.trim_start().starts_with("//"))
@@ -252,192 +250,176 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
         code.push('\n');
     }
 
-    // --- Trait implementation (only for request/response, not headers) ---
-    if msg.api_key.is_none() {
-        return code; // header messages have no apiKey
-    }
-    let ak = msg.api_key.unwrap();
-
     let (min_v, max_v) = parse_version_range(&msg.valid_versions);
 
-    match msg.message_type {
-        MessageType::Request => {
-            let resp_name = pair_names
-                .and_then(|p| {
-                    if p.0 == msg.name {
-                        Some(p.1.as_str())
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or("UNKNOWN_RESPONSE");
+    // ApiRequest/ApiResponse trait impls (only for messages with api_key)
+    if let Some(ak) = msg.api_key {
+        match msg.message_type {
+            MessageType::Request => {
+                let resp_name = pair_names
+                    .and_then(|p| {
+                        if p.0 == msg.name {
+                            Some(p.1.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or("UNKNOWN_RESPONSE");
 
-            code.push_str(&format!("impl ApiRequest for {} {{\n", msg.name));
-            code.push_str(&format!(
-                "    type Response = crate::generated::{};\n",
-                resp_name
-            ));
-            code.push_str(&format!(
-                "    fn get_api_key() -> ApiKey {{ ApiKey::new({}) }}\n",
-                ak
-            ));
-            code.push_str(&format!(
-                "    fn get_min_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
-                min_v
-            ));
-            code.push_str(&format!(
-                "    fn get_max_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
-                max_v
-            ));
-            code.push_str(&format!(
-                "    fn get_min_flexible_version() -> ApiVer {{ ApiVer::new({}) }}\n",
-                min_flex_version(&msg.flexible_versions)
-            ));
+                code.push_str(&format!("impl ApiRequest for {} {{\n", msg.name));
+                code.push_str(&format!(
+                    "    type Response = crate::generated::{};\n",
+                    resp_name
+                ));
+                code.push_str(&format!(
+                    "    fn get_api_key() -> ApiKey {{ ApiKey::new({}) }}\n",
+                    ak
+                ));
+                code.push_str(&format!(
+                    "    fn get_min_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
+                    min_v
+                ));
+                code.push_str(&format!(
+                    "    fn get_max_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
+                    max_v
+                ));
+                code.push_str(&format!(
+                    "    fn get_min_flexible_version() -> ApiVer {{ ApiVer::new({}) }}\n",
+                    min_flex_version(&msg.flexible_versions)
+                ));
 
-            // serialize
-            code.push_str("    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
-            if max_v >= min_v {
-                code.push_str("        assert!(");
-                code.push_str(&format!("{} <= version.0 && version.0 <= {}", min_v, max_v));
-                code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+                // serialize
+                code.push_str("    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+                if max_v >= min_v {
+                    code.push_str("        assert!(");
+                    code.push_str(&format!("{} <= version.0 && version.0 <= {}", min_v, max_v));
+                    code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+                }
+                code.push_str(
+                    "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+                );
+
+                for field in &msg.fields {
+                    code.push_str(&generate_serialize_field(field, field));
+                }
+                code.push_str("        if is_flexible {\n");
+                code.push_str(&generate_tagged_encode_body(&msg.fields));
+                code.push_str("        }\n");
+                code.push_str("        Ok(())\n");
+                code.push_str("    }\n");
+
+                // deserialize
+                code.push_str("    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+                code.push_str(
+                    "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+                );
+                for field in &msg.fields {
+                    code.push_str(&generate_deserialize_field(field));
+                }
+                code.push_str("        if is_flexible {\n");
+                code.push_str(&generate_tagged_decode_body(&msg.fields));
+                code.push_str("        }\n");
+                code.push_str(&format!(
+                    "        Ok(Self {{ {} }})\n",
+                    msg.fields
+                        .iter()
+                        .map(|f| escape_field_name(&camel_to_snake(&f.name)))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+                code.push_str("    }\n");
+                code.push_str("}\n");
             }
-            code.push_str(
-                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
-            );
+            MessageType::Response => {
+                let req_name = pair_names
+                    .and_then(|p| {
+                        if p.1 == msg.name {
+                            Some(p.0.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or("UNKNOWN_REQUEST");
 
-            for field in &msg.fields {
-                code.push_str(&generate_serialize_field(field, field));
-            }
-            code.push_str("        if is_flexible {\n");
-            code.push_str(&generate_tagged_encode_body(&msg.fields));
-            code.push_str("        }\n");
-            code.push_str("        Ok(())\n");
-            code.push_str("    }\n");
+                code.push_str(&format!("impl ApiResponse for {} {{\n", msg.name));
+                code.push_str(&format!(
+                    "    type Request = crate::generated::{};\n",
+                    req_name
+                ));
+                code.push_str(&format!(
+                    "    fn get_api_key() -> ApiKey {{ ApiKey::new({}) }}\n",
+                    ak
+                ));
+                code.push_str(&format!(
+                    "    fn get_min_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
+                    min_v
+                ));
+                code.push_str(&format!(
+                    "    fn get_max_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
+                    max_v
+                ));
+                code.push_str(&format!(
+                    "    fn get_min_flexible_version() -> ApiVer {{ ApiVer::new({}) }}\n",
+                    min_flex_version(&msg.flexible_versions)
+                ));
 
-            // deserialize
-            code.push_str("    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
-            code.push_str(
-                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
-            );
-            for field in &msg.fields {
-                code.push_str(&generate_deserialize_field(field));
-            }
-            code.push_str("        if is_flexible {\n");
-            code.push_str(&generate_tagged_decode_body(&msg.fields));
-            code.push_str("        }\n");
-            code.push_str(&format!(
-                "        Ok(Self {{ {} }})\n",
-                msg.fields
-                    .iter()
-                    .map(|f| escape_field_name(&camel_to_snake(&f.name)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-            code.push_str("    }\n");
-            code.push_str("}\n");
+                // serialize
+                code.push_str("    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
+                if max_v >= min_v {
+                    code.push_str("        assert!(");
+                    code.push_str(&format!("{} <= version.0 && version.0 <= {}", min_v, max_v));
+                    code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
+                }
+                code.push_str(
+                    "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+                );
 
-            // Generate KafkaSerialize/KafkaDeserialize impls for this struct.
-            code.push_str(&generate_kafka_serialize_impl(&msg.name, &msg.fields));
-            code.push('\n');
-            code.push_str(&generate_kafka_deserialize_impl(&msg.name, &msg.fields));
-            code.push('\n');
-            // And for nested structs.
-            for (struct_name, struct_fields) in &nested {
-                code.push_str(&generate_kafka_serialize_impl(struct_name, struct_fields));
-                code.push('\n');
-                code.push_str(&generate_kafka_deserialize_impl(struct_name, struct_fields));
-                code.push('\n');
+                for field in &msg.fields {
+                    code.push_str(&generate_serialize_field(field, field));
+                }
+                code.push_str("        if is_flexible {\n");
+                code.push_str(&generate_tagged_encode_body(&msg.fields));
+                code.push_str("        }\n");
+                code.push_str("        Ok(())\n");
+                code.push_str("    }\n");
+
+                // deserialize
+                code.push_str("    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
+                code.push_str(
+                    "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+                );
+                for field in &msg.fields {
+                    code.push_str(&generate_deserialize_field(field));
+                }
+                code.push_str("        if is_flexible {\n");
+                code.push_str(&generate_tagged_decode_body(&msg.fields));
+                code.push_str("        }\n");
+                code.push_str(&format!(
+                    "        Ok(Self {{ {} }})\n",
+                    msg.fields
+                        .iter()
+                        .map(|f| escape_field_name(&camel_to_snake(&f.name)))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+                code.push_str("    }\n");
+                code.push_str("}\n");
             }
+            MessageType::Header | MessageType::Data => {}
         }
-        MessageType::Response => {
-            let req_name = pair_names
-                .and_then(|p| {
-                    if p.1 == msg.name {
-                        Some(p.0.as_str())
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or("UNKNOWN_REQUEST");
+    } // end if let Some(ak)
 
-            code.push_str(&format!("impl ApiResponse for {} {{\n", msg.name));
-            code.push_str(&format!(
-                "    type Request = crate::generated::{};\n",
-                req_name
-            ));
-            code.push_str(&format!(
-                "    fn get_api_key() -> ApiKey {{ ApiKey::new({}) }}\n",
-                ak
-            ));
-            code.push_str(&format!(
-                "    fn get_min_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
-                min_v
-            ));
-            code.push_str(&format!(
-                "    fn get_max_supported_version() -> ApiVer {{ ApiVer::new({}) }}\n",
-                max_v
-            ));
-            code.push_str(&format!(
-                "    fn get_min_flexible_version() -> ApiVer {{ ApiVer::new({}) }}\n",
-                min_flex_version(&msg.flexible_versions)
-            ));
-
-            // serialize
-            code.push_str("    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
-            if max_v >= min_v {
-                code.push_str("        assert!(");
-                code.push_str(&format!("{} <= version.0 && version.0 <= {}", min_v, max_v));
-                code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
-            }
-            code.push_str(
-                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
-            );
-
-            for field in &msg.fields {
-                code.push_str(&generate_serialize_field(field, field));
-            }
-            code.push_str("        if is_flexible {\n");
-            code.push_str(&generate_tagged_encode_body(&msg.fields));
-            code.push_str("        }\n");
-            code.push_str("        Ok(())\n");
-            code.push_str("    }\n");
-
-            // deserialize
-            code.push_str("    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
-            code.push_str(
-                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
-            );
-            for field in &msg.fields {
-                code.push_str(&generate_deserialize_field(field));
-            }
-            code.push_str("        if is_flexible {\n");
-            code.push_str(&generate_tagged_decode_body(&msg.fields));
-            code.push_str("        }\n");
-            code.push_str(&format!(
-                "        Ok(Self {{ {} }})\n",
-                msg.fields
-                    .iter()
-                    .map(|f| escape_field_name(&camel_to_snake(&f.name)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-            code.push_str("    }\n");
-            code.push_str("}\n");
-
-            // Generate KafkaSerialize/KafkaDeserialize impls for this struct.
-            code.push_str(&generate_kafka_serialize_impl(&msg.name, &msg.fields));
-            code.push('\n');
-            code.push_str(&generate_kafka_deserialize_impl(&msg.name, &msg.fields));
-            code.push('\n');
-            // And for nested structs.
-            for (struct_name, struct_fields) in &nested {
-                code.push_str(&generate_kafka_serialize_impl(struct_name, struct_fields));
-                code.push('\n');
-                code.push_str(&generate_kafka_deserialize_impl(struct_name, struct_fields));
-                code.push('\n');
-            }
-        }
-        MessageType::Header | MessageType::Data => {}
+    // KafkaSerialize/KafkaDeserialize for all message types
+    code.push_str(&generate_kafka_serialize_impl(&msg.name, &msg.fields));
+    code.push('\n');
+    code.push_str(&generate_kafka_deserialize_impl(&msg.name, &msg.fields));
+    code.push('\n');
+    // And for nested structs.
+    for (struct_name, struct_fields) in &nested {
+        code.push_str(&generate_kafka_serialize_impl(struct_name, struct_fields));
+        code.push('\n');
+        code.push_str(&generate_kafka_deserialize_impl(struct_name, struct_fields));
+        code.push('\n');
     }
 
     code
@@ -849,7 +831,7 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
     code.push_str(&format!("impl KafkaDeserialize for {} {{\n", struct_name));
     code.push_str("    fn decode<B: Buf>(buf: &mut B, version: ApiVer, is_flexible: bool) -> Result<Self, SerializationError> {\n");
     for f in fields {
-        let rust_name = escape_field_name(&camel_to_snake(&f.name));
+        let rust_name = escape_var_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
         let cond = field_version_condition(f);
         let has_version_gate = cond.is_some();
@@ -922,7 +904,15 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
         "        Ok(Self {{ {} }})\n",
         fields
             .iter()
-            .map(|f| escape_field_name(&camel_to_snake(&f.name)))
+            .map(|f| {
+                let field_name = escape_field_name(&camel_to_snake(&f.name));
+                let var_name = escape_var_name(&camel_to_snake(&f.name));
+                if field_name == var_name {
+                    field_name
+                } else {
+                    format!("{}: {}", field_name, var_name)
+                }
+            })
             .collect::<Vec<_>>()
             .join(", ")
     ));
@@ -1097,6 +1087,15 @@ fn escape_field_name(name: &str) -> String {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+/// Escape a variable name, also avoiding shadowing common parameters.
+fn escape_var_name(name: &str) -> String {
+    let base = escape_field_name(name);
+    match base.as_str() {
+        "version" => format!("{}_val", base),
+        "is_flexible" => format!("{}_val", base),
+        _ => base,
+    }
+}
 
 #[cfg(test)]
 mod tests {

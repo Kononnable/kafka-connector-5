@@ -28,3 +28,83 @@ pub struct Voter {
     /// Available in version 1+.
     pub voter_directory_id: [u8; 16],
 }
+
+impl KafkaSerialize for LeaderChangeMessage {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        self.version.encode(buf, version, is_flexible)?;
+        self.leader_id.encode(buf, version, is_flexible)?;
+        self.voters.encode(buf, version, is_flexible)?;
+        self.granting_voters.encode(buf, version, is_flexible)?;
+        if is_flexible {
+            encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for LeaderChangeMessage {
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        let version_val = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let voters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let granting_voters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            version: version_val,
+            leader_id,
+            voters,
+            granting_voters,
+        })
+    }
+}
+
+impl KafkaSerialize for Voter {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        self.voter_id.encode(buf, version, is_flexible)?;
+        if 1 <= version.0 {
+            self.voter_directory_id.encode(buf, version, is_flexible)?;
+        }
+        if is_flexible {
+            encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for Voter {
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        let voter_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let voter_directory_id = if 1 <= version.0 {
+            KafkaDeserialize::decode(buf, version, is_flexible)?
+        } else {
+            Default::default()
+        };
+        if is_flexible {
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            voter_id,
+            voter_directory_id,
+        })
+    }
+}

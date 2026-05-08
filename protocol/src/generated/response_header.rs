@@ -13,3 +13,32 @@ pub struct ResponseHeader {
     /// The correlation ID of this response.
     pub correlation_id: i32,
 }
+
+impl KafkaSerialize for ResponseHeader {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        self.correlation_id.encode(buf, version, is_flexible)?;
+        if is_flexible {
+            encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for ResponseHeader {
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        let correlation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
+        }
+        Ok(Self { correlation_id })
+    }
+}

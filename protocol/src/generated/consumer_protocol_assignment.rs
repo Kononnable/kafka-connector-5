@@ -23,3 +23,68 @@ pub struct TopicPartition {
     /// The list of partitions assigned to this consumer.
     pub partitions: Vec<i32>,
 }
+
+impl KafkaSerialize for ConsumerProtocolAssignment {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        self.assigned_partitions.encode(buf, version, is_flexible)?;
+        self.user_data.encode(buf, version, is_flexible)?;
+        if is_flexible {
+            encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for ConsumerProtocolAssignment {
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        let assigned_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let user_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
+        }
+        Ok(Self {
+            assigned_partitions,
+            user_data,
+        })
+    }
+}
+
+impl KafkaSerialize for TopicPartition {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        self.topic.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
+        if is_flexible {
+            encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+}
+
+impl KafkaDeserialize for TopicPartition {
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
+        }
+        Ok(Self { topic, partitions })
+    }
+}
