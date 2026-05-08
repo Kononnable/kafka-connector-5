@@ -52,8 +52,8 @@ impl ApiRequest for AllocateProducerIdsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -85,8 +85,8 @@ impl KafkaDeserialize for AllocateProducerIdsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

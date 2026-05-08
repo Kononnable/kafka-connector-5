@@ -81,14 +81,13 @@ impl ApiResponse for ElectLeadersResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = if (1) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let replica_election_results =
-            <Vec<ReplicaElectionResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let replica_election_results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -125,14 +124,13 @@ impl KafkaDeserialize for ElectLeadersResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = if (1) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let replica_election_results =
-            <Vec<ReplicaElectionResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let replica_election_results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -167,10 +165,9 @@ impl KafkaDeserialize for PartitionResult {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let partition_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_message =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -204,9 +201,8 @@ impl KafkaDeserialize for ReplicaElectionResult {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let topic = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partition_result =
-            <Vec<PartitionResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_result = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

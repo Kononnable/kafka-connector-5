@@ -66,9 +66,8 @@ impl ApiRequest for OffsetDeleteRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topics =
-            <Vec<OffsetDeleteRequestTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -97,9 +96,8 @@ impl KafkaDeserialize for OffsetDeleteRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topics =
-            <Vec<OffsetDeleteRequestTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -128,7 +126,7 @@ impl KafkaDeserialize for OffsetDeleteRequestPartition {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -158,12 +156,8 @@ impl KafkaDeserialize for OffsetDeleteRequestTopic {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partitions = <Vec<OffsetDeleteRequestPartition> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

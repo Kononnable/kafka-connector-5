@@ -61,11 +61,11 @@ impl ApiRequest for PushTelemetryRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let terminating = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let metrics = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_instance_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let subscription_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let terminating = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let compression_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let metrics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -103,11 +103,11 @@ impl KafkaDeserialize for PushTelemetryRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let terminating = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let metrics = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_instance_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let subscription_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let terminating = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let compression_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let metrics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

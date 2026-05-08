@@ -82,12 +82,10 @@ impl ApiResponse for DescribeClientQuotasResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_message =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let entries =
-            <Option<Vec<EntryData>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -123,12 +121,10 @@ impl KafkaDeserialize for DescribeClientQuotasResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_message =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let entries =
-            <Option<Vec<EntryData>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -163,8 +159,8 @@ impl KafkaDeserialize for EntityData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let entity_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let entity_name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entity_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let entity_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -197,8 +193,8 @@ impl KafkaDeserialize for EntryData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let entity = <Vec<EntityData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let values = <Vec<ValueData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entity = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let values = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -228,8 +224,8 @@ impl KafkaDeserialize for ValueData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let key = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let value = <f64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let key = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let value = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

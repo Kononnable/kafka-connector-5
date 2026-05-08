@@ -80,15 +80,11 @@ impl ApiResponse for OffsetCommitResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = <Vec<OffsetCommitResponseTopic> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -123,15 +119,11 @@ impl KafkaDeserialize for OffsetCommitResponse {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = <Vec<OffsetCommitResponseTopic> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -164,8 +156,8 @@ impl KafkaDeserialize for OffsetCommitResponsePartition {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -204,20 +196,16 @@ impl KafkaDeserialize for OffsetCommitResponseTopic {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (0) <= version.0 && version.0 <= (9) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (10) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partitions = <Vec<OffsetCommitResponsePartition> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

@@ -74,12 +74,11 @@ impl ApiResponse for DeleteTopicsResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let responses =
-            <Vec<DeletableTopicResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -114,12 +113,11 @@ impl KafkaDeserialize for DeleteTopicsResponse {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let responses =
-            <Vec<DeletableTopicResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -158,15 +156,15 @@ impl KafkaDeserialize for DeletableTopicResult {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topic_id = if (6) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

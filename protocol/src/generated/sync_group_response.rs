@@ -83,22 +83,22 @@ impl ApiResponse for SyncGroupResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let protocol_type = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_name = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let assignment = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -143,22 +143,22 @@ impl KafkaDeserialize for SyncGroupResponse {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let protocol_type = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_name = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let assignment = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

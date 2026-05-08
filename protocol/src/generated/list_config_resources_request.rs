@@ -57,7 +57,7 @@ impl ApiRequest for ListConfigResourcesRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let resource_types = if (1) <= version.0 {
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -91,7 +91,7 @@ impl KafkaDeserialize for ListConfigResourcesRequest {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let resource_types = if (1) <= version.0 {
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

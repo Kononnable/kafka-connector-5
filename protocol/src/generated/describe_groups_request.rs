@@ -60,9 +60,9 @@ impl ApiRequest for DescribeGroupsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let groups = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let include_authorized_operations = if (3) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -100,9 +100,9 @@ impl KafkaDeserialize for DescribeGroupsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let groups = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let include_authorized_operations = if (3) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

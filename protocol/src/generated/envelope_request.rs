@@ -55,10 +55,9 @@ impl ApiRequest for EnvelopeRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let request_data = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let request_principal =
-            <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let request_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let request_principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let client_host_address = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -92,10 +91,9 @@ impl KafkaDeserialize for EnvelopeRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let request_data = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let request_principal =
-            <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let request_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let request_principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let client_host_address = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

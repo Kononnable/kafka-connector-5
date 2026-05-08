@@ -73,16 +73,15 @@ impl ApiRequest for ListTransactionsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let state_filters = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_id_filters =
-            <Vec<i64> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let state_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let duration_filter = if (1) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let transactional_id_pattern = if (2) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -126,16 +125,15 @@ impl KafkaDeserialize for ListTransactionsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let state_filters = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_id_filters =
-            <Vec<i64> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let state_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let duration_filter = if (1) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let transactional_id_pattern = if (2) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

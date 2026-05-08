@@ -80,16 +80,16 @@ impl ApiRequest for DeleteTopicsRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = if (6) <= version.0 {
-            <Vec<DeleteTopicState> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_names = if (0) <= version.0 && version.0 <= (5) {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -128,16 +128,16 @@ impl KafkaDeserialize for DeleteTopicsRequest {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let topics = if (6) <= version.0 {
-            <Vec<DeleteTopicState> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_names = if (0) <= version.0 && version.0 <= (5) {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -176,12 +176,12 @@ impl KafkaDeserialize for DeleteTopicState {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (6) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (6) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

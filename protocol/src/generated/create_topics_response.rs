@@ -105,12 +105,11 @@ impl ApiResponse for CreateTopicsResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (2) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics =
-            <Vec<CreatableTopicResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -145,12 +144,11 @@ impl KafkaDeserialize for CreateTopicsResponse {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (2) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics =
-            <Vec<CreatableTopicResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -197,27 +195,27 @@ impl KafkaDeserialize for CreatableTopicConfigs {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (5) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let value = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let read_only = if (5) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let config_source = if (5) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let is_sensitive = if (5) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -287,15 +285,15 @@ impl KafkaDeserialize for CreatableTopicResult {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topic_id = if (7) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = if (1) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -303,27 +301,23 @@ impl KafkaDeserialize for CreatableTopicResult {
             if is_flexible {
                 Default::default()
             } else {
-                <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
         let num_partitions = if (5) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let replication_factor = if (5) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let configs = if (5) <= version.0 {
-            <Option<Vec<CreatableTopicConfigs>> as KafkaDeserialize>::decode(
-                buf,
-                version,
-                is_flexible,
-            )?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -334,8 +328,7 @@ impl KafkaDeserialize for CreatableTopicResult {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        topic_config_error_code =
-                            <i16 as KafkaDeserialize>::decode(buf, version, true)?;
+                        topic_config_error_code = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);

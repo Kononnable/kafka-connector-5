@@ -153,10 +153,9 @@ impl ApiResponse for ProduceResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let responses =
-            <Vec<TopicProduceResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -164,7 +163,7 @@ impl ApiResponse for ProduceResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -176,8 +175,7 @@ impl ApiResponse for ProduceResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        node_endpoints =
-                            <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, true)?;
+                        node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -230,10 +228,9 @@ impl KafkaDeserialize for ProduceResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let responses =
-            <Vec<TopicProduceResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -241,7 +238,7 @@ impl KafkaDeserialize for ProduceResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -253,8 +250,7 @@ impl KafkaDeserialize for ProduceResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        node_endpoints =
-                            <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, true)?;
+                        node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -298,12 +294,12 @@ impl KafkaDeserialize for BatchIndexAndErrorMessage {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let batch_index = if (8) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let batch_index_error_message = if (8) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -344,12 +340,12 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let leader_id = if (10) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let leader_epoch = if (10) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -396,22 +392,22 @@ impl KafkaDeserialize for NodeEndpoint {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let node_id = if (10) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let host = if (10) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let port = if (10) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let rack = if (10) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -476,26 +472,26 @@ impl KafkaDeserialize for PartitionProduceResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let base_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let index = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let base_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let log_append_time_ms = if (2) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let log_start_offset = if (5) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let record_errors = if (8) <= version.0 {
-            <Vec<BatchIndexAndErrorMessage> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_message = if (8) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -503,7 +499,7 @@ impl KafkaDeserialize for PartitionProduceResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <LeaderIdAndEpoch as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -515,8 +511,7 @@ impl KafkaDeserialize for PartitionProduceResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        current_leader =
-                            <LeaderIdAndEpoch as KafkaDeserialize>::decode(buf, version, true)?;
+                        current_leader = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -565,17 +560,16 @@ impl KafkaDeserialize for TopicProduceResponse {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (0) <= version.0 && version.0 <= (12) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (13) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partition_responses =
-            <Vec<PartitionProduceResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

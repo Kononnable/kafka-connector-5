@@ -71,10 +71,9 @@ impl ApiRequest for CreatePartitionsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let topics =
-            <Vec<CreatePartitionsTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -108,10 +107,9 @@ impl KafkaDeserialize for CreatePartitionsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let topics =
-            <Vec<CreatePartitionsTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -144,7 +142,7 @@ impl KafkaDeserialize for CreatePartitionsAssignment {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let broker_ids = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let broker_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -175,13 +173,9 @@ impl KafkaDeserialize for CreatePartitionsTopic {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let count = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let assignments = <Option<Vec<CreatePartitionsAssignment>> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let count = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let assignments = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

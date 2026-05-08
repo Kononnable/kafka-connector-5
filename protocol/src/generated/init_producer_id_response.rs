@@ -80,17 +80,17 @@ impl ApiResponse for InitProducerIdResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let ongoing_txn_producer_id = if (6) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let ongoing_txn_producer_epoch = if (6) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -139,17 +139,17 @@ impl KafkaDeserialize for InitProducerIdResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let ongoing_txn_producer_id = if (6) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let ongoing_txn_producer_epoch = if (6) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

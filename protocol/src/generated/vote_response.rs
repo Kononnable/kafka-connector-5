@@ -108,13 +108,13 @@ impl ApiResponse for VoteResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mut node_endpoints = if (1) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -126,8 +126,7 @@ impl ApiResponse for VoteResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        node_endpoints =
-                            <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, true)?;
+                        node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -178,13 +177,13 @@ impl KafkaDeserialize for VoteResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mut node_endpoints = if (1) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -196,8 +195,7 @@ impl KafkaDeserialize for VoteResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        node_endpoints =
-                            <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, true)?;
+                        node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -243,17 +241,17 @@ impl KafkaDeserialize for NodeEndpoint {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let node_id = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let host = if (1) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let port = if (1) <= version.0 {
-            <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -293,11 +291,11 @@ impl KafkaDeserialize for PartitionData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let leader_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let vote_granted = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let vote_granted = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -333,9 +331,8 @@ impl KafkaDeserialize for TopicData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let topic_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partitions =
-            <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topic_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

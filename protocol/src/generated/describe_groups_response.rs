@@ -99,11 +99,11 @@ impl ApiResponse for DescribeGroupsResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let groups = <Vec<DescribedGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -138,11 +138,11 @@ impl KafkaDeserialize for DescribeGroupsResponse {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let groups = <Vec<DescribedGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -186,20 +186,19 @@ impl KafkaDeserialize for DescribedGroup {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = if (6) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let group_state = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let protocol_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let protocol_data = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let members =
-            <Vec<DescribedGroupMember> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_state = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let protocol_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let protocol_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let members = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let authorized_operations = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -247,16 +246,16 @@ impl KafkaDeserialize for DescribedGroupMember {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let group_instance_id = if (4) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let client_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let client_host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let member_metadata = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let member_assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let client_host = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let member_metadata = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let member_assignment = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

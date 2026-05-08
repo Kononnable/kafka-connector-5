@@ -127,31 +127,27 @@ impl ApiRequest for AddPartitionsToTxnRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let transactions = if (4) <= version.0 {
-            <Vec<AddPartitionsToTxnTransaction> as KafkaDeserialize>::decode(
-                buf,
-                version,
-                is_flexible,
-            )?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_transactional_id = if (0) <= version.0 && version.0 <= (3) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_id = if (0) <= version.0 && version.0 <= (3) {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_epoch = if (0) <= version.0 && version.0 <= (3) {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_topics = if (0) <= version.0 && version.0 <= (3) {
-            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -206,31 +202,27 @@ impl KafkaDeserialize for AddPartitionsToTxnRequest {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let transactions = if (4) <= version.0 {
-            <Vec<AddPartitionsToTxnTransaction> as KafkaDeserialize>::decode(
-                buf,
-                version,
-                is_flexible,
-            )?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_transactional_id = if (0) <= version.0 && version.0 <= (3) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_id = if (0) <= version.0 && version.0 <= (3) {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_epoch = if (0) <= version.0 && version.0 <= (3) {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_topics = if (0) <= version.0 && version.0 <= (3) {
-            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -269,8 +261,8 @@ impl KafkaDeserialize for AddPartitionsToTxnTopic {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -314,27 +306,27 @@ impl KafkaDeserialize for AddPartitionsToTxnTransaction {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let transactional_id = if (4) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_id = if (4) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_epoch = if (4) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let verify_only = if (4) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if (4) <= version.0 {
-            <Vec<AddPartitionsToTxnTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -93,9 +93,9 @@ impl ApiRequest for AlterPartitionRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -129,9 +129,9 @@ impl KafkaDeserialize for AlterPartitionRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -170,12 +170,12 @@ impl KafkaDeserialize for BrokerState {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let broker_id = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let broker_epoch = if (3) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -222,24 +222,24 @@ impl KafkaDeserialize for PartitionData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let new_isr = if (0) <= version.0 && version.0 <= (2) {
-            <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let new_isr_with_epochs = if (3) <= version.0 {
-            <Vec<BrokerState> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let leader_recovery_state = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partition_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -279,12 +279,11 @@ impl KafkaDeserialize for TopicData {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let topic_id = if (2) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partitions =
-            <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

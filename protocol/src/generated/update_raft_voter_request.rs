@@ -84,13 +84,12 @@ impl ApiRequest for UpdateRaftVoterRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let current_leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let kraft_version_feature =
-            <KRaftVersionFeature as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let current_leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let voter_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let voter_directory_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let kraft_version_feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -132,13 +131,12 @@ impl KafkaDeserialize for UpdateRaftVoterRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let current_leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let kraft_version_feature =
-            <KRaftVersionFeature as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let current_leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let voter_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let voter_directory_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let kraft_version_feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -177,8 +175,8 @@ impl KafkaDeserialize for KRaftVersionFeature {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let min_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let max_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let min_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let max_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -212,9 +210,9 @@ impl KafkaDeserialize for Listener {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

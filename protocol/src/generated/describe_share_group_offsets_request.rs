@@ -65,11 +65,7 @@ impl ApiRequest for DescribeShareGroupOffsetsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let groups = <Vec<DescribeShareGroupOffsetsRequestGroup> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -97,11 +93,7 @@ impl KafkaDeserialize for DescribeShareGroupOffsetsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let groups = <Vec<DescribeShareGroupOffsetsRequestGroup> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -131,13 +123,8 @@ impl KafkaDeserialize for DescribeShareGroupOffsetsRequestGroup {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topics =
-            <Option<Vec<DescribeShareGroupOffsetsRequestTopic>> as KafkaDeserialize>::decode(
-                buf,
-                version,
-                is_flexible,
-            )?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -167,8 +154,8 @@ impl KafkaDeserialize for DescribeShareGroupOffsetsRequestTopic {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let topic_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topic_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

@@ -68,8 +68,7 @@ impl ApiRequest for DeleteAclsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let filters =
-            <Vec<DeleteAclsFilter> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -97,8 +96,7 @@ impl KafkaDeserialize for DeleteAclsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let filters =
-            <Vec<DeleteAclsFilter> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -137,19 +135,17 @@ impl KafkaDeserialize for DeleteAclsFilter {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let resource_type_filter = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let resource_name_filter =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let resource_type_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let resource_name_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let pattern_type_filter = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let principal_filter =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let host_filter = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let permission_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let principal_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let host_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let operation = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let permission_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

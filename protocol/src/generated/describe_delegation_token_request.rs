@@ -57,11 +57,7 @@ impl ApiRequest for DescribeDelegationTokenRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let owners = <Option<Vec<DescribeDelegationTokenOwner>> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let owners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -89,11 +85,7 @@ impl KafkaDeserialize for DescribeDelegationTokenRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let owners = <Option<Vec<DescribeDelegationTokenOwner>> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let owners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -123,8 +115,8 @@ impl KafkaDeserialize for DescribeDelegationTokenOwner {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let principal_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let principal_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

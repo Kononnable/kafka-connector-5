@@ -68,7 +68,7 @@ impl ApiRequest for CreateAclsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let creations = <Vec<AclCreation> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let creations = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -96,7 +96,7 @@ impl KafkaDeserialize for CreateAclsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let creations = <Vec<AclCreation> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let creations = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -134,17 +134,17 @@ impl KafkaDeserialize for AclCreation {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let resource_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let resource_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let resource_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let resource_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let resource_pattern_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let principal = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let permission_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let operation = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let permission_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

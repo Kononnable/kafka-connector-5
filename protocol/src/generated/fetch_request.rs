@@ -231,13 +231,13 @@ impl ApiRequest for FetchRequest {
             if is_flexible {
                 Default::default()
             } else {
-                <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
         let replica_id = if (0) <= version.0 && version.0 <= (14) {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -245,41 +245,41 @@ impl ApiRequest for FetchRequest {
             if is_flexible {
                 Default::default()
             } else {
-                <ReplicaState as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
-        let max_wait_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let min_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let max_wait_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let min_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_bytes = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let isolation_level = if (4) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_id = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_epoch = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = if (7) <= version.0 {
-            <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let rack_id = if (11) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -290,12 +290,10 @@ impl ApiRequest for FetchRequest {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        cluster_id =
-                            <Option<String> as KafkaDeserialize>::decode(buf, version, true)?;
+                        cluster_id = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     1 => {
-                        replica_state =
-                            <ReplicaState as KafkaDeserialize>::decode(buf, version, true)?;
+                        replica_state = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -395,13 +393,13 @@ impl KafkaDeserialize for FetchRequest {
             if is_flexible {
                 Default::default()
             } else {
-                <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
         let replica_id = if (0) <= version.0 && version.0 <= (14) {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -409,41 +407,41 @@ impl KafkaDeserialize for FetchRequest {
             if is_flexible {
                 Default::default()
             } else {
-                <ReplicaState as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
-        let max_wait_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let min_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let max_wait_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let min_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_bytes = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let isolation_level = if (4) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_id = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_epoch = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = if (7) <= version.0 {
-            <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let rack_id = if (11) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -454,12 +452,10 @@ impl KafkaDeserialize for FetchRequest {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        cluster_id =
-                            <Option<String> as KafkaDeserialize>::decode(buf, version, true)?;
+                        cluster_id = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     1 => {
-                        replica_state =
-                            <ReplicaState as KafkaDeserialize>::decode(buf, version, true)?;
+                        replica_state = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -546,29 +542,29 @@ impl KafkaDeserialize for FetchPartition {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let current_leader_epoch = if (9) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let fetch_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let fetch_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let last_fetched_epoch = if (12) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let log_start_offset = if (5) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partition_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mut replica_directory_id = if (17) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -577,7 +573,7 @@ impl KafkaDeserialize for FetchPartition {
             if is_flexible {
                 Default::default()
             } else {
-                <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -589,11 +585,10 @@ impl KafkaDeserialize for FetchPartition {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        replica_directory_id =
-                            <[u8; 16] as KafkaDeserialize>::decode(buf, version, true)?;
+                        replica_directory_id = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     1 => {
-                        high_watermark = <i64 as KafkaDeserialize>::decode(buf, version, true)?;
+                        high_watermark = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -642,17 +637,16 @@ impl KafkaDeserialize for FetchTopic {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let topic = if (0) <= version.0 && version.0 <= (12) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (13) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partitions =
-            <Vec<FetchPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -694,17 +688,17 @@ impl KafkaDeserialize for ForgottenTopic {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let topic = if (7) <= version.0 && version.0 <= (12) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (13) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partitions = if (7) <= version.0 {
-            <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -746,12 +740,12 @@ impl KafkaDeserialize for ReplicaState {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let replica_id = if (15) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let replica_epoch = if (15) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

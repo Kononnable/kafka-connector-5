@@ -204,48 +204,41 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let endpoint_information_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let member_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let endpoint_information_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let instance_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let rack_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let rebalance_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topology = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<Topology as KafkaDeserialize>::decode(buf, version, true)?)
+                Some(KafkaDeserialize::decode(buf, version, true)?)
             }
         } else {
-            Some(<Topology as KafkaDeserialize>::decode(buf, version, false)?)
+            Some(KafkaDeserialize::decode(buf, version, false)?)
         };
-        let active_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let standby_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let warmup_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let process_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let active_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let standby_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let warmup_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let process_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let user_endpoint = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<Endpoint as KafkaDeserialize>::decode(buf, version, true)?)
+                Some(KafkaDeserialize::decode(buf, version, true)?)
             }
         } else {
-            Some(<Endpoint as KafkaDeserialize>::decode(buf, version, false)?)
+            Some(KafkaDeserialize::decode(buf, version, false)?)
         };
-        let client_tags =
-            <Option<Vec<KeyValue>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let task_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let task_end_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let shutdown_application = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_tags = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let task_offsets = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let task_end_offsets = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let shutdown_application = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -332,48 +325,41 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let endpoint_information_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let member_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let endpoint_information_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let instance_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let rack_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let rebalance_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topology = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<Topology as KafkaDeserialize>::decode(buf, version, true)?)
+                Some(KafkaDeserialize::decode(buf, version, true)?)
             }
         } else {
-            Some(<Topology as KafkaDeserialize>::decode(buf, version, false)?)
+            Some(KafkaDeserialize::decode(buf, version, false)?)
         };
-        let active_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let standby_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let warmup_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let process_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let active_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let standby_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let warmup_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let process_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let user_endpoint = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(<Endpoint as KafkaDeserialize>::decode(buf, version, true)?)
+                Some(KafkaDeserialize::decode(buf, version, true)?)
             }
         } else {
-            Some(<Endpoint as KafkaDeserialize>::decode(buf, version, false)?)
+            Some(KafkaDeserialize::decode(buf, version, false)?)
         };
-        let client_tags =
-            <Option<Vec<KeyValue>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let task_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let task_end_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let shutdown_application = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_tags = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let task_offsets = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let task_end_offsets = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let shutdown_application = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -423,10 +409,9 @@ impl KafkaDeserialize for CopartitionGroup {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let source_topics = <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let source_topic_regex = <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let repartition_source_topics =
-            <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let source_topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let source_topic_regex = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let repartition_source_topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -460,8 +445,8 @@ impl KafkaDeserialize for Endpoint {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -491,8 +476,8 @@ impl KafkaDeserialize for KeyValue {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let key = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let value = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let key = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let value = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -530,18 +515,13 @@ impl KafkaDeserialize for Subtopology {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let source_topics = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let source_topic_regex =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let state_changelog_topics =
-            <Vec<TopicInfo> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let repartition_sink_topics =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let repartition_source_topics =
-            <Vec<TopicInfo> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let copartition_groups =
-            <Vec<CopartitionGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let subtopology_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let source_topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let source_topic_regex = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let state_changelog_topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let repartition_sink_topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let repartition_source_topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let copartition_groups = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -579,8 +559,8 @@ impl KafkaDeserialize for TaskIds {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let subtopology_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -614,9 +594,9 @@ impl KafkaDeserialize for TaskOffset {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let subtopology_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -652,10 +632,10 @@ impl KafkaDeserialize for TopicInfo {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partitions = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let replication_factor = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let topic_configs = <Vec<KeyValue> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let replication_factor = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic_configs = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -690,9 +670,8 @@ impl KafkaDeserialize for Topology {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let subtopologies =
-            <Vec<Subtopology> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let subtopologies = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

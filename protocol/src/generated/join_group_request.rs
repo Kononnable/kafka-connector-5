@@ -100,24 +100,23 @@ impl ApiRequest for JoinGroupRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let session_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let session_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let group_instance_id = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let protocols =
-            <Vec<JoinGroupRequestProtocol> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let protocol_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let protocols = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let reason = if (8) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -171,24 +170,23 @@ impl KafkaDeserialize for JoinGroupRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let session_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let session_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let group_instance_id = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let protocols =
-            <Vec<JoinGroupRequestProtocol> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let protocol_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let protocols = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let reason = if (8) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -230,8 +228,8 @@ impl KafkaDeserialize for JoinGroupRequestProtocol {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let metadata = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let metadata = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

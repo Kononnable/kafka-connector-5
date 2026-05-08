@@ -106,28 +106,26 @@ impl ApiResponse for JoinGroupResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (2) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let generation_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let protocol_type = if (7) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_name =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let leader = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let protocol_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let skip_assignment = if (9) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let members =
-            <Vec<JoinGroupResponseMember> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let members = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -180,28 +178,26 @@ impl KafkaDeserialize for JoinGroupResponse {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (2) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let generation_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let protocol_type = if (7) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_name =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let leader = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let protocol_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let skip_assignment = if (9) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let members =
-            <Vec<JoinGroupResponseMember> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let members = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -244,13 +240,13 @@ impl KafkaDeserialize for JoinGroupResponseMember {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let group_instance_id = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let metadata = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let metadata = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

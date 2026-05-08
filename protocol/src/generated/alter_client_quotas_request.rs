@@ -78,8 +78,8 @@ impl ApiRequest for AlterClientQuotasRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let entries = <Vec<EntryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -111,8 +111,8 @@ impl KafkaDeserialize for AlterClientQuotasRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let entries = <Vec<EntryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -145,8 +145,8 @@ impl KafkaDeserialize for EntityData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let entity_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let entity_name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entity_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let entity_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -179,8 +179,8 @@ impl KafkaDeserialize for EntryData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let entity = <Vec<EntityData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let ops = <Vec<OpData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entity = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let ops = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -211,9 +211,9 @@ impl KafkaDeserialize for OpData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let key = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let value = <f64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let remove = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let key = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let value = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let remove = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

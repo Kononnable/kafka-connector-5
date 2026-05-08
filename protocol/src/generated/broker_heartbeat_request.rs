@@ -83,16 +83,16 @@ impl ApiRequest for BrokerHeartbeatRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let current_metadata_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let want_fence = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let want_shut_down = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let current_metadata_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let want_fence = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let want_shut_down = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mut offline_log_dirs = if (1) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<[u8; 16]> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -104,8 +104,7 @@ impl ApiRequest for BrokerHeartbeatRequest {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        offline_log_dirs =
-                            <Vec<[u8; 16]> as KafkaDeserialize>::decode(buf, version, true)?;
+                        offline_log_dirs = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -163,16 +162,16 @@ impl KafkaDeserialize for BrokerHeartbeatRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let current_metadata_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let want_fence = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let want_shut_down = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let current_metadata_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let want_fence = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let want_shut_down = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mut offline_log_dirs = if (1) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<[u8; 16]> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -184,8 +183,7 @@ impl KafkaDeserialize for BrokerHeartbeatRequest {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        offline_log_dirs =
-                            <Vec<[u8; 16]> as KafkaDeserialize>::decode(buf, version, true)?;
+                        offline_log_dirs = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);

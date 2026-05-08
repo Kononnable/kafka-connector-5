@@ -71,13 +71,12 @@ impl ApiRequest for ElectLeadersRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let election_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_partitions =
-            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topic_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -114,13 +113,12 @@ impl KafkaDeserialize for ElectLeadersRequest {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let election_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_partitions =
-            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topic_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -154,8 +152,8 @@ impl KafkaDeserialize for TopicPartitions {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let topic = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

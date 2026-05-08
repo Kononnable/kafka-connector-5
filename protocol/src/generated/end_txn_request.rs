@@ -58,10 +58,10 @@ impl ApiRequest for EndTxnRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let transactional_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let committed = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let committed = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -97,10 +97,10 @@ impl KafkaDeserialize for EndTxnRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let transactional_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let committed = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let committed = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

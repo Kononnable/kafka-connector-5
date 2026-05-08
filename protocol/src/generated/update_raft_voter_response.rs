@@ -78,12 +78,12 @@ impl ApiResponse for UpdateRaftVoterResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mut current_leader = if is_flexible {
             Default::default()
         } else {
-            <CurrentLeader as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         };
         if is_flexible {
             let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -92,8 +92,7 @@ impl ApiResponse for UpdateRaftVoterResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        current_leader =
-                            <CurrentLeader as KafkaDeserialize>::decode(buf, version, true)?;
+                        current_leader = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -144,12 +143,12 @@ impl KafkaDeserialize for UpdateRaftVoterResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let mut current_leader = if is_flexible {
             Default::default()
         } else {
-            <CurrentLeader as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         };
         if is_flexible {
             let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -158,8 +157,7 @@ impl KafkaDeserialize for UpdateRaftVoterResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        current_leader =
-                            <CurrentLeader as KafkaDeserialize>::decode(buf, version, true)?;
+                        current_leader = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -199,10 +197,10 @@ impl KafkaDeserialize for CurrentLeader {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let leader_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let port = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let leader_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

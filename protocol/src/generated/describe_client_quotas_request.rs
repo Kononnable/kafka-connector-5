@@ -62,9 +62,8 @@ impl ApiRequest for DescribeClientQuotasRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let components =
-            <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let strict = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let components = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let strict = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -93,9 +92,8 @@ impl KafkaDeserialize for DescribeClientQuotasRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let components =
-            <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let strict = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let components = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let strict = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -126,9 +124,9 @@ impl KafkaDeserialize for ComponentData {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let entity_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let match_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let r#match = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entity_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let match_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let r#match = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

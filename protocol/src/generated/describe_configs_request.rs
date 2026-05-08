@@ -80,15 +80,14 @@ impl ApiRequest for DescribeConfigsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let resources =
-            <Vec<DescribeConfigsResource> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let resources = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let include_synonyms = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_documentation = if (3) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -130,15 +129,14 @@ impl KafkaDeserialize for DescribeConfigsRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let resources =
-            <Vec<DescribeConfigsResource> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let resources = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let include_synonyms = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_documentation = if (3) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -176,10 +174,9 @@ impl KafkaDeserialize for DescribeConfigsResource {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let resource_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let resource_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let configuration_keys =
-            <Option<Vec<String>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let resource_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let resource_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let configuration_keys = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

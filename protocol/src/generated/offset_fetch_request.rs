@@ -126,26 +126,22 @@ impl ApiRequest for OffsetFetchRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = if (0) <= version.0 && version.0 <= (7) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if (0) <= version.0 && version.0 <= (7) {
-            <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode(
-                buf,
-                version,
-                is_flexible,
-            )?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let groups = if (8) <= version.0 {
-            <Vec<OffsetFetchRequestGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let require_stable = if (7) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -193,26 +189,22 @@ impl KafkaDeserialize for OffsetFetchRequest {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let group_id = if (0) <= version.0 && version.0 <= (7) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if (0) <= version.0 && version.0 <= (7) {
-            <Option<Vec<OffsetFetchRequestTopic>> as KafkaDeserialize>::decode(
-                buf,
-                version,
-                is_flexible,
-            )?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let groups = if (8) <= version.0 {
-            <Vec<OffsetFetchRequestGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let require_stable = if (7) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -261,26 +253,22 @@ impl KafkaDeserialize for OffsetFetchRequestGroup {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let group_id = if (8) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let member_id = if (9) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let member_epoch = if (9) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if (8) <= version.0 {
-            <Option<Vec<OffsetFetchRequestTopics>> as KafkaDeserialize>::decode(
-                buf,
-                version,
-                is_flexible,
-            )?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -323,12 +311,12 @@ impl KafkaDeserialize for OffsetFetchRequestTopic {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (0) <= version.0 && version.0 <= (7) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partition_indexes = if (0) <= version.0 && version.0 <= (7) {
-            <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -372,17 +360,17 @@ impl KafkaDeserialize for OffsetFetchRequestTopics {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (8) <= version.0 && version.0 <= (9) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (10) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partition_indexes = if (8) <= version.0 {
-            <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

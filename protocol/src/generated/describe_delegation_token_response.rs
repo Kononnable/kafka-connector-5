@@ -89,10 +89,9 @@ impl ApiResponse for DescribeDelegationTokenResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let tokens =
-            <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let tokens = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -126,10 +125,9 @@ impl KafkaDeserialize for DescribeDelegationTokenResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let tokens =
-            <Vec<DescribedDelegationToken> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let tokens = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -177,28 +175,24 @@ impl KafkaDeserialize for DescribedDelegationToken {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let principal_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let principal_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let token_requester_principal_type = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let token_requester_principal_name = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let issue_timestamp = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let expiry_timestamp = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let max_timestamp = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let token_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let renewers = <Vec<DescribedDelegationTokenRenewer> as KafkaDeserialize>::decode(
-            buf,
-            version,
-            is_flexible,
-        )?;
+        let issue_timestamp = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let expiry_timestamp = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let max_timestamp = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let token_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let hmac = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let renewers = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -239,8 +233,8 @@ impl KafkaDeserialize for DescribedDelegationTokenRenewer {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let principal_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let principal_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

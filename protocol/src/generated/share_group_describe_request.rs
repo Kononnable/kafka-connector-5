@@ -53,9 +53,8 @@ impl ApiRequest for ShareGroupDescribeRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_ids = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let include_authorized_operations =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let include_authorized_operations = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -88,9 +87,8 @@ impl KafkaDeserialize for ShareGroupDescribeRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let group_ids = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let include_authorized_operations =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let group_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let include_authorized_operations = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

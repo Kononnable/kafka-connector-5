@@ -74,17 +74,15 @@ impl ApiResponse for GetTelemetrySubscriptionsResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let accepted_compression_types =
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let push_interval_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let delta_temporality = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let requested_metrics =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let client_instance_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let subscription_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let accepted_compression_types = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let push_interval_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let telemetry_max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let delta_temporality = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let requested_metrics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -131,17 +129,15 @@ impl KafkaDeserialize for GetTelemetrySubscriptionsResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let accepted_compression_types =
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let push_interval_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let delta_temporality = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let requested_metrics =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let client_instance_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let subscription_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let accepted_compression_types = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let push_interval_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let telemetry_max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let delta_temporality = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let requested_metrics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }

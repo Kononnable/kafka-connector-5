@@ -76,11 +76,10 @@ impl ApiRequest for UpdateFeaturesRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let feature_updates =
-            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -119,11 +118,10 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let feature_updates =
-            <Vec<FeatureUpdateKey> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -166,15 +164,15 @@ impl KafkaDeserialize for FeatureUpdateKey {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let feature = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let max_version_level = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let max_version_level = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let allow_downgrade = if version.0 == (0) {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let upgrade_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

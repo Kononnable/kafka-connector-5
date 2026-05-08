@@ -67,12 +67,12 @@ impl ApiRequest for ListGroupsRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let states_filter = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let types_filter = if (5) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -112,12 +112,12 @@ impl KafkaDeserialize for ListGroupsRequest {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let states_filter = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let types_filter = if (5) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

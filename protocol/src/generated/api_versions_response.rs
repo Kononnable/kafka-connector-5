@@ -181,10 +181,10 @@ impl ApiResponse for ApiVersionsResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let api_keys = <Vec<ApiVersion> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let api_keys = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -192,7 +192,7 @@ impl ApiResponse for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -201,7 +201,7 @@ impl ApiResponse for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -210,7 +210,7 @@ impl ApiResponse for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -219,7 +219,7 @@ impl ApiResponse for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -231,24 +231,16 @@ impl ApiResponse for ApiVersionsResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        supported_features =
-                            <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode(
-                                buf, version, true,
-                            )?;
+                        supported_features = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     1 => {
-                        finalized_features_epoch =
-                            <i64 as KafkaDeserialize>::decode(buf, version, true)?;
+                        finalized_features_epoch = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     2 => {
-                        finalized_features =
-                            <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode(
-                                buf, version, true,
-                            )?;
+                        finalized_features = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     3 => {
-                        zk_migration_ready =
-                            <bool as KafkaDeserialize>::decode(buf, version, true)?;
+                        zk_migration_ready = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -347,10 +339,10 @@ impl KafkaDeserialize for ApiVersionsResponse {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let api_keys = <Vec<ApiVersion> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let api_keys = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -358,7 +350,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -367,7 +359,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -376,7 +368,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -385,7 +377,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
             if is_flexible {
                 Default::default()
             } else {
-                <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
+                KafkaDeserialize::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -397,24 +389,16 @@ impl KafkaDeserialize for ApiVersionsResponse {
                 let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        supported_features =
-                            <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode(
-                                buf, version, true,
-                            )?;
+                        supported_features = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     1 => {
-                        finalized_features_epoch =
-                            <i64 as KafkaDeserialize>::decode(buf, version, true)?;
+                        finalized_features_epoch = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     2 => {
-                        finalized_features =
-                            <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode(
-                                buf, version, true,
-                            )?;
+                        finalized_features = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     3 => {
-                        zk_migration_ready =
-                            <bool as KafkaDeserialize>::decode(buf, version, true)?;
+                        zk_migration_ready = KafkaDeserialize::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -457,9 +441,9 @@ impl KafkaDeserialize for ApiVersion {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let api_key = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let min_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let max_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let api_key = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let min_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let max_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
@@ -501,17 +485,17 @@ impl KafkaDeserialize for FinalizedFeatureKey {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let max_version_level = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let min_version_level = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -556,17 +540,17 @@ impl KafkaDeserialize for SupportedFeatureKey {
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let min_version = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let max_version = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
+            KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
