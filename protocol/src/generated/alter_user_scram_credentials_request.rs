@@ -65,7 +65,6 @@ impl ApiRequest for AlterUserScramCredentialsRequest {
         self.deletions.encode(buf, version, is_flexible)?;
         self.upsertions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -79,6 +78,9 @@ impl ApiRequest for AlterUserScramCredentialsRequest {
             <Vec<ScramCredentialDeletion> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let upsertions =
             <Vec<ScramCredentialUpsertion> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             deletions,
             upsertions,
@@ -95,7 +97,6 @@ impl KafkaSerialize for AlterUserScramCredentialsRequest {
         self.deletions.encode(buf, version, is_flexible)?;
         self.upsertions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -113,7 +114,6 @@ impl KafkaDeserialize for AlterUserScramCredentialsRequest {
         let upsertions =
             <Vec<ScramCredentialUpsertion> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -133,7 +133,6 @@ impl KafkaSerialize for ScramCredentialDeletion {
         self.name.encode(buf, version, is_flexible)?;
         self.mechanism.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -149,7 +148,6 @@ impl KafkaDeserialize for ScramCredentialDeletion {
         let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let mechanism = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, mechanism })
@@ -169,7 +167,6 @@ impl KafkaSerialize for ScramCredentialUpsertion {
         self.salt.encode(buf, version, is_flexible)?;
         self.salted_password.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -188,7 +185,6 @@ impl KafkaDeserialize for ScramCredentialUpsertion {
         let salt = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let salted_password = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

@@ -43,7 +43,6 @@ impl ApiRequest for AllocateProducerIdsRequest {
         self.broker_id.encode(buf, version, is_flexible)?;
         self.broker_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -55,6 +54,9 @@ impl ApiRequest for AllocateProducerIdsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             broker_id,
             broker_epoch,
@@ -71,7 +73,6 @@ impl KafkaSerialize for AllocateProducerIdsRequest {
         self.broker_id.encode(buf, version, is_flexible)?;
         self.broker_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -87,7 +88,6 @@ impl KafkaDeserialize for AllocateProducerIdsRequest {
         let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

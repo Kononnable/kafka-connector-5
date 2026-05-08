@@ -71,7 +71,6 @@ impl ApiResponse for DescribeTransactionsResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.transaction_states.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -84,6 +83,9 @@ impl ApiResponse for DescribeTransactionsResponse {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let transaction_states =
             <Vec<TransactionState> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             transaction_states,
@@ -100,7 +102,6 @@ impl KafkaSerialize for DescribeTransactionsResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.transaction_states.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -117,7 +118,6 @@ impl KafkaDeserialize for DescribeTransactionsResponse {
         let transaction_states =
             <Vec<TransactionState> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -137,7 +137,6 @@ impl KafkaSerialize for TopicData {
         self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -153,7 +152,6 @@ impl KafkaDeserialize for TopicData {
         let topic = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { topic, partitions })
@@ -178,7 +176,6 @@ impl KafkaSerialize for TransactionState {
         self.producer_epoch.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -201,7 +198,6 @@ impl KafkaDeserialize for TransactionState {
         let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

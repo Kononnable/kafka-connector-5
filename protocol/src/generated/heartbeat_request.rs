@@ -56,7 +56,6 @@ impl ApiRequest for HeartbeatRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -74,6 +73,9 @@ impl ApiRequest for HeartbeatRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             group_id,
             generation_id,
@@ -96,7 +98,6 @@ impl KafkaSerialize for HeartbeatRequest {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -118,7 +119,6 @@ impl KafkaDeserialize for HeartbeatRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

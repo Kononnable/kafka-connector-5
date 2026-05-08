@@ -72,7 +72,6 @@ impl ApiResponse for ElectLeadersResponse {
         self.replica_election_results
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -90,6 +89,9 @@ impl ApiResponse for ElectLeadersResponse {
         };
         let replica_election_results =
             <Vec<ReplicaElectionResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -111,7 +113,6 @@ impl KafkaSerialize for ElectLeadersResponse {
         self.replica_election_results
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -133,7 +134,6 @@ impl KafkaDeserialize for ElectLeadersResponse {
         let replica_election_results =
             <Vec<ReplicaElectionResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -155,7 +155,6 @@ impl KafkaSerialize for PartitionResult {
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -173,7 +172,6 @@ impl KafkaDeserialize for PartitionResult {
         let error_message =
             <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -194,7 +192,6 @@ impl KafkaSerialize for ReplicaElectionResult {
         self.topic.encode(buf, version, is_flexible)?;
         self.partition_result.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -211,7 +208,6 @@ impl KafkaDeserialize for ReplicaElectionResult {
         let partition_result =
             <Vec<PartitionResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

@@ -40,7 +40,6 @@ impl ApiRequest for UnregisterBrokerRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.broker_id.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -51,6 +50,9 @@ impl ApiRequest for UnregisterBrokerRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { broker_id })
     }
 }
@@ -63,7 +65,6 @@ impl KafkaSerialize for UnregisterBrokerRequest {
     ) -> Result<(), crate::traits::SerializationError> {
         self.broker_id.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -78,7 +79,6 @@ impl KafkaDeserialize for UnregisterBrokerRequest {
     ) -> Result<Self, crate::traits::SerializationError> {
         let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { broker_id })

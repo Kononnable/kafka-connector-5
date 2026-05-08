@@ -70,7 +70,6 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -88,6 +87,9 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
         };
         let topics =
             <Vec<ReassignableTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             timeout_ms,
             allow_replication_factor_change,
@@ -109,7 +111,6 @@ impl KafkaSerialize for AlterPartitionReassignmentsRequest {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -131,7 +132,6 @@ impl KafkaDeserialize for AlterPartitionReassignmentsRequest {
         let topics =
             <Vec<ReassignableTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -152,7 +152,6 @@ impl KafkaSerialize for ReassignablePartition {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.replicas.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -168,7 +167,6 @@ impl KafkaDeserialize for ReassignablePartition {
         let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let replicas = <Option<Vec<i32>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -188,7 +186,6 @@ impl KafkaSerialize for ReassignableTopic {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -205,7 +202,6 @@ impl KafkaDeserialize for ReassignableTopic {
         let partitions =
             <Vec<ReassignablePartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })

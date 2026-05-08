@@ -43,7 +43,6 @@ impl ApiRequest for RenewDelegationTokenRequest {
         self.hmac.encode(buf, version, is_flexible)?;
         self.renew_period_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -55,6 +54,9 @@ impl ApiRequest for RenewDelegationTokenRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let renew_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             hmac,
             renew_period_ms,
@@ -71,7 +73,6 @@ impl KafkaSerialize for RenewDelegationTokenRequest {
         self.hmac.encode(buf, version, is_flexible)?;
         self.renew_period_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -87,7 +88,6 @@ impl KafkaDeserialize for RenewDelegationTokenRequest {
         let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let renew_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

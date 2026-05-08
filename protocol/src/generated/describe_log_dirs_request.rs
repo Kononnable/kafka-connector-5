@@ -48,7 +48,6 @@ impl ApiRequest for DescribeLogDirsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -63,6 +62,9 @@ impl ApiRequest for DescribeLogDirsRequest {
             version,
             is_flexible,
         )?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { topics })
     }
 }
@@ -75,7 +77,6 @@ impl KafkaSerialize for DescribeLogDirsRequest {
     ) -> Result<(), crate::traits::SerializationError> {
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -94,7 +95,6 @@ impl KafkaDeserialize for DescribeLogDirsRequest {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { topics })
@@ -111,7 +111,6 @@ impl KafkaSerialize for DescribableLogDirTopic {
         self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -127,7 +126,6 @@ impl KafkaDeserialize for DescribableLogDirTopic {
         let topic = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { topic, partitions })

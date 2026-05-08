@@ -88,8 +88,18 @@ impl ApiResponse for VoteResponse {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            let mut __tag_count = 0u64;
+            if !self.node_endpoints.is_empty() {
+                __tag_count += 1;
+            }
+            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            if !self.node_endpoints.is_empty() {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.node_endpoints.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
         }
         Ok(())
     }
@@ -100,7 +110,7 @@ impl ApiResponse for VoteResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let node_endpoints = if (1) <= version.0 {
+        let mut node_endpoints = if (1) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -109,6 +119,22 @@ impl ApiResponse for VoteResponse {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            for _ in 0..__tag_count {
+                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                match __tag_id {
+                    0 => {
+                        node_endpoints =
+                            <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    _ => {
+                        buf.advance(__tag_len as usize);
+                    }
+                }
+            }
+        }
         Ok(Self {
             error_code,
             topics,
@@ -129,8 +155,18 @@ impl KafkaSerialize for VoteResponse {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            let mut __tag_count = 0u64;
+            if !self.node_endpoints.is_empty() {
+                __tag_count += 1;
+            }
+            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            if !self.node_endpoints.is_empty() {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.node_endpoints.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
         }
         Ok(())
     }
@@ -144,7 +180,7 @@ impl KafkaDeserialize for VoteResponse {
     ) -> Result<Self, crate::traits::SerializationError> {
         let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let node_endpoints = if (1) <= version.0 {
+        let mut node_endpoints = if (1) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -154,8 +190,20 @@ impl KafkaDeserialize for VoteResponse {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            for _ in 0..__tag_count {
+                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                match __tag_id {
+                    0 => {
+                        node_endpoints =
+                            <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    _ => {
+                        buf.advance(__tag_len as usize);
+                    }
+                }
+            }
         }
         Ok(Self {
             error_code,
@@ -182,7 +230,6 @@ impl KafkaSerialize for NodeEndpoint {
             self.port.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -211,7 +258,6 @@ impl KafkaDeserialize for NodeEndpoint {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -235,7 +281,6 @@ impl KafkaSerialize for PartitionData {
         self.leader_epoch.encode(buf, version, is_flexible)?;
         self.vote_granted.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -254,7 +299,6 @@ impl KafkaDeserialize for PartitionData {
         let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let vote_granted = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -277,7 +321,6 @@ impl KafkaSerialize for TopicData {
         self.topic_name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -294,7 +337,6 @@ impl KafkaDeserialize for TopicData {
         let partitions =
             <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

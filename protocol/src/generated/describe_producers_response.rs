@@ -79,7 +79,6 @@ impl ApiResponse for DescribeProducersResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -91,6 +90,9 @@ impl ApiResponse for DescribeProducersResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             topics,
@@ -107,7 +109,6 @@ impl KafkaSerialize for DescribeProducersResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -123,7 +124,6 @@ impl KafkaDeserialize for DescribeProducersResponse {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -145,7 +145,6 @@ impl KafkaSerialize for PartitionResponse {
         self.error_message.encode(buf, version, is_flexible)?;
         self.active_producers.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -165,7 +164,6 @@ impl KafkaDeserialize for PartitionResponse {
         let active_producers =
             <Vec<ProducerState> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -192,7 +190,6 @@ impl KafkaSerialize for ProducerState {
         self.current_txn_start_offset
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -213,7 +210,6 @@ impl KafkaDeserialize for ProducerState {
         let current_txn_start_offset =
             <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -237,7 +233,6 @@ impl KafkaSerialize for TopicResponse {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -254,7 +249,6 @@ impl KafkaDeserialize for TopicResponse {
         let partitions =
             <Vec<PartitionResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })

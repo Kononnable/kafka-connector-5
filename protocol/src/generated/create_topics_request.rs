@@ -83,7 +83,6 @@ impl ApiRequest for CreateTopicsRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -100,6 +99,9 @@ impl ApiRequest for CreateTopicsRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             topics,
             timeout_ms,
@@ -120,7 +122,6 @@ impl KafkaSerialize for CreateTopicsRequest {
             self.validate_only.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -141,7 +142,6 @@ impl KafkaDeserialize for CreateTopicsRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -162,7 +162,6 @@ impl KafkaSerialize for CreatableReplicaAssignment {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.broker_ids.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -178,7 +177,6 @@ impl KafkaDeserialize for CreatableReplicaAssignment {
         let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let broker_ids = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -201,7 +199,6 @@ impl KafkaSerialize for CreatableTopic {
         self.assignments.encode(buf, version, is_flexible)?;
         self.configs.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -225,7 +222,6 @@ impl KafkaDeserialize for CreatableTopic {
         let configs =
             <Vec<CreatableTopicConfig> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -248,7 +244,6 @@ impl KafkaSerialize for CreatableTopicConfig {
         self.name.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -264,7 +259,6 @@ impl KafkaDeserialize for CreatableTopicConfig {
         let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let value = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, value })

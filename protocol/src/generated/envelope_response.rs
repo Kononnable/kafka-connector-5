@@ -43,7 +43,6 @@ impl ApiResponse for EnvelopeResponse {
         self.response_data.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -56,6 +55,9 @@ impl ApiResponse for EnvelopeResponse {
         let response_data =
             <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             response_data,
             error_code,
@@ -72,7 +74,6 @@ impl KafkaSerialize for EnvelopeResponse {
         self.response_data.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -89,7 +90,6 @@ impl KafkaDeserialize for EnvelopeResponse {
             <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

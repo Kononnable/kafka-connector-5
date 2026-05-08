@@ -67,7 +67,6 @@ impl ApiRequest for DescribeAclsRequest {
         self.operation.encode(buf, version, is_flexible)?;
         self.permission_type.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -90,6 +89,9 @@ impl ApiRequest for DescribeAclsRequest {
         let host_filter = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let permission_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             resource_type_filter,
             resource_name_filter,
@@ -120,7 +122,6 @@ impl KafkaSerialize for DescribeAclsRequest {
         self.operation.encode(buf, version, is_flexible)?;
         self.permission_type.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -147,7 +148,6 @@ impl KafkaDeserialize for DescribeAclsRequest {
         let operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let permission_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

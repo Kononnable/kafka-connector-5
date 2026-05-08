@@ -59,7 +59,6 @@ impl ApiRequest for ReadShareGroupStateSummaryRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -72,6 +71,9 @@ impl ApiRequest for ReadShareGroupStateSummaryRequest {
         let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics =
             <Vec<ReadStateSummaryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { group_id, topics })
     }
 }
@@ -85,7 +87,6 @@ impl KafkaSerialize for ReadShareGroupStateSummaryRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -102,7 +103,6 @@ impl KafkaDeserialize for ReadShareGroupStateSummaryRequest {
         let topics =
             <Vec<ReadStateSummaryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { group_id, topics })
@@ -119,7 +119,6 @@ impl KafkaSerialize for PartitionData {
         self.partition.encode(buf, version, is_flexible)?;
         self.leader_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -135,7 +134,6 @@ impl KafkaDeserialize for PartitionData {
         let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -155,7 +153,6 @@ impl KafkaSerialize for ReadStateSummaryData {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -172,7 +169,6 @@ impl KafkaDeserialize for ReadStateSummaryData {
         let partitions =
             <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

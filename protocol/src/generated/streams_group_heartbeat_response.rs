@@ -126,7 +126,6 @@ impl ApiResponse for StreamsGroupHeartbeatResponse {
         self.partitions_by_user_endpoint
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -160,6 +159,9 @@ impl ApiResponse for StreamsGroupHeartbeatResponse {
                 version,
                 is_flexible,
             )?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -205,7 +207,6 @@ impl KafkaSerialize for StreamsGroupHeartbeatResponse {
         self.partitions_by_user_endpoint
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -243,7 +244,6 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
                 is_flexible,
             )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -275,7 +275,6 @@ impl KafkaSerialize for Endpoint {
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -291,7 +290,6 @@ impl KafkaDeserialize for Endpoint {
         let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { host, port })
@@ -309,7 +307,6 @@ impl KafkaSerialize for EndpointToPartitions {
         self.active_partitions.encode(buf, version, is_flexible)?;
         self.standby_partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -328,7 +325,6 @@ impl KafkaDeserialize for EndpointToPartitions {
         let standby_partitions =
             <Vec<TopicPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -349,7 +345,6 @@ impl KafkaSerialize for Status {
         self.status_code.encode(buf, version, is_flexible)?;
         self.status_detail.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -365,7 +360,6 @@ impl KafkaDeserialize for Status {
         let status_code = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let status_detail = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -385,7 +379,6 @@ impl KafkaSerialize for TaskIds {
         self.subtopology_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -401,7 +394,6 @@ impl KafkaDeserialize for TaskIds {
         let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -421,7 +413,6 @@ impl KafkaSerialize for TopicPartition {
         self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -437,7 +428,6 @@ impl KafkaDeserialize for TopicPartition {
         let topic = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { topic, partitions })

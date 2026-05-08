@@ -73,7 +73,6 @@ impl ApiResponse for SyncGroupResponse {
         }
         self.assignment.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -100,6 +99,9 @@ impl ApiResponse for SyncGroupResponse {
             Default::default()
         };
         let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -128,7 +130,6 @@ impl KafkaSerialize for SyncGroupResponse {
         }
         self.assignment.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -159,7 +160,6 @@ impl KafkaDeserialize for SyncGroupResponse {
         };
         let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

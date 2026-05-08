@@ -72,7 +72,6 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
             }
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -95,6 +94,9 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
         } else {
             Some(<Cursor as KafkaDeserialize>::decode(buf, version, false)?)
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             topics,
             response_partition_limit,
@@ -125,7 +127,6 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
             }
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -152,7 +153,6 @@ impl KafkaDeserialize for DescribeTopicPartitionsRequest {
             Some(<Cursor as KafkaDeserialize>::decode(buf, version, false)?)
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -173,7 +173,6 @@ impl KafkaSerialize for Cursor {
         self.topic_name.encode(buf, version, is_flexible)?;
         self.partition_index.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -189,7 +188,6 @@ impl KafkaDeserialize for Cursor {
         let topic_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -208,7 +206,6 @@ impl KafkaSerialize for TopicRequest {
     ) -> Result<(), crate::traits::SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -223,7 +220,6 @@ impl KafkaDeserialize for TopicRequest {
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name })

@@ -56,7 +56,6 @@ impl ApiRequest for AlterReplicaLogDirsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.dirs.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -68,6 +67,9 @@ impl ApiRequest for AlterReplicaLogDirsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let dirs =
             <Vec<AlterReplicaLogDir> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { dirs })
     }
 }
@@ -80,7 +82,6 @@ impl KafkaSerialize for AlterReplicaLogDirsRequest {
     ) -> Result<(), crate::traits::SerializationError> {
         self.dirs.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -96,7 +97,6 @@ impl KafkaDeserialize for AlterReplicaLogDirsRequest {
         let dirs =
             <Vec<AlterReplicaLogDir> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { dirs })
@@ -113,7 +113,6 @@ impl KafkaSerialize for AlterReplicaLogDir {
         self.path.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -130,7 +129,6 @@ impl KafkaDeserialize for AlterReplicaLogDir {
         let topics =
             <Vec<AlterReplicaLogDirTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { path, topics })
@@ -147,7 +145,6 @@ impl KafkaSerialize for AlterReplicaLogDirTopic {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -163,7 +160,6 @@ impl KafkaDeserialize for AlterReplicaLogDirTopic {
         let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })

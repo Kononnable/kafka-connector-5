@@ -103,7 +103,6 @@ impl ApiRequest for TxnOffsetCommitRequest {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -137,6 +136,9 @@ impl ApiRequest for TxnOffsetCommitRequest {
             version,
             is_flexible,
         )?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             transactional_id,
             group_id,
@@ -171,7 +173,6 @@ impl KafkaSerialize for TxnOffsetCommitRequest {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -209,7 +210,6 @@ impl KafkaDeserialize for TxnOffsetCommitRequest {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -240,7 +240,6 @@ impl KafkaSerialize for TxnOffsetCommitRequestPartition {
         }
         self.committed_metadata.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -263,7 +262,6 @@ impl KafkaDeserialize for TxnOffsetCommitRequestPartition {
         let committed_metadata =
             <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -285,7 +283,6 @@ impl KafkaSerialize for TxnOffsetCommitRequestTopic {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -305,7 +302,6 @@ impl KafkaDeserialize for TxnOffsetCommitRequestTopic {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })

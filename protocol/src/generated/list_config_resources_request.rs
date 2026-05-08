@@ -47,7 +47,6 @@ impl ApiRequest for ListConfigResourcesRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -62,6 +61,9 @@ impl ApiRequest for ListConfigResourcesRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { resource_types })
     }
 }
@@ -76,7 +78,6 @@ impl KafkaSerialize for ListConfigResourcesRequest {
             self.resource_types.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -95,7 +96,6 @@ impl KafkaDeserialize for ListConfigResourcesRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { resource_types })

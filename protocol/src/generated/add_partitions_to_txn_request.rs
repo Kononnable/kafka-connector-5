@@ -117,7 +117,6 @@ impl ApiRequest for AddPartitionsToTxnRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -156,6 +155,9 @@ impl ApiRequest for AddPartitionsToTxnRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             transactions,
             v3_and_below_transactional_id,
@@ -191,7 +193,6 @@ impl KafkaSerialize for AddPartitionsToTxnRequest {
             self.v3_and_below_topics.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -234,7 +235,6 @@ impl KafkaDeserialize for AddPartitionsToTxnRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -257,7 +257,6 @@ impl KafkaSerialize for AddPartitionsToTxnTopic {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -273,7 +272,6 @@ impl KafkaDeserialize for AddPartitionsToTxnTopic {
         let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })
@@ -303,7 +301,6 @@ impl KafkaSerialize for AddPartitionsToTxnTransaction {
             self.topics.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -342,7 +339,6 @@ impl KafkaDeserialize for AddPartitionsToTxnTransaction {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

@@ -46,7 +46,6 @@ impl ApiRequest for DescribeUserScramCredentialsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.users.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -57,6 +56,9 @@ impl ApiRequest for DescribeUserScramCredentialsRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let users = <Option<Vec<UserName>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { users })
     }
 }
@@ -69,7 +71,6 @@ impl KafkaSerialize for DescribeUserScramCredentialsRequest {
     ) -> Result<(), crate::traits::SerializationError> {
         self.users.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -84,7 +85,6 @@ impl KafkaDeserialize for DescribeUserScramCredentialsRequest {
     ) -> Result<Self, crate::traits::SerializationError> {
         let users = <Option<Vec<UserName>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { users })
@@ -100,7 +100,6 @@ impl KafkaSerialize for UserName {
     ) -> Result<(), crate::traits::SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -115,7 +114,6 @@ impl KafkaDeserialize for UserName {
     ) -> Result<Self, crate::traits::SerializationError> {
         let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name })

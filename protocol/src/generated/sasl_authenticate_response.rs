@@ -56,7 +56,6 @@ impl ApiResponse for SaslAuthenticateResponse {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -75,6 +74,9 @@ impl ApiResponse for SaslAuthenticateResponse {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             error_code,
             error_message,
@@ -97,7 +99,6 @@ impl KafkaSerialize for SaslAuthenticateResponse {
             self.session_lifetime_ms.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -120,7 +121,6 @@ impl KafkaDeserialize for SaslAuthenticateResponse {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

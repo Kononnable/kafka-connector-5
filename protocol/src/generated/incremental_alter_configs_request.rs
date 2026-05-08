@@ -63,7 +63,6 @@ impl ApiRequest for IncrementalAlterConfigsRequest {
         self.resources.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -76,6 +75,9 @@ impl ApiRequest for IncrementalAlterConfigsRequest {
         let resources =
             <Vec<AlterConfigsResource> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             resources,
             validate_only,
@@ -92,7 +94,6 @@ impl KafkaSerialize for IncrementalAlterConfigsRequest {
         self.resources.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -109,7 +110,6 @@ impl KafkaDeserialize for IncrementalAlterConfigsRequest {
             <Vec<AlterConfigsResource> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -130,7 +130,6 @@ impl KafkaSerialize for AlterConfigsResource {
         self.resource_name.encode(buf, version, is_flexible)?;
         self.configs.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -148,7 +147,6 @@ impl KafkaDeserialize for AlterConfigsResource {
         let configs =
             <Vec<AlterableConfig> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -170,7 +168,6 @@ impl KafkaSerialize for AlterableConfig {
         self.config_operation.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -187,7 +184,6 @@ impl KafkaDeserialize for AlterableConfig {
         let config_operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let value = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

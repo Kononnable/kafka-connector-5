@@ -57,7 +57,6 @@ impl ApiRequest for DeleteShareGroupStateRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -69,6 +68,9 @@ impl ApiRequest for DeleteShareGroupStateRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<DeleteStateData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { group_id, topics })
     }
 }
@@ -82,7 +84,6 @@ impl KafkaSerialize for DeleteShareGroupStateRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -98,7 +99,6 @@ impl KafkaDeserialize for DeleteShareGroupStateRequest {
         let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<DeleteStateData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { group_id, topics })
@@ -115,7 +115,6 @@ impl KafkaSerialize for DeleteStateData {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -132,7 +131,6 @@ impl KafkaDeserialize for DeleteStateData {
         let partitions =
             <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -151,7 +149,6 @@ impl KafkaSerialize for PartitionData {
     ) -> Result<(), crate::traits::SerializationError> {
         self.partition.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -166,7 +163,6 @@ impl KafkaDeserialize for PartitionData {
     ) -> Result<Self, crate::traits::SerializationError> {
         let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { partition })

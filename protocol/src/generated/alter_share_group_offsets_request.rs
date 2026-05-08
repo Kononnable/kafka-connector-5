@@ -59,7 +59,6 @@ impl ApiRequest for AlterShareGroupOffsetsRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -75,6 +74,9 @@ impl ApiRequest for AlterShareGroupOffsetsRequest {
             version,
             is_flexible,
         )?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { group_id, topics })
     }
 }
@@ -88,7 +90,6 @@ impl KafkaSerialize for AlterShareGroupOffsetsRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -108,7 +109,6 @@ impl KafkaDeserialize for AlterShareGroupOffsetsRequest {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { group_id, topics })
@@ -125,7 +125,6 @@ impl KafkaSerialize for AlterShareGroupOffsetsRequestPartition {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.start_offset.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -141,7 +140,6 @@ impl KafkaDeserialize for AlterShareGroupOffsetsRequestPartition {
         let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let start_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -161,7 +159,6 @@ impl KafkaSerialize for AlterShareGroupOffsetsRequestTopic {
         self.topic_name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -181,7 +178,6 @@ impl KafkaDeserialize for AlterShareGroupOffsetsRequestTopic {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

@@ -59,7 +59,6 @@ impl ApiRequest for DeleteRecordsRequest {
         self.topics.encode(buf, version, is_flexible)?;
         self.timeout_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -72,6 +71,9 @@ impl ApiRequest for DeleteRecordsRequest {
         let topics =
             <Vec<DeleteRecordsTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { topics, timeout_ms })
     }
 }
@@ -85,7 +87,6 @@ impl KafkaSerialize for DeleteRecordsRequest {
         self.topics.encode(buf, version, is_flexible)?;
         self.timeout_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -102,7 +103,6 @@ impl KafkaDeserialize for DeleteRecordsRequest {
             <Vec<DeleteRecordsTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { topics, timeout_ms })
@@ -119,7 +119,6 @@ impl KafkaSerialize for DeleteRecordsPartition {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.offset.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -135,7 +134,6 @@ impl KafkaDeserialize for DeleteRecordsPartition {
         let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -155,7 +153,6 @@ impl KafkaSerialize for DeleteRecordsTopic {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -172,7 +169,6 @@ impl KafkaDeserialize for DeleteRecordsTopic {
         let partitions =
             <Vec<DeleteRecordsPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })

@@ -70,7 +70,6 @@ impl ApiResponse for OffsetCommitResponse {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -90,6 +89,9 @@ impl ApiResponse for OffsetCommitResponse {
             version,
             is_flexible,
         )?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             topics,
@@ -108,7 +110,6 @@ impl KafkaSerialize for OffsetCommitResponse {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -132,7 +133,6 @@ impl KafkaDeserialize for OffsetCommitResponse {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -152,7 +152,6 @@ impl KafkaSerialize for OffsetCommitResponsePartition {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -168,7 +167,6 @@ impl KafkaDeserialize for OffsetCommitResponsePartition {
         let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -193,7 +191,6 @@ impl KafkaSerialize for OffsetCommitResponseTopic {
         }
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -222,7 +219,6 @@ impl KafkaDeserialize for OffsetCommitResponseTopic {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

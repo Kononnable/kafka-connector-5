@@ -48,7 +48,6 @@ impl ApiRequest for DescribeDelegationTokenRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.owners.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -63,6 +62,9 @@ impl ApiRequest for DescribeDelegationTokenRequest {
             version,
             is_flexible,
         )?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { owners })
     }
 }
@@ -75,7 +77,6 @@ impl KafkaSerialize for DescribeDelegationTokenRequest {
     ) -> Result<(), crate::traits::SerializationError> {
         self.owners.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -94,7 +95,6 @@ impl KafkaDeserialize for DescribeDelegationTokenRequest {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { owners })
@@ -111,7 +111,6 @@ impl KafkaSerialize for DescribeDelegationTokenOwner {
         self.principal_type.encode(buf, version, is_flexible)?;
         self.principal_name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -127,7 +126,6 @@ impl KafkaDeserialize for DescribeDelegationTokenOwner {
         let principal_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let principal_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

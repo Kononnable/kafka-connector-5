@@ -46,7 +46,6 @@ impl ApiRequest for RemoveRaftVoterRequest {
         self.voter_id.encode(buf, version, is_flexible)?;
         self.voter_directory_id.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -59,6 +58,9 @@ impl ApiRequest for RemoveRaftVoterRequest {
         let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             cluster_id,
             voter_id,
@@ -77,7 +79,6 @@ impl KafkaSerialize for RemoveRaftVoterRequest {
         self.voter_id.encode(buf, version, is_flexible)?;
         self.voter_directory_id.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -94,7 +95,6 @@ impl KafkaDeserialize for RemoveRaftVoterRequest {
         let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

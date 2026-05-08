@@ -84,7 +84,6 @@ impl ApiRequest for AlterPartitionRequest {
         self.broker_epoch.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -97,6 +96,9 @@ impl ApiRequest for AlterPartitionRequest {
         let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             broker_id,
             broker_epoch,
@@ -115,7 +117,6 @@ impl KafkaSerialize for AlterPartitionRequest {
         self.broker_epoch.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -132,7 +133,6 @@ impl KafkaDeserialize for AlterPartitionRequest {
         let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -157,7 +157,6 @@ impl KafkaSerialize for BrokerState {
             self.broker_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -181,7 +180,6 @@ impl KafkaDeserialize for BrokerState {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -212,7 +210,6 @@ impl KafkaSerialize for PartitionData {
         }
         self.partition_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -244,7 +241,6 @@ impl KafkaDeserialize for PartitionData {
         };
         let partition_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -270,7 +266,6 @@ impl KafkaSerialize for TopicData {
         }
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -291,7 +286,6 @@ impl KafkaDeserialize for TopicData {
         let partitions =
             <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

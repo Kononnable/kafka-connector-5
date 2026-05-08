@@ -53,7 +53,6 @@ impl ApiRequest for DescribeClientQuotasRequest {
         self.components.encode(buf, version, is_flexible)?;
         self.strict.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -66,6 +65,9 @@ impl ApiRequest for DescribeClientQuotasRequest {
         let components =
             <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let strict = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { components, strict })
     }
 }
@@ -79,7 +81,6 @@ impl KafkaSerialize for DescribeClientQuotasRequest {
         self.components.encode(buf, version, is_flexible)?;
         self.strict.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -96,7 +97,6 @@ impl KafkaDeserialize for DescribeClientQuotasRequest {
             <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let strict = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { components, strict })
@@ -114,7 +114,6 @@ impl KafkaSerialize for ComponentData {
         self.match_type.encode(buf, version, is_flexible)?;
         self.r#match.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -131,7 +130,6 @@ impl KafkaDeserialize for ComponentData {
         let match_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let r#match = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

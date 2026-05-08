@@ -62,7 +62,6 @@ impl ApiRequest for CreatePartitionsRequest {
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -76,6 +75,9 @@ impl ApiRequest for CreatePartitionsRequest {
             <Vec<CreatePartitionsTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             topics,
             timeout_ms,
@@ -94,7 +96,6 @@ impl KafkaSerialize for CreatePartitionsRequest {
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -112,7 +113,6 @@ impl KafkaDeserialize for CreatePartitionsRequest {
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -132,7 +132,6 @@ impl KafkaSerialize for CreatePartitionsAssignment {
     ) -> Result<(), crate::traits::SerializationError> {
         self.broker_ids.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -147,7 +146,6 @@ impl KafkaDeserialize for CreatePartitionsAssignment {
     ) -> Result<Self, crate::traits::SerializationError> {
         let broker_ids = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { broker_ids })
@@ -165,7 +163,6 @@ impl KafkaSerialize for CreatePartitionsTopic {
         self.count.encode(buf, version, is_flexible)?;
         self.assignments.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -186,7 +183,6 @@ impl KafkaDeserialize for CreatePartitionsTopic {
             is_flexible,
         )?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

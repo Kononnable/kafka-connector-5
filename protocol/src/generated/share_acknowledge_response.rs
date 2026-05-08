@@ -92,7 +92,6 @@ impl ApiResponse for ShareAcknowledgeResponse {
         self.responses.encode(buf, version, is_flexible)?;
         self.node_endpoints.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -113,6 +112,9 @@ impl ApiResponse for ShareAcknowledgeResponse {
         )?;
         let node_endpoints =
             <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -135,7 +137,6 @@ impl KafkaSerialize for ShareAcknowledgeResponse {
         self.responses.encode(buf, version, is_flexible)?;
         self.node_endpoints.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -160,7 +161,6 @@ impl KafkaDeserialize for ShareAcknowledgeResponse {
         let node_endpoints =
             <Vec<NodeEndpoint> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -183,7 +183,6 @@ impl KafkaSerialize for LeaderIdAndEpoch {
         self.leader_id.encode(buf, version, is_flexible)?;
         self.leader_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -199,7 +198,6 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
         let leader_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -221,7 +219,6 @@ impl KafkaSerialize for NodeEndpoint {
         self.port.encode(buf, version, is_flexible)?;
         self.rack.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -239,7 +236,6 @@ impl KafkaDeserialize for NodeEndpoint {
         let port = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let rack = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -263,7 +259,6 @@ impl KafkaSerialize for PartitionData {
         self.error_message.encode(buf, version, is_flexible)?;
         self.current_leader.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -283,7 +278,6 @@ impl KafkaDeserialize for PartitionData {
         let current_leader =
             <LeaderIdAndEpoch as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -305,7 +299,6 @@ impl KafkaSerialize for ShareAcknowledgeTopicResponse {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -322,7 +315,6 @@ impl KafkaDeserialize for ShareAcknowledgeTopicResponse {
         let partitions =
             <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

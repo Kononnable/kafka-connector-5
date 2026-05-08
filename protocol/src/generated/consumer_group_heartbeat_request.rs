@@ -85,7 +85,6 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
         self.server_assignor.encode(buf, version, is_flexible)?;
         self.topic_partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -112,6 +111,9 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
             <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topic_partitions =
             <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             group_id,
             member_id,
@@ -149,7 +151,6 @@ impl KafkaSerialize for ConsumerGroupHeartbeatRequest {
         self.server_assignor.encode(buf, version, is_flexible)?;
         self.topic_partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -180,7 +181,6 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
         let topic_partitions =
             <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -208,7 +208,6 @@ impl KafkaSerialize for TopicPartitions {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -224,7 +223,6 @@ impl KafkaDeserialize for TopicPartitions {
         let topic_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

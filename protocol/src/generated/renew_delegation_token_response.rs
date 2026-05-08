@@ -46,7 +46,6 @@ impl ApiResponse for RenewDelegationTokenResponse {
         self.expiry_timestamp_ms.encode(buf, version, is_flexible)?;
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -59,6 +58,9 @@ impl ApiResponse for RenewDelegationTokenResponse {
         let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let expiry_timestamp_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             error_code,
             expiry_timestamp_ms,
@@ -77,7 +79,6 @@ impl KafkaSerialize for RenewDelegationTokenResponse {
         self.expiry_timestamp_ms.encode(buf, version, is_flexible)?;
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -94,7 +95,6 @@ impl KafkaDeserialize for RenewDelegationTokenResponse {
         let expiry_timestamp_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

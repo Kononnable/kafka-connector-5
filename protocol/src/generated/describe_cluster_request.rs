@@ -62,7 +62,6 @@ impl ApiRequest for DescribeClusterRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -84,6 +83,9 @@ impl ApiRequest for DescribeClusterRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             include_cluster_authorized_operations,
             endpoint_type,
@@ -108,7 +110,6 @@ impl KafkaSerialize for DescribeClusterRequest {
                 .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -134,7 +135,6 @@ impl KafkaDeserialize for DescribeClusterRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

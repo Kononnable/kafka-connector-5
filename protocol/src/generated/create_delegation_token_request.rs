@@ -73,7 +73,6 @@ impl ApiRequest for CreateDelegationTokenRequest {
         self.renewers.encode(buf, version, is_flexible)?;
         self.max_lifetime_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -96,6 +95,9 @@ impl ApiRequest for CreateDelegationTokenRequest {
         let renewers =
             <Vec<CreatableRenewers> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let max_lifetime_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             owner_principal_type,
             owner_principal_name,
@@ -122,7 +124,6 @@ impl KafkaSerialize for CreateDelegationTokenRequest {
         self.renewers.encode(buf, version, is_flexible)?;
         self.max_lifetime_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -149,7 +150,6 @@ impl KafkaDeserialize for CreateDelegationTokenRequest {
             <Vec<CreatableRenewers> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let max_lifetime_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -171,7 +171,6 @@ impl KafkaSerialize for CreatableRenewers {
         self.principal_type.encode(buf, version, is_flexible)?;
         self.principal_name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -187,7 +186,6 @@ impl KafkaDeserialize for CreatableRenewers {
         let principal_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let principal_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

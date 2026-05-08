@@ -311,10 +311,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 code.push_str(&generate_serialize_field(field, field));
             }
             code.push_str("        if is_flexible {\n");
-            code.push_str("            // Tagged fields (none yet)\n");
-            code.push_str(
-                "            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
-            );
+            code.push_str(&generate_tagged_encode_body(&msg.fields));
             code.push_str("        }\n");
             code.push_str("        Ok(())\n");
             code.push_str("    }\n");
@@ -327,6 +324,9 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             for field in &msg.fields {
                 code.push_str(&generate_deserialize_field(field));
             }
+            code.push_str("        if is_flexible {\n");
+            code.push_str(&generate_tagged_decode_body(&msg.fields));
+            code.push_str("        }\n");
             code.push_str(&format!(
                 "        Ok(Self {{ {} }})\n",
                 msg.fields
@@ -402,10 +402,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 code.push_str(&generate_serialize_field(field, field));
             }
             code.push_str("        if is_flexible {\n");
-            code.push_str("            // Tagged fields (none yet)\n");
-            code.push_str(
-                "            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
-            );
+            code.push_str(&generate_tagged_encode_body(&msg.fields));
             code.push_str("        }\n");
             code.push_str("        Ok(())\n");
             code.push_str("    }\n");
@@ -418,6 +415,9 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             for field in &msg.fields {
                 code.push_str(&generate_deserialize_field(field));
             }
+            code.push_str("        if is_flexible {\n");
+            code.push_str(&generate_tagged_decode_body(&msg.fields));
+            code.push_str("        }\n");
             code.push_str(&format!(
                 "        Ok(Self {{ {} }})\n",
                 msg.fields
@@ -536,6 +536,98 @@ fn nullable_has_builtin_flex(field: &Field) -> bool {
     let ft = &field.field_type;
     // String, bytes, and array types have built-in Option flexible encoding
     ft == "string" || ft == "bytes" || ft == "records" || ft.starts_with("[]")
+}
+
+/// Generate the tag buffer encode body for a list of fields that have `tag` set.
+/// Returns code that counts non-default tagged fields and writes them.
+fn generate_tagged_encode_body(fields: &[Field]) -> String {
+    let mut code = String::new();
+    let tagged: Vec<&Field> = fields.iter().filter(|f| f.tag.is_some()).collect();
+    if tagged.is_empty() {
+        code.push_str(
+            "            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
+        );
+        return code;
+    }
+    code.push_str("            let mut __tag_count = 0u64;\n");
+    for f in &tagged {
+        let rust_name = escape_field_name(&camel_to_snake(&f.name));
+        if let Some(check) = non_default_check(&rust_name, f) {
+            code.push_str(&format!(
+                "            if {} {{ __tag_count += 1; }}\n",
+                check
+            ));
+        }
+    }
+    code.push_str(
+        "            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);\n",
+    );
+    for f in &tagged {
+        let rust_name = escape_field_name(&camel_to_snake(&f.name));
+        let _inner_type = map_field_type(f);
+        let needs_presence = f.nullable_versions.is_some() && !nullable_has_builtin_flex(f);
+        let tag_id = f.tag.unwrap();
+        if let Some(check) = non_default_check(&rust_name, f) {
+            code.push_str(&format!("            if {} {{\n", check));
+            code.push_str(&format!("                crate::protocol::serialization::encode_unsigned_varint({}u64, buf);\n", tag_id));
+            code.push_str("                let mut __tmp = bytes::BytesMut::new();\n");
+            if needs_presence {
+                code.push_str(&format!(
+                    "                if let Some(ref __val) = self.{} {{\n",
+                    rust_name
+                ));
+                code.push_str("                    __val.encode(&mut __tmp, version, true)?;\n");
+                code.push_str("                }\n");
+            } else {
+                code.push_str(&format!(
+                    "                self.{}.encode(&mut __tmp, version, true)?;\n",
+                    rust_name
+                ));
+            }
+            code.push_str("                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);\n");
+            code.push_str("                buf.put_slice(&__tmp);\n");
+            code.push_str("            }\n");
+        }
+    }
+    code
+}
+
+/// Generate the tag buffer decode body for a list of fields that have `tag` set.
+/// Returns code that iterates the tag buffer, matches tags, and decodes fields.
+fn generate_tagged_decode_body(fields: &[Field]) -> String {
+    let mut code = String::new();
+    let tagged: Vec<&Field> = fields.iter().filter(|f| f.tag.is_some()).collect();
+    if tagged.is_empty() {
+        code.push_str("            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+        return code;
+    }
+    code.push_str("            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+    code.push_str("            for _ in 0..__tag_count {\n");
+    code.push_str("                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+    code.push_str("                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+    code.push_str("                match __tag_id {\n");
+    for f in &tagged {
+        let rust_name = escape_field_name(&camel_to_snake(&f.name));
+        let rust_type = map_field_type(f);
+        let tag_id = f.tag.unwrap();
+        let needs_presence = f.nullable_versions.is_some() && !nullable_has_builtin_flex(f);
+        if needs_presence {
+            let inner_type = strip_option_wrapper(&rust_type);
+            code.push_str(&format!(
+                "                    {} => {{ {} = Some(<{} as KafkaDeserialize>::decode(buf, version, true)?); }}\n",
+                tag_id, rust_name, inner_type
+            ));
+        } else {
+            code.push_str(&format!(
+                "                    {} => {{ {} = <{} as KafkaDeserialize>::decode(buf, version, true)?; }}\n",
+                tag_id, rust_name, rust_type
+            ));
+        }
+    }
+    code.push_str("                    _ => { buf.advance(__tag_len as usize); }\n");
+    code.push_str("                }\n");
+    code.push_str("            }\n");
+    code
 }
 
 /// Return a boolean expression that tests whether a field has a non-default value.
@@ -664,7 +756,11 @@ fn generate_deserialize_field(field: &Field) -> String {
             code.push_str("        ;\n");
         }
     } else if let Some(c) = cond {
-        code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
+        if field.tag.is_some() {
+            code.push_str(&format!("        let mut {} = if {} {{\n", rust_name, c));
+        } else {
+            code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
+        }
         if field.tag.is_some() {
             code.push_str("            if is_flexible { Default::default() } else {\n");
             code.push_str(&format!(
@@ -684,7 +780,7 @@ fn generate_deserialize_field(field: &Field) -> String {
     } else {
         if field.tag.is_some() {
             code.push_str(&format!(
-                "        let {} = if is_flexible {{ Default::default() }} else {{\n",
+                "        let mut {} = if is_flexible {{ Default::default() }} else {{\n",
                 rust_name
             ));
             code.push_str(&format!(
@@ -746,10 +842,7 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
         }
     }
     code.push_str("        if is_flexible {\n");
-    code.push_str("            // Tagged fields (none yet)\n");
-    code.push_str(
-        "            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
-    );
+    code.push_str(&generate_tagged_encode_body(fields));
     code.push_str("        }\n");
     code.push_str("        Ok(())\n");
     code.push_str("    }\n");
@@ -801,7 +894,11 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
             }
         } else if let Some(ref c) = cond {
             // Version-gated non-nullable field
-            code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
+            if is_tagged {
+                code.push_str(&format!("        let mut {} = if {} {{\n", rust_name, c));
+            } else {
+                code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
+            }
             if is_tagged {
                 code.push_str("            if is_flexible { Default::default() } else {\n");
                 code.push_str(&format!("                <{} as KafkaDeserialize>::decode(buf, version, is_flexible)?\n", rust_type));
@@ -818,7 +915,7 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
         } else if is_tagged {
             // Tagged field: skip when flexible
             code.push_str(&format!(
-                "        let {} = if is_flexible {{ Default::default() }} else {{\n",
+                "        let mut {} = if is_flexible {{ Default::default() }} else {{\n",
                 rust_name
             ));
             code.push_str(&format!(
@@ -835,8 +932,7 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
         }
     }
     code.push_str("        if is_flexible {\n");
-    code.push_str("            // Tagged fields (skip)\n");
-    code.push_str("            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+    code.push_str(&generate_tagged_decode_body(fields));
     code.push_str("        }\n");
     code.push_str(&format!(
         "        Ok(Self {{ {} }})\n",

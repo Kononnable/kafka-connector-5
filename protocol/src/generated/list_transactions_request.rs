@@ -64,7 +64,6 @@ impl ApiRequest for ListTransactionsRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -87,6 +86,9 @@ impl ApiRequest for ListTransactionsRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             state_filters,
             producer_id_filters,
@@ -112,7 +114,6 @@ impl KafkaSerialize for ListTransactionsRequest {
                 .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -139,7 +140,6 @@ impl KafkaDeserialize for ListTransactionsRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

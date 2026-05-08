@@ -116,7 +116,6 @@ impl ApiRequest for OffsetFetchRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -150,6 +149,9 @@ impl ApiRequest for OffsetFetchRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             group_id,
             topics,
@@ -178,7 +180,6 @@ impl KafkaSerialize for OffsetFetchRequest {
             self.require_stable.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -216,7 +217,6 @@ impl KafkaDeserialize for OffsetFetchRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -248,7 +248,6 @@ impl KafkaSerialize for OffsetFetchRequestGroup {
             self.topics.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -286,7 +285,6 @@ impl KafkaDeserialize for OffsetFetchRequestGroup {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -312,7 +310,6 @@ impl KafkaSerialize for OffsetFetchRequestTopic {
             self.partition_indexes.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -336,7 +333,6 @@ impl KafkaDeserialize for OffsetFetchRequestTopic {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -363,7 +359,6 @@ impl KafkaSerialize for OffsetFetchRequestTopics {
             self.partition_indexes.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -392,7 +387,6 @@ impl KafkaDeserialize for OffsetFetchRequestTopics {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

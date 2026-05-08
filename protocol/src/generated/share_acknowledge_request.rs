@@ -75,7 +75,6 @@ impl ApiRequest for ShareAcknowledgeRequest {
         self.share_session_epoch.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -90,6 +89,9 @@ impl ApiRequest for ShareAcknowledgeRequest {
         let share_session_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics =
             <Vec<AcknowledgeTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             group_id,
             member_id,
@@ -110,7 +112,6 @@ impl KafkaSerialize for ShareAcknowledgeRequest {
         self.share_session_epoch.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -129,7 +130,6 @@ impl KafkaDeserialize for ShareAcknowledgeRequest {
         let topics =
             <Vec<AcknowledgeTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -152,7 +152,6 @@ impl KafkaSerialize for AcknowledgePartition {
         self.acknowledgement_batches
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -169,7 +168,6 @@ impl KafkaDeserialize for AcknowledgePartition {
         let acknowledgement_batches =
             <Vec<AcknowledgementBatch> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -189,7 +187,6 @@ impl KafkaSerialize for AcknowledgeTopic {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -206,7 +203,6 @@ impl KafkaDeserialize for AcknowledgeTopic {
         let partitions =
             <Vec<AcknowledgePartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -227,7 +223,6 @@ impl KafkaSerialize for AcknowledgementBatch {
         self.last_offset.encode(buf, version, is_flexible)?;
         self.acknowledge_types.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -244,7 +239,6 @@ impl KafkaDeserialize for AcknowledgementBatch {
         let last_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let acknowledge_types = <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

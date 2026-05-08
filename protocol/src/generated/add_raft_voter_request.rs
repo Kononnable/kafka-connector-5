@@ -62,7 +62,6 @@ impl ApiRequest for AddRaftVoterRequest {
         self.voter_directory_id.encode(buf, version, is_flexible)?;
         self.listeners.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -77,6 +76,9 @@ impl ApiRequest for AddRaftVoterRequest {
         let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             cluster_id,
             timeout_ms,
@@ -99,7 +101,6 @@ impl KafkaSerialize for AddRaftVoterRequest {
         self.voter_directory_id.encode(buf, version, is_flexible)?;
         self.listeners.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -118,7 +119,6 @@ impl KafkaDeserialize for AddRaftVoterRequest {
         let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -142,7 +142,6 @@ impl KafkaSerialize for Listener {
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -159,7 +158,6 @@ impl KafkaDeserialize for Listener {
         let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, host, port })

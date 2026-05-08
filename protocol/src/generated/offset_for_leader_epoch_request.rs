@@ -69,7 +69,6 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -86,6 +85,9 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
         };
         let topics =
             <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { replica_id, topics })
     }
 }
@@ -101,7 +103,6 @@ impl KafkaSerialize for OffsetForLeaderEpochRequest {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -122,7 +123,6 @@ impl KafkaDeserialize for OffsetForLeaderEpochRequest {
         let topics =
             <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { replica_id, topics })
@@ -143,7 +143,6 @@ impl KafkaSerialize for OffsetForLeaderPartition {
         }
         self.leader_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -164,7 +163,6 @@ impl KafkaDeserialize for OffsetForLeaderPartition {
         };
         let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -185,7 +183,6 @@ impl KafkaSerialize for OffsetForLeaderTopic {
         self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -202,7 +199,6 @@ impl KafkaDeserialize for OffsetForLeaderTopic {
         let partitions =
             <Vec<OffsetForLeaderPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { topic, partitions })

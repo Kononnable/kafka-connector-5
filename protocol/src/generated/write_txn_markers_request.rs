@@ -62,7 +62,6 @@ impl ApiRequest for WriteTxnMarkersRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.markers.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -74,6 +73,9 @@ impl ApiRequest for WriteTxnMarkersRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let markers =
             <Vec<WritableTxnMarker> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self { markers })
     }
 }
@@ -86,7 +88,6 @@ impl KafkaSerialize for WriteTxnMarkersRequest {
     ) -> Result<(), crate::traits::SerializationError> {
         self.markers.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -102,7 +103,6 @@ impl KafkaDeserialize for WriteTxnMarkersRequest {
         let markers =
             <Vec<WritableTxnMarker> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { markers })
@@ -122,7 +122,6 @@ impl KafkaSerialize for WritableTxnMarker {
         self.topics.encode(buf, version, is_flexible)?;
         self.coordinator_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -142,7 +141,6 @@ impl KafkaDeserialize for WritableTxnMarker {
             <Vec<WritableTxnMarkerTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let coordinator_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -165,7 +163,6 @@ impl KafkaSerialize for WritableTxnMarkerTopic {
         self.name.encode(buf, version, is_flexible)?;
         self.partition_indexes.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -181,7 +178,6 @@ impl KafkaDeserialize for WritableTxnMarkerTopic {
         let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partition_indexes = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

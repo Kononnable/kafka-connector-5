@@ -119,7 +119,6 @@ impl ApiRequest for ShareFetchRequest {
         self.forgotten_topics_data
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -148,6 +147,9 @@ impl ApiRequest for ShareFetchRequest {
         let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let forgotten_topics_data =
             <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             group_id,
             member_id,
@@ -185,7 +187,6 @@ impl KafkaSerialize for ShareFetchRequest {
         self.forgotten_topics_data
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -218,7 +219,6 @@ impl KafkaDeserialize for ShareFetchRequest {
         let forgotten_topics_data =
             <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -247,7 +247,6 @@ impl KafkaSerialize for AcknowledgementBatch {
         self.last_offset.encode(buf, version, is_flexible)?;
         self.acknowledge_types.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -264,7 +263,6 @@ impl KafkaDeserialize for AcknowledgementBatch {
         let last_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let acknowledge_types = <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -289,7 +287,6 @@ impl KafkaSerialize for FetchPartition {
         self.acknowledgement_batches
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -311,7 +308,6 @@ impl KafkaDeserialize for FetchPartition {
         let acknowledgement_batches =
             <Vec<AcknowledgementBatch> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -332,7 +328,6 @@ impl KafkaSerialize for FetchTopic {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -349,7 +344,6 @@ impl KafkaDeserialize for FetchTopic {
         let partitions =
             <Vec<FetchPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -369,7 +363,6 @@ impl KafkaSerialize for ForgottenTopic {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -385,7 +378,6 @@ impl KafkaDeserialize for ForgottenTopic {
         let topic_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

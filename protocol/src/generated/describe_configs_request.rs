@@ -71,7 +71,6 @@ impl ApiRequest for DescribeConfigsRequest {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -93,6 +92,9 @@ impl ApiRequest for DescribeConfigsRequest {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             resources,
             include_synonyms,
@@ -116,7 +118,6 @@ impl KafkaSerialize for DescribeConfigsRequest {
                 .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -142,7 +143,6 @@ impl KafkaDeserialize for DescribeConfigsRequest {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -164,7 +164,6 @@ impl KafkaSerialize for DescribeConfigsResource {
         self.resource_name.encode(buf, version, is_flexible)?;
         self.configuration_keys.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -182,7 +181,6 @@ impl KafkaDeserialize for DescribeConfigsResource {
         let configuration_keys =
             <Option<Vec<String>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

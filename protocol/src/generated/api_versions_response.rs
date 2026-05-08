@@ -130,8 +130,49 @@ impl ApiResponse for ApiVersionsResponse {
             ));
         }
         if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            let mut __tag_count = 0u64;
+            if !self.supported_features.is_empty() {
+                __tag_count += 1;
+            }
+            if self.finalized_features_epoch != 0 {
+                __tag_count += 1;
+            }
+            if !self.finalized_features.is_empty() {
+                __tag_count += 1;
+            }
+            if self.zk_migration_ready {
+                __tag_count += 1;
+            }
+            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            if !self.supported_features.is_empty() {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.supported_features.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
+            if self.finalized_features_epoch != 0 {
+                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.finalized_features_epoch
+                    .encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
+            if !self.finalized_features.is_empty() {
+                crate::protocol::serialization::encode_unsigned_varint(2u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.finalized_features.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
+            if self.zk_migration_ready {
+                crate::protocol::serialization::encode_unsigned_varint(3u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.zk_migration_ready.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
         }
         Ok(())
     }
@@ -147,7 +188,7 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let supported_features = if (3) <= version.0 {
+        let mut supported_features = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -156,7 +197,7 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let finalized_features_epoch = if (3) <= version.0 {
+        let mut finalized_features_epoch = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -165,7 +206,7 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let finalized_features = if (3) <= version.0 {
+        let mut finalized_features = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -174,7 +215,7 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let zk_migration_ready = if (3) <= version.0 {
+        let mut zk_migration_ready = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -183,6 +224,38 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
+        if is_flexible {
+            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            for _ in 0..__tag_count {
+                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                match __tag_id {
+                    0 => {
+                        supported_features =
+                            <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode(
+                                buf, version, true,
+                            )?;
+                    }
+                    1 => {
+                        finalized_features_epoch =
+                            <i64 as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    2 => {
+                        finalized_features =
+                            <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode(
+                                buf, version, true,
+                            )?;
+                    }
+                    3 => {
+                        zk_migration_ready =
+                            <bool as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    _ => {
+                        buf.advance(__tag_len as usize);
+                    }
+                }
+            }
+        }
         Ok(Self {
             error_code,
             api_keys,
@@ -220,8 +293,49 @@ impl KafkaSerialize for ApiVersionsResponse {
             self.zk_migration_ready.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            let mut __tag_count = 0u64;
+            if !self.supported_features.is_empty() {
+                __tag_count += 1;
+            }
+            if self.finalized_features_epoch != 0 {
+                __tag_count += 1;
+            }
+            if !self.finalized_features.is_empty() {
+                __tag_count += 1;
+            }
+            if self.zk_migration_ready {
+                __tag_count += 1;
+            }
+            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            if !self.supported_features.is_empty() {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.supported_features.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
+            if self.finalized_features_epoch != 0 {
+                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.finalized_features_epoch
+                    .encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
+            if !self.finalized_features.is_empty() {
+                crate::protocol::serialization::encode_unsigned_varint(2u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.finalized_features.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
+            if self.zk_migration_ready {
+                crate::protocol::serialization::encode_unsigned_varint(3u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.zk_migration_ready.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
         }
         Ok(())
     }
@@ -240,7 +354,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let supported_features = if (3) <= version.0 {
+        let mut supported_features = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -249,7 +363,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let finalized_features_epoch = if (3) <= version.0 {
+        let mut finalized_features_epoch = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -258,7 +372,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let finalized_features = if (3) <= version.0 {
+        let mut finalized_features = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -267,7 +381,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let zk_migration_ready = if (3) <= version.0 {
+        let mut zk_migration_ready = if (3) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -277,8 +391,36 @@ impl KafkaDeserialize for ApiVersionsResponse {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            for _ in 0..__tag_count {
+                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                match __tag_id {
+                    0 => {
+                        supported_features =
+                            <Vec<SupportedFeatureKey> as KafkaDeserialize>::decode(
+                                buf, version, true,
+                            )?;
+                    }
+                    1 => {
+                        finalized_features_epoch =
+                            <i64 as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    2 => {
+                        finalized_features =
+                            <Vec<FinalizedFeatureKey> as KafkaDeserialize>::decode(
+                                buf, version, true,
+                            )?;
+                    }
+                    3 => {
+                        zk_migration_ready =
+                            <bool as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    _ => {
+                        buf.advance(__tag_len as usize);
+                    }
+                }
+            }
         }
         Ok(Self {
             error_code,
@@ -303,7 +445,6 @@ impl KafkaSerialize for ApiVersion {
         self.min_version.encode(buf, version, is_flexible)?;
         self.max_version.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -320,7 +461,6 @@ impl KafkaDeserialize for ApiVersion {
         let min_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let max_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -348,7 +488,6 @@ impl KafkaSerialize for FinalizedFeatureKey {
             self.min_version_level.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -377,7 +516,6 @@ impl KafkaDeserialize for FinalizedFeatureKey {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -405,7 +543,6 @@ impl KafkaSerialize for SupportedFeatureKey {
             self.max_version.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -434,7 +571,6 @@ impl KafkaDeserialize for SupportedFeatureKey {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

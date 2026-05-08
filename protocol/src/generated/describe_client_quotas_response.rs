@@ -73,7 +73,6 @@ impl ApiResponse for DescribeClientQuotasResponse {
         self.error_message.encode(buf, version, is_flexible)?;
         self.entries.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -89,6 +88,9 @@ impl ApiResponse for DescribeClientQuotasResponse {
             <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let entries =
             <Option<Vec<EntryData>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -109,7 +111,6 @@ impl KafkaSerialize for DescribeClientQuotasResponse {
         self.error_message.encode(buf, version, is_flexible)?;
         self.entries.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -129,7 +130,6 @@ impl KafkaDeserialize for DescribeClientQuotasResponse {
         let entries =
             <Option<Vec<EntryData>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -151,7 +151,6 @@ impl KafkaSerialize for EntityData {
         self.entity_type.encode(buf, version, is_flexible)?;
         self.entity_name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -167,7 +166,6 @@ impl KafkaDeserialize for EntityData {
         let entity_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let entity_name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -187,7 +185,6 @@ impl KafkaSerialize for EntryData {
         self.entity.encode(buf, version, is_flexible)?;
         self.values.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -203,7 +200,6 @@ impl KafkaDeserialize for EntryData {
         let entity = <Vec<EntityData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let values = <Vec<ValueData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { entity, values })
@@ -220,7 +216,6 @@ impl KafkaSerialize for ValueData {
         self.key.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -236,7 +231,6 @@ impl KafkaDeserialize for ValueData {
         let key = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let value = <f64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { key, value })

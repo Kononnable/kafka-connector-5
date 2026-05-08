@@ -52,7 +52,6 @@ impl ApiRequest for PushTelemetryRequest {
         self.compression_type.encode(buf, version, is_flexible)?;
         self.metrics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -67,6 +66,9 @@ impl ApiRequest for PushTelemetryRequest {
         let terminating = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let metrics = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             client_instance_id,
             subscription_id,
@@ -89,7 +91,6 @@ impl KafkaSerialize for PushTelemetryRequest {
         self.compression_type.encode(buf, version, is_flexible)?;
         self.metrics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -108,7 +109,6 @@ impl KafkaDeserialize for PushTelemetryRequest {
         let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let metrics = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

@@ -80,8 +80,18 @@ impl ApiRequest for FetchSnapshotRequest {
         self.max_bytes.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            let mut __tag_count = 0u64;
+            if self.cluster_id.is_some() {
+                __tag_count += 1;
+            }
+            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            if self.cluster_id.is_some() {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.cluster_id.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
         }
         Ok(())
     }
@@ -90,7 +100,7 @@ impl ApiRequest for FetchSnapshotRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let cluster_id = if is_flexible {
+        let mut cluster_id = if is_flexible {
             Default::default()
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
@@ -98,6 +108,22 @@ impl ApiRequest for FetchSnapshotRequest {
         let replica_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicSnapshot> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            for _ in 0..__tag_count {
+                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                match __tag_id {
+                    0 => {
+                        cluster_id =
+                            <Option<String> as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    _ => {
+                        buf.advance(__tag_len as usize);
+                    }
+                }
+            }
+        }
         Ok(Self {
             cluster_id,
             replica_id,
@@ -118,8 +144,18 @@ impl KafkaSerialize for FetchSnapshotRequest {
         self.max_bytes.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            let mut __tag_count = 0u64;
+            if self.cluster_id.is_some() {
+                __tag_count += 1;
+            }
+            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            if self.cluster_id.is_some() {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.cluster_id.encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
         }
         Ok(())
     }
@@ -131,7 +167,7 @@ impl KafkaDeserialize for FetchSnapshotRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, crate::traits::SerializationError> {
-        let cluster_id = if is_flexible {
+        let mut cluster_id = if is_flexible {
             Default::default()
         } else {
             <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
@@ -140,8 +176,20 @@ impl KafkaDeserialize for FetchSnapshotRequest {
         let max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicSnapshot> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            for _ in 0..__tag_count {
+                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                match __tag_id {
+                    0 => {
+                        cluster_id =
+                            <Option<String> as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    _ => {
+                        buf.advance(__tag_len as usize);
+                    }
+                }
+            }
         }
         Ok(Self {
             cluster_id,
@@ -169,8 +217,19 @@ impl KafkaSerialize for PartitionSnapshot {
                 .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            let mut __tag_count = 0u64;
+            if self.replica_directory_id != [0u8; 16] {
+                __tag_count += 1;
+            }
+            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            if self.replica_directory_id != [0u8; 16] {
+                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                let mut __tmp = bytes::BytesMut::new();
+                self.replica_directory_id
+                    .encode(&mut __tmp, version, true)?;
+                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                buf.put_slice(&__tmp);
+            }
         }
         Ok(())
     }
@@ -186,7 +245,7 @@ impl KafkaDeserialize for PartitionSnapshot {
         let current_leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let snapshot_id = <SnapshotId as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let position = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
-        let replica_directory_id = if (1) <= version.0 {
+        let mut replica_directory_id = if (1) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -196,8 +255,20 @@ impl KafkaDeserialize for PartitionSnapshot {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            for _ in 0..__tag_count {
+                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                match __tag_id {
+                    0 => {
+                        replica_directory_id =
+                            <[u8; 16] as KafkaDeserialize>::decode(buf, version, true)?;
+                    }
+                    _ => {
+                        buf.advance(__tag_len as usize);
+                    }
+                }
+            }
         }
         Ok(Self {
             partition,
@@ -219,7 +290,6 @@ impl KafkaSerialize for SnapshotId {
         self.end_offset.encode(buf, version, is_flexible)?;
         self.epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -235,7 +305,6 @@ impl KafkaDeserialize for SnapshotId {
         let end_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { end_offset, epoch })
@@ -252,7 +321,6 @@ impl KafkaSerialize for TopicSnapshot {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -269,7 +337,6 @@ impl KafkaDeserialize for TopicSnapshot {
         let partitions =
             <Vec<PartitionSnapshot> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })

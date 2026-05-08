@@ -49,7 +49,6 @@ impl ApiRequest for EndTxnRequest {
         self.producer_epoch.encode(buf, version, is_flexible)?;
         self.committed.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -63,6 +62,9 @@ impl ApiRequest for EndTxnRequest {
         let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let committed = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             transactional_id,
             producer_id,
@@ -83,7 +85,6 @@ impl KafkaSerialize for EndTxnRequest {
         self.producer_epoch.encode(buf, version, is_flexible)?;
         self.committed.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -101,7 +102,6 @@ impl KafkaDeserialize for EndTxnRequest {
         let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let committed = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

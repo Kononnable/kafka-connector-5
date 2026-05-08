@@ -46,7 +46,6 @@ impl ApiRequest for EnvelopeRequest {
         self.request_principal.encode(buf, version, is_flexible)?;
         self.client_host_address.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -60,6 +59,9 @@ impl ApiRequest for EnvelopeRequest {
         let request_principal =
             <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             request_data,
             request_principal,
@@ -78,7 +80,6 @@ impl KafkaSerialize for EnvelopeRequest {
         self.request_principal.encode(buf, version, is_flexible)?;
         self.client_host_address.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -96,7 +97,6 @@ impl KafkaDeserialize for EnvelopeRequest {
             <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

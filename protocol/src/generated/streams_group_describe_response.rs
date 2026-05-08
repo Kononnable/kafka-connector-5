@@ -187,7 +187,6 @@ impl ApiResponse for StreamsGroupDescribeResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.groups.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -199,6 +198,9 @@ impl ApiResponse for StreamsGroupDescribeResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let groups = <Vec<DescribedGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             throttle_time_ms,
             groups,
@@ -215,7 +217,6 @@ impl KafkaSerialize for StreamsGroupDescribeResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.groups.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -231,7 +232,6 @@ impl KafkaDeserialize for StreamsGroupDescribeResponse {
         let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let groups = <Vec<DescribedGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -252,7 +252,6 @@ impl KafkaSerialize for Assignment {
         self.standby_tasks.encode(buf, version, is_flexible)?;
         self.warmup_tasks.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -269,7 +268,6 @@ impl KafkaDeserialize for Assignment {
         let standby_tasks = <Vec<TaskIds> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let warmup_tasks = <Vec<TaskIds> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -309,7 +307,6 @@ impl KafkaSerialize for DescribedGroup {
         self.authorized_operations
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -342,7 +339,6 @@ impl KafkaDeserialize for DescribedGroup {
         let members = <Vec<Member> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let authorized_operations = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -369,7 +365,6 @@ impl KafkaSerialize for Endpoint {
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -385,7 +380,6 @@ impl KafkaDeserialize for Endpoint {
         let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { host, port })
@@ -402,7 +396,6 @@ impl KafkaSerialize for KeyValue {
         self.key.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -418,7 +411,6 @@ impl KafkaDeserialize for KeyValue {
         let key = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let value = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { key, value })
@@ -459,7 +451,6 @@ impl KafkaSerialize for Member {
         self.target_assignment.encode(buf, version, is_flexible)?;
         self.is_classic.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -500,7 +491,6 @@ impl KafkaDeserialize for Member {
             <Assignment as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let is_classic = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -539,7 +529,6 @@ impl KafkaSerialize for Subtopology {
         self.repartition_source_topics
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -561,7 +550,6 @@ impl KafkaDeserialize for Subtopology {
         let repartition_source_topics =
             <Vec<TopicInfo> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -584,7 +572,6 @@ impl KafkaSerialize for TaskIds {
         self.subtopology_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -600,7 +587,6 @@ impl KafkaDeserialize for TaskIds {
         let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -621,7 +607,6 @@ impl KafkaSerialize for TaskOffset {
         self.partition.encode(buf, version, is_flexible)?;
         self.offset.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -638,7 +623,6 @@ impl KafkaDeserialize for TaskOffset {
         let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -661,7 +645,6 @@ impl KafkaSerialize for TopicInfo {
         self.replication_factor.encode(buf, version, is_flexible)?;
         self.topic_configs.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -679,7 +662,6 @@ impl KafkaDeserialize for TopicInfo {
         let replication_factor = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topic_configs = <Vec<KeyValue> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -702,7 +684,6 @@ impl KafkaSerialize for TopicPartitions {
         self.topic_name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -719,7 +700,6 @@ impl KafkaDeserialize for TopicPartitions {
         let topic_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -740,7 +720,6 @@ impl KafkaSerialize for Topology {
         self.epoch.encode(buf, version, is_flexible)?;
         self.subtopologies.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -757,7 +736,6 @@ impl KafkaDeserialize for Topology {
         let subtopologies =
             <Option<Vec<Subtopology>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

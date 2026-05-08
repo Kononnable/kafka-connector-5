@@ -68,7 +68,6 @@ impl ApiRequest for AssignReplicasToDirsRequest {
         self.broker_epoch.encode(buf, version, is_flexible)?;
         self.directories.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -82,6 +81,9 @@ impl ApiRequest for AssignReplicasToDirsRequest {
         let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let directories =
             <Vec<DirectoryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             broker_id,
             broker_epoch,
@@ -100,7 +102,6 @@ impl KafkaSerialize for AssignReplicasToDirsRequest {
         self.broker_epoch.encode(buf, version, is_flexible)?;
         self.directories.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -118,7 +119,6 @@ impl KafkaDeserialize for AssignReplicasToDirsRequest {
         let directories =
             <Vec<DirectoryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -139,7 +139,6 @@ impl KafkaSerialize for DirectoryData {
         self.id.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -155,7 +154,6 @@ impl KafkaDeserialize for DirectoryData {
         let id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { id, topics })
@@ -171,7 +169,6 @@ impl KafkaSerialize for PartitionData {
     ) -> Result<(), crate::traits::SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -186,7 +183,6 @@ impl KafkaDeserialize for PartitionData {
     ) -> Result<Self, crate::traits::SerializationError> {
         let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { partition_index })
@@ -203,7 +199,6 @@ impl KafkaSerialize for TopicData {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -220,7 +215,6 @@ impl KafkaDeserialize for TopicData {
         let partitions =
             <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

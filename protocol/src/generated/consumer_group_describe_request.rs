@@ -44,7 +44,6 @@ impl ApiRequest for ConsumerGroupDescribeRequest {
         self.include_authorized_operations
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -57,6 +56,9 @@ impl ApiRequest for ConsumerGroupDescribeRequest {
         let group_ids = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let include_authorized_operations =
             <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             group_ids,
             include_authorized_operations,
@@ -74,7 +76,6 @@ impl KafkaSerialize for ConsumerGroupDescribeRequest {
         self.include_authorized_operations
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -91,7 +92,6 @@ impl KafkaDeserialize for ConsumerGroupDescribeRequest {
         let include_authorized_operations =
             <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {

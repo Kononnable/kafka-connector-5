@@ -70,7 +70,6 @@ impl ApiRequest for DeleteTopicsRequest {
         }
         self.timeout_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -91,6 +90,9 @@ impl ApiRequest for DeleteTopicsRequest {
             Default::default()
         };
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+        }
         Ok(Self {
             topics,
             topic_names,
@@ -113,7 +115,6 @@ impl KafkaSerialize for DeleteTopicsRequest {
         }
         self.timeout_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -138,7 +139,6 @@ impl KafkaDeserialize for DeleteTopicsRequest {
         };
         let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self {
@@ -163,7 +163,6 @@ impl KafkaSerialize for DeleteTopicState {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
         }
         Ok(())
@@ -187,7 +186,6 @@ impl KafkaDeserialize for DeleteTopicState {
             Default::default()
         };
         if is_flexible {
-            // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, topic_id })
