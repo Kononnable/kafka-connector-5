@@ -279,17 +279,17 @@ impl KafkaSerialize for ApiVersionsResponse {
         if (1) <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if (3) <= version.0 && !is_flexible {
             self.supported_features.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if (3) <= version.0 && !is_flexible {
             self.finalized_features_epoch
                 .encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if (3) <= version.0 && !is_flexible {
             self.finalized_features.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if (3) <= version.0 && !is_flexible {
             self.zk_migration_ready.encode(buf, version, is_flexible)?;
         }
         if is_flexible {

@@ -149,7 +149,7 @@ impl KafkaSerialize for EndQuorumEpochResponse {
     ) -> Result<(), crate::traits::SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if (1) <= version.0 && !is_flexible {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         }
         if is_flexible {

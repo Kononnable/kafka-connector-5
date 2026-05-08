@@ -136,7 +136,7 @@ impl KafkaSerialize for BrokerHeartbeatRequest {
             .encode(buf, version, is_flexible)?;
         self.want_fence.encode(buf, version, is_flexible)?;
         self.want_shut_down.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if (1) <= version.0 && !is_flexible {
             self.offline_log_dirs.encode(buf, version, is_flexible)?;
         }
         if is_flexible {

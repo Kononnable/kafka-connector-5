@@ -1100,4 +1100,58 @@ mod tests {
         let val = Vec::<u8>::decode(&mut read, crate::traits::ApiVersion::new(0), false).unwrap();
         assert!(val.is_empty());
     }
+
+    #[test]
+    fn test_tagged_field_roundtrip() {
+        use crate::generated::fetch_snapshot_request::FetchSnapshotRequest;
+        use crate::generated::fetch_snapshot_request::TopicSnapshot;
+
+        let original = FetchSnapshotRequest {
+            cluster_id: Some("test-cluster-id".into()),
+            replica_id: 42,
+            max_bytes: 65536,
+            topics: vec![TopicSnapshot {
+                name: "test-topic".into(),
+                partitions: vec![],
+            }],
+        };
+
+        let ver = crate::traits::ApiVersion::new(0);
+
+        // Encode/decode with flexible encoding — tagged field goes to tag buffer
+        let mut buf = BytesMut::new();
+        KafkaSerialize::encode(&original, &mut buf, ver, true).unwrap();
+        let mut read: &[u8] = &buf;
+        let decoded =
+            <FetchSnapshotRequest as KafkaDeserialize>::decode(&mut read, ver, true).unwrap();
+        assert_eq!(
+            decoded.cluster_id,
+            Some("test-cluster-id".into()),
+            "tagged field cluster_id should round-trip"
+        );
+        assert_eq!(decoded.replica_id, 42);
+        assert_eq!(decoded.max_bytes, 65536);
+        assert_eq!(decoded.topics.len(), 1);
+        assert_eq!(decoded.topics[0].name, "test-topic");
+
+        // Classic encoding — tagged field goes inline
+        let mut buf2 = BytesMut::new();
+        KafkaSerialize::encode(&original, &mut buf2, ver, false).unwrap();
+        let mut read2: &[u8] = &buf2;
+        let decoded2 =
+            <FetchSnapshotRequest as KafkaDeserialize>::decode(&mut read2, ver, false).unwrap();
+        assert_eq!(decoded2, original);
+
+        // Empty tagged field (None) — should encode as tag_count=0
+        let no_cluster = FetchSnapshotRequest {
+            cluster_id: None,
+            ..Default::default()
+        };
+        let mut buf3 = BytesMut::new();
+        KafkaSerialize::encode(&no_cluster, &mut buf3, ver, true).unwrap();
+        let mut read3: &[u8] = &buf3;
+        let decoded3 =
+            <FetchSnapshotRequest as KafkaDeserialize>::decode(&mut read3, ver, true).unwrap();
+        assert_eq!(decoded3.cluster_id, None);
+    }
 }

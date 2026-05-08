@@ -117,7 +117,9 @@ impl KafkaSerialize for UpdateRaftVoterResponse {
     ) -> Result<(), crate::traits::SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
-        self.current_leader.encode(buf, version, is_flexible)?;
+        if !is_flexible {
+            self.current_leader.encode(buf, version, is_flexible)?;
+        }
         if is_flexible {
             let mut __tag_count = 0u64;
             if self.current_leader != Default::default() {

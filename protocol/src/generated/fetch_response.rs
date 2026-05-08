@@ -267,7 +267,7 @@ impl KafkaSerialize for FetchResponse {
             self.session_id.encode(buf, version, is_flexible)?;
         }
         self.responses.encode(buf, version, is_flexible)?;
-        if (16) <= version.0 {
+        if (16) <= version.0 && !is_flexible {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -611,13 +611,13 @@ impl KafkaSerialize for PartitionData {
         if (5) <= version.0 {
             self.log_start_offset.encode(buf, version, is_flexible)?;
         }
-        if (12) <= version.0 {
+        if (12) <= version.0 && !is_flexible {
             self.diverging_epoch.encode(buf, version, is_flexible)?;
         }
-        if (12) <= version.0 {
+        if (12) <= version.0 && !is_flexible {
             self.current_leader.encode(buf, version, is_flexible)?;
         }
-        if (12) <= version.0 {
+        if (12) <= version.0 && !is_flexible {
             self.snapshot_id.encode(buf, version, is_flexible)?;
         }
         if (4) <= version.0 {

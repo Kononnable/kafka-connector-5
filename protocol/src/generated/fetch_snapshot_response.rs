@@ -177,7 +177,7 @@ impl KafkaSerialize for FetchSnapshotResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if (1) <= version.0 && !is_flexible {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -340,7 +340,9 @@ impl KafkaSerialize for PartitionSnapshot {
         self.index.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.snapshot_id.encode(buf, version, is_flexible)?;
-        self.current_leader.encode(buf, version, is_flexible)?;
+        if !is_flexible {
+            self.current_leader.encode(buf, version, is_flexible)?;
+        }
         self.size.encode(buf, version, is_flexible)?;
         self.position.encode(buf, version, is_flexible)?;
         self.unaligned_records.encode(buf, version, is_flexible)?;

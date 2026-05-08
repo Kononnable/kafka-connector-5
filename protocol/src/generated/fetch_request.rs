@@ -326,13 +326,13 @@ impl KafkaSerialize for FetchRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), crate::traits::SerializationError> {
-        if (12) <= version.0 {
+        if (12) <= version.0 && !is_flexible {
             self.cluster_id.encode(buf, version, is_flexible)?;
         }
         if (0) <= version.0 && version.0 <= (14) {
             self.replica_id.encode(buf, version, is_flexible)?;
         }
-        if (15) <= version.0 {
+        if (15) <= version.0 && !is_flexible {
             self.replica_state.encode(buf, version, is_flexible)?;
         }
         self.max_wait_ms.encode(buf, version, is_flexible)?;
@@ -504,11 +504,11 @@ impl KafkaSerialize for FetchPartition {
             self.log_start_offset.encode(buf, version, is_flexible)?;
         }
         self.partition_max_bytes.encode(buf, version, is_flexible)?;
-        if (17) <= version.0 {
+        if (17) <= version.0 && !is_flexible {
             self.replica_directory_id
                 .encode(buf, version, is_flexible)?;
         }
-        if (18) <= version.0 {
+        if (18) <= version.0 && !is_flexible {
             self.high_watermark.encode(buf, version, is_flexible)?;
         }
         if is_flexible {

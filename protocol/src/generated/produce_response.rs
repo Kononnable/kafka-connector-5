@@ -203,7 +203,7 @@ impl KafkaSerialize for ProduceResponse {
         if (1) <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 {
+        if (10) <= version.0 && !is_flexible {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -449,7 +449,7 @@ impl KafkaSerialize for PartitionProduceResponse {
         if (8) <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 {
+        if (10) <= version.0 && !is_flexible {
             self.current_leader.encode(buf, version, is_flexible)?;
         }
         if is_flexible {

@@ -139,7 +139,9 @@ impl KafkaSerialize for FetchSnapshotRequest {
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), crate::traits::SerializationError> {
-        self.cluster_id.encode(buf, version, is_flexible)?;
+        if !is_flexible {
+            self.cluster_id.encode(buf, version, is_flexible)?;
+        }
         self.replica_id.encode(buf, version, is_flexible)?;
         self.max_bytes.encode(buf, version, is_flexible)?;
         self.topics.encode(buf, version, is_flexible)?;
@@ -212,7 +214,7 @@ impl KafkaSerialize for PartitionSnapshot {
             .encode(buf, version, is_flexible)?;
         self.snapshot_id.encode(buf, version, is_flexible)?;
         self.position.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if (1) <= version.0 && !is_flexible {
             self.replica_directory_id
                 .encode(buf, version, is_flexible)?;
         }

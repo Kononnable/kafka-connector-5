@@ -808,11 +808,18 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
         let cond = field_version_condition(f);
         let has_version_gate = cond.is_some();
         let needs_presence = f.nullable_versions.is_some() && !nullable_has_builtin_flex(f);
-        if let Some(ref c) = cond {
+        let is_tagged = f.tag.is_some();
+
+        if is_tagged && has_version_gate {
+            // Collapse version gate and !is_flexible into one condition
+            code.push_str(&format!(
+                "        if {} && !is_flexible {{\n",
+                cond.as_ref().unwrap()
+            ));
+        } else if let Some(ref c) = cond {
             code.push_str(&format!("        if {} {{\n", c));
         }
         if needs_presence {
-            // Nullable struct: presence marker + sub-message encode
             code.push_str("            if is_flexible {\n");
             code.push_str(&format!(
                 "                if let Some(ref __val) = self.{} {{\n",
@@ -831,6 +838,11 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
             code.push_str("                    __val.encode(buf, version, false)?;\n");
             code.push_str("                }\n");
             code.push_str("            }\n");
+        } else if is_tagged && !has_version_gate {
+            code.push_str(&format!(
+                "            if !is_flexible {{ self.{}.encode(buf, version, is_flexible)?; }}\n",
+                rust_name
+            ));
         } else {
             code.push_str(&format!(
                 "            self.{}.encode(buf, version, is_flexible)?;\n",

@@ -249,7 +249,7 @@ impl KafkaSerialize for CreatableTopicResult {
         if (1) <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if (5) <= version.0 && !is_flexible {
             self.topic_config_error_code
                 .encode(buf, version, is_flexible)?;
         }
