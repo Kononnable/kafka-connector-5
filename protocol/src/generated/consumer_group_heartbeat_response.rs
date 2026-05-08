@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -45,20 +43,16 @@ impl ApiResponse for ConsumerGroupHeartbeatResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(68)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (1),
             "version {} is not supported by {} (supported: 0-1)",
@@ -90,7 +84,7 @@ impl ApiResponse for ConsumerGroupHeartbeatResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -126,7 +120,7 @@ impl KafkaSerialize for ConsumerGroupHeartbeatResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
@@ -158,7 +152,7 @@ impl KafkaSerialize for ConsumerGroupHeartbeatResponse {
 impl KafkaDeserialize for ConsumerGroupHeartbeatResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -196,7 +190,7 @@ impl KafkaSerialize for Assignment {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topic_partitions.encode(buf, version, is_flexible)?;
@@ -210,7 +204,7 @@ impl KafkaSerialize for Assignment {
 impl KafkaDeserialize for Assignment {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -225,7 +219,7 @@ impl KafkaSerialize for TopicPartitions {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topic_id.encode(buf, version, is_flexible)?;
@@ -240,7 +234,7 @@ impl KafkaSerialize for TopicPartitions {
 impl KafkaDeserialize for TopicPartitions {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic_id = KafkaDeserialize::decode(buf, version, is_flexible)?;

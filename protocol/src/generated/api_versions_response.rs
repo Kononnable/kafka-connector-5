@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -72,20 +70,16 @@ impl ApiResponse for ApiVersionsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(18)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(3)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(3)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (4),
             "version {} is not supported by {} (supported: 0-4)",
@@ -178,7 +172,7 @@ impl ApiResponse for ApiVersionsResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let api_keys = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -262,7 +256,7 @@ impl KafkaSerialize for ApiVersionsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
@@ -335,7 +329,7 @@ impl KafkaSerialize for ApiVersionsResponse {
 impl KafkaDeserialize for ApiVersionsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -421,7 +415,7 @@ impl KafkaSerialize for ApiVersion {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.api_key.encode(buf, version, is_flexible)?;
@@ -437,7 +431,7 @@ impl KafkaSerialize for ApiVersion {
 impl KafkaDeserialize for ApiVersion {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let api_key = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -458,7 +452,7 @@ impl KafkaSerialize for FinalizedFeatureKey {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (3) <= version.0 {
@@ -480,7 +474,7 @@ impl KafkaSerialize for FinalizedFeatureKey {
 impl KafkaDeserialize for FinalizedFeatureKey {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if (3) <= version.0 {
@@ -513,7 +507,7 @@ impl KafkaSerialize for SupportedFeatureKey {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (3) <= version.0 {
@@ -535,7 +529,7 @@ impl KafkaSerialize for SupportedFeatureKey {
 impl KafkaDeserialize for SupportedFeatureKey {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if (3) <= version.0 {

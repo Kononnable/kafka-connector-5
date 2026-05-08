@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -55,20 +53,16 @@ impl ApiRequest for WriteShareGroupStateRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(85)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (0),
             "version {} is not supported by {} (supported: 0-0)",
@@ -83,7 +77,7 @@ impl ApiRequest for WriteShareGroupStateRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -97,7 +91,7 @@ impl KafkaSerialize for WriteShareGroupStateRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.group_id.encode(buf, version, is_flexible)?;
@@ -112,7 +106,7 @@ impl KafkaSerialize for WriteShareGroupStateRequest {
 impl KafkaDeserialize for WriteShareGroupStateRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -128,7 +122,7 @@ impl KafkaSerialize for PartitionData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition.encode(buf, version, is_flexible)?;
@@ -146,7 +140,7 @@ impl KafkaSerialize for PartitionData {
 impl KafkaDeserialize for PartitionData {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -171,7 +165,7 @@ impl KafkaSerialize for StateBatch {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.first_offset.encode(buf, version, is_flexible)?;
@@ -188,7 +182,7 @@ impl KafkaSerialize for StateBatch {
 impl KafkaDeserialize for StateBatch {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let first_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -211,7 +205,7 @@ impl KafkaSerialize for WriteStateData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topic_id.encode(buf, version, is_flexible)?;
@@ -226,7 +220,7 @@ impl KafkaSerialize for WriteStateData {
 impl KafkaDeserialize for WriteStateData {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic_id = KafkaDeserialize::decode(buf, version, is_flexible)?;

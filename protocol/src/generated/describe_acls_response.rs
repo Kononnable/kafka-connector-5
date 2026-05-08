@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -50,20 +48,16 @@ impl ApiResponse for DescribeAclsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(29)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(3)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(3)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(2)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(2)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (1) <= version.0 && version.0 <= (3),
             "version {} is not supported by {} (supported: 1-3)",
@@ -80,7 +74,7 @@ impl ApiResponse for DescribeAclsResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -101,7 +95,7 @@ impl KafkaSerialize for DescribeAclsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
@@ -118,7 +112,7 @@ impl KafkaSerialize for DescribeAclsResponse {
 impl KafkaDeserialize for DescribeAclsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -141,7 +135,7 @@ impl KafkaSerialize for AclDescription {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.principal.encode(buf, version, is_flexible)?;
@@ -158,7 +152,7 @@ impl KafkaSerialize for AclDescription {
 impl KafkaDeserialize for AclDescription {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -181,7 +175,7 @@ impl KafkaSerialize for DescribeAclsResource {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.resource_type.encode(buf, version, is_flexible)?;
@@ -200,7 +194,7 @@ impl KafkaSerialize for DescribeAclsResource {
 impl KafkaDeserialize for DescribeAclsResource {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let resource_type = KafkaDeserialize::decode(buf, version, is_flexible)?;

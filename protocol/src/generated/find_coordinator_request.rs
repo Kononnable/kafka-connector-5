@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -26,20 +24,16 @@ impl ApiRequest for FindCoordinatorRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(10)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(6)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(6)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(3)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(3)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (6),
             "version {} is not supported by {} (supported: 0-6)",
@@ -73,7 +67,7 @@ impl ApiRequest for FindCoordinatorRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let key = if (0) <= version.0 && version.0 <= (3) {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -104,7 +98,7 @@ impl KafkaSerialize for FindCoordinatorRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (0) <= version.0 && version.0 <= (3) {
@@ -126,7 +120,7 @@ impl KafkaSerialize for FindCoordinatorRequest {
 impl KafkaDeserialize for FindCoordinatorRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let key = if (0) <= version.0 && version.0 <= (3) {

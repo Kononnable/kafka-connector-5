@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -39,20 +37,16 @@ impl ApiRequest for CreatePartitionsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(37)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(3)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(3)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(2)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(2)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (3),
             "version {} is not supported by {} (supported: 0-3)",
@@ -68,7 +62,7 @@ impl ApiRequest for CreatePartitionsRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -87,7 +81,7 @@ impl KafkaSerialize for CreatePartitionsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topics.encode(buf, version, is_flexible)?;
@@ -103,7 +97,7 @@ impl KafkaSerialize for CreatePartitionsRequest {
 impl KafkaDeserialize for CreatePartitionsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -124,7 +118,7 @@ impl KafkaSerialize for CreatePartitionsAssignment {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.broker_ids.encode(buf, version, is_flexible)?;
@@ -138,7 +132,7 @@ impl KafkaSerialize for CreatePartitionsAssignment {
 impl KafkaDeserialize for CreatePartitionsAssignment {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let broker_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -153,7 +147,7 @@ impl KafkaSerialize for CreatePartitionsTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
@@ -169,7 +163,7 @@ impl KafkaSerialize for CreatePartitionsTopic {
 impl KafkaDeserialize for CreatePartitionsTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;

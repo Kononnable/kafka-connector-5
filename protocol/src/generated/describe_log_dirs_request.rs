@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -27,20 +25,16 @@ impl ApiRequest for DescribeLogDirsRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(35)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(2)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(2)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (1) <= version.0 && version.0 <= (4),
             "version {} is not supported by {} (supported: 1-4)",
@@ -54,7 +48,7 @@ impl ApiRequest for DescribeLogDirsRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -67,7 +61,7 @@ impl KafkaSerialize for DescribeLogDirsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topics.encode(buf, version, is_flexible)?;
@@ -81,7 +75,7 @@ impl KafkaSerialize for DescribeLogDirsRequest {
 impl KafkaDeserialize for DescribeLogDirsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -96,7 +90,7 @@ impl KafkaSerialize for DescribableLogDirTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topic.encode(buf, version, is_flexible)?;
@@ -111,7 +105,7 @@ impl KafkaSerialize for DescribableLogDirTopic {
 impl KafkaDeserialize for DescribableLogDirTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;

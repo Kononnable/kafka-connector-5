@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -25,20 +23,16 @@ impl ApiRequest for EndTxnRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(26)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(5)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(5)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(3)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(3)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (5),
             "version {} is not supported by {} (supported: 0-5)",
@@ -55,7 +49,7 @@ impl ApiRequest for EndTxnRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -76,7 +70,7 @@ impl KafkaSerialize for EndTxnRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.transactional_id.encode(buf, version, is_flexible)?;
@@ -93,7 +87,7 @@ impl KafkaSerialize for EndTxnRequest {
 impl KafkaDeserialize for EndTxnRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;

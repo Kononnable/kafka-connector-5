@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -41,20 +39,16 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(23)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(2)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(2)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (2) <= version.0 && version.0 <= (4),
             "version {} is not supported by {} (supported: 2-4)",
@@ -75,7 +69,7 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let replica_id = if (3) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -93,7 +87,7 @@ impl KafkaSerialize for OffsetForLeaderEpochRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (3) <= version.0 {
@@ -110,7 +104,7 @@ impl KafkaSerialize for OffsetForLeaderEpochRequest {
 impl KafkaDeserialize for OffsetForLeaderEpochRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let replica_id = if (3) <= version.0 {
@@ -130,7 +124,7 @@ impl KafkaSerialize for OffsetForLeaderPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition.encode(buf, version, is_flexible)?;
@@ -149,7 +143,7 @@ impl KafkaSerialize for OffsetForLeaderPartition {
 impl KafkaDeserialize for OffsetForLeaderPartition {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -174,7 +168,7 @@ impl KafkaSerialize for OffsetForLeaderTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topic.encode(buf, version, is_flexible)?;
@@ -189,7 +183,7 @@ impl KafkaSerialize for OffsetForLeaderTopic {
 impl KafkaDeserialize for OffsetForLeaderTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;

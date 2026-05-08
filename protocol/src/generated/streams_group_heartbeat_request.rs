@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -133,20 +131,16 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(88)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (0),
             "version {} is not supported by {} (supported: 0-0)",
@@ -201,7 +195,7 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -266,7 +260,7 @@ impl KafkaSerialize for StreamsGroupHeartbeatRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.group_id.encode(buf, version, is_flexible)?;
@@ -321,7 +315,7 @@ impl KafkaSerialize for StreamsGroupHeartbeatRequest {
 impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -388,7 +382,7 @@ impl KafkaSerialize for CopartitionGroup {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.source_topics.encode(buf, version, is_flexible)?;
@@ -405,7 +399,7 @@ impl KafkaSerialize for CopartitionGroup {
 impl KafkaDeserialize for CopartitionGroup {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let source_topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -426,7 +420,7 @@ impl KafkaSerialize for Endpoint {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.host.encode(buf, version, is_flexible)?;
@@ -441,7 +435,7 @@ impl KafkaSerialize for Endpoint {
 impl KafkaDeserialize for Endpoint {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -457,7 +451,7 @@ impl KafkaSerialize for KeyValue {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.key.encode(buf, version, is_flexible)?;
@@ -472,7 +466,7 @@ impl KafkaSerialize for KeyValue {
 impl KafkaDeserialize for KeyValue {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let key = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -488,7 +482,7 @@ impl KafkaSerialize for Subtopology {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.subtopology_id.encode(buf, version, is_flexible)?;
@@ -511,7 +505,7 @@ impl KafkaSerialize for Subtopology {
 impl KafkaDeserialize for Subtopology {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let subtopology_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -540,7 +534,7 @@ impl KafkaSerialize for TaskIds {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.subtopology_id.encode(buf, version, is_flexible)?;
@@ -555,7 +549,7 @@ impl KafkaSerialize for TaskIds {
 impl KafkaDeserialize for TaskIds {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let subtopology_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -574,7 +568,7 @@ impl KafkaSerialize for TaskOffset {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.subtopology_id.encode(buf, version, is_flexible)?;
@@ -590,7 +584,7 @@ impl KafkaSerialize for TaskOffset {
 impl KafkaDeserialize for TaskOffset {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let subtopology_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -611,7 +605,7 @@ impl KafkaSerialize for TopicInfo {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
@@ -628,7 +622,7 @@ impl KafkaSerialize for TopicInfo {
 impl KafkaDeserialize for TopicInfo {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -651,7 +645,7 @@ impl KafkaSerialize for Topology {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.epoch.encode(buf, version, is_flexible)?;
@@ -666,7 +660,7 @@ impl KafkaSerialize for Topology {
 impl KafkaDeserialize for Topology {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;

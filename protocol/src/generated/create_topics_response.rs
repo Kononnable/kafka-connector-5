@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -67,20 +65,16 @@ impl ApiResponse for CreateTopicsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(19)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(2)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(2)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(7)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(7)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(5)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(5)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (2) <= version.0 && version.0 <= (7),
             "version {} is not supported by {} (supported: 2-7)",
@@ -101,7 +95,7 @@ impl ApiResponse for CreateTopicsResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (2) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -122,7 +116,7 @@ impl KafkaSerialize for CreateTopicsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (2) <= version.0 {
@@ -139,7 +133,7 @@ impl KafkaSerialize for CreateTopicsResponse {
 impl KafkaDeserialize for CreateTopicsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if (2) <= version.0 {
@@ -162,7 +156,7 @@ impl KafkaSerialize for CreatableTopicConfigs {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (5) <= version.0 {
@@ -190,7 +184,7 @@ impl KafkaSerialize for CreatableTopicConfigs {
 impl KafkaDeserialize for CreatableTopicConfigs {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if (5) <= version.0 {
@@ -235,7 +229,7 @@ impl KafkaSerialize for CreatableTopicResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
@@ -281,7 +275,7 @@ impl KafkaSerialize for CreatableTopicResult {
 impl KafkaDeserialize for CreatableTopicResult {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;

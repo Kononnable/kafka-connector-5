@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -27,20 +25,16 @@ impl ApiRequest for DescribeDelegationTokenRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(41)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(3)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(3)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(2)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(2)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (1) <= version.0 && version.0 <= (3),
             "version {} is not supported by {} (supported: 1-3)",
@@ -54,7 +48,7 @@ impl ApiRequest for DescribeDelegationTokenRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let owners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -67,7 +61,7 @@ impl KafkaSerialize for DescribeDelegationTokenRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.owners.encode(buf, version, is_flexible)?;
@@ -81,7 +75,7 @@ impl KafkaSerialize for DescribeDelegationTokenRequest {
 impl KafkaDeserialize for DescribeDelegationTokenRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let owners = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -96,7 +90,7 @@ impl KafkaSerialize for DescribeDelegationTokenOwner {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.principal_type.encode(buf, version, is_flexible)?;
@@ -111,7 +105,7 @@ impl KafkaSerialize for DescribeDelegationTokenOwner {
 impl KafkaDeserialize for DescribeDelegationTokenOwner {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;

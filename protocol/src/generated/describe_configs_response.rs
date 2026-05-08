@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -72,20 +70,16 @@ impl ApiResponse for DescribeConfigsResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(32)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (1) <= version.0 && version.0 <= (4),
             "version {} is not supported by {} (supported: 1-4)",
@@ -100,7 +94,7 @@ impl ApiResponse for DescribeConfigsResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -117,7 +111,7 @@ impl KafkaSerialize for DescribeConfigsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
@@ -132,7 +126,7 @@ impl KafkaSerialize for DescribeConfigsResponse {
 impl KafkaDeserialize for DescribeConfigsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -151,7 +145,7 @@ impl KafkaSerialize for DescribeConfigsResourceResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
@@ -180,7 +174,7 @@ impl KafkaSerialize for DescribeConfigsResourceResult {
 impl KafkaDeserialize for DescribeConfigsResourceResult {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -227,7 +221,7 @@ impl KafkaSerialize for DescribeConfigsResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
@@ -245,7 +239,7 @@ impl KafkaSerialize for DescribeConfigsResult {
 impl KafkaDeserialize for DescribeConfigsResult {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -270,7 +264,7 @@ impl KafkaSerialize for DescribeConfigsSynonym {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (1) <= version.0 {
@@ -292,7 +286,7 @@ impl KafkaSerialize for DescribeConfigsSynonym {
 impl KafkaDeserialize for DescribeConfigsSynonym {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if (1) <= version.0 {

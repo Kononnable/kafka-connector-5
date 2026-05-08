@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -103,20 +101,16 @@ impl ApiResponse for OffsetFetchResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(9)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(10)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(10)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(6)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(6)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (1) <= version.0 && version.0 <= (10),
             "version {} is not supported by {} (supported: 1-10)",
@@ -157,7 +151,7 @@ impl ApiResponse for OffsetFetchResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (3) <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
@@ -194,7 +188,7 @@ impl KafkaSerialize for OffsetFetchResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (3) <= version.0 {
@@ -219,7 +213,7 @@ impl KafkaSerialize for OffsetFetchResponse {
 impl KafkaDeserialize for OffsetFetchResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if (3) <= version.0 {
@@ -258,7 +252,7 @@ impl KafkaSerialize for OffsetFetchResponseGroup {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (8) <= version.0 {
@@ -280,7 +274,7 @@ impl KafkaSerialize for OffsetFetchResponseGroup {
 impl KafkaDeserialize for OffsetFetchResponseGroup {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let group_id = if (8) <= version.0 {
@@ -313,7 +307,7 @@ impl KafkaSerialize for OffsetFetchResponsePartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (0) <= version.0 && version.0 <= (7) {
@@ -342,7 +336,7 @@ impl KafkaSerialize for OffsetFetchResponsePartition {
 impl KafkaDeserialize for OffsetFetchResponsePartition {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition_index = if (0) <= version.0 && version.0 <= (7) {
@@ -387,7 +381,7 @@ impl KafkaSerialize for OffsetFetchResponsePartitions {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (8) <= version.0 {
@@ -416,7 +410,7 @@ impl KafkaSerialize for OffsetFetchResponsePartitions {
 impl KafkaDeserialize for OffsetFetchResponsePartitions {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition_index = if (8) <= version.0 {
@@ -461,7 +455,7 @@ impl KafkaSerialize for OffsetFetchResponseTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (0) <= version.0 && version.0 <= (7) {
@@ -480,7 +474,7 @@ impl KafkaSerialize for OffsetFetchResponseTopic {
 impl KafkaDeserialize for OffsetFetchResponseTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if (0) <= version.0 && version.0 <= (7) {
@@ -504,7 +498,7 @@ impl KafkaSerialize for OffsetFetchResponseTopics {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (8) <= version.0 && version.0 <= (9) {
@@ -526,7 +520,7 @@ impl KafkaSerialize for OffsetFetchResponseTopics {
 impl KafkaDeserialize for OffsetFetchResponseTopics {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if (8) <= version.0 && version.0 <= (9) {

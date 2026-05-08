@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -110,20 +108,16 @@ impl ApiRequest for FetchRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(1)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(18)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(18)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(12)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(12)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (4) <= version.0 && version.0 <= (18),
             "version {} is not supported by {} (supported: 4-18)",
@@ -224,7 +218,7 @@ impl ApiRequest for FetchRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let mut cluster_id = if (12) <= version.0 {
             if is_flexible {
@@ -320,7 +314,7 @@ impl KafkaSerialize for FetchRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (12) <= version.0 && !is_flexible {
@@ -385,7 +379,7 @@ impl KafkaSerialize for FetchRequest {
 impl KafkaDeserialize for FetchRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let mut cluster_id = if (12) <= version.0 {
@@ -483,7 +477,7 @@ impl KafkaSerialize for FetchPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition.encode(buf, version, is_flexible)?;
@@ -538,7 +532,7 @@ impl KafkaSerialize for FetchPartition {
 impl KafkaDeserialize for FetchPartition {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -612,7 +606,7 @@ impl KafkaSerialize for FetchTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (0) <= version.0 && version.0 <= (12) {
@@ -632,7 +626,7 @@ impl KafkaSerialize for FetchTopic {
 impl KafkaDeserialize for FetchTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic = if (0) <= version.0 && version.0 <= (12) {
@@ -661,7 +655,7 @@ impl KafkaSerialize for ForgottenTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (7) <= version.0 && version.0 <= (12) {
@@ -683,7 +677,7 @@ impl KafkaSerialize for ForgottenTopic {
 impl KafkaDeserialize for ForgottenTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic = if (7) <= version.0 && version.0 <= (12) {
@@ -716,7 +710,7 @@ impl KafkaSerialize for ReplicaState {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (15) <= version.0 {
@@ -735,7 +729,7 @@ impl KafkaSerialize for ReplicaState {
 impl KafkaDeserialize for ReplicaState {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let replica_id = if (15) <= version.0 {

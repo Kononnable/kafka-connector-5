@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -37,20 +35,16 @@ impl ApiRequest for MetadataRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(3)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(13)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(13)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(9)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(9)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (13),
             "version {} is not supported by {} (supported: 0-13)",
@@ -88,7 +82,7 @@ impl ApiRequest for MetadataRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let allow_auto_topic_creation = if (4) <= version.0 {
@@ -121,7 +115,7 @@ impl KafkaSerialize for MetadataRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topics.encode(buf, version, is_flexible)?;
@@ -147,7 +141,7 @@ impl KafkaSerialize for MetadataRequest {
 impl KafkaDeserialize for MetadataRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -182,7 +176,7 @@ impl KafkaSerialize for MetadataRequestTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (10) <= version.0 {
@@ -199,7 +193,7 @@ impl KafkaSerialize for MetadataRequestTopic {
 impl KafkaDeserialize for MetadataRequestTopic {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic_id = if (10) <= version.0 {

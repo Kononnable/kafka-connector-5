@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -38,20 +36,16 @@ impl ApiRequest for LeaveGroupRequest {
     fn get_api_key() -> ApiKey {
         ApiKey::new(13)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(0)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(0)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(5)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(5)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(4)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(4)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (0) <= version.0 && version.0 <= (5),
             "version {} is not supported by {} (supported: 0-5)",
@@ -79,7 +73,7 @@ impl ApiRequest for LeaveGroupRequest {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let member_id = if (0) <= version.0 && version.0 <= (2) {
@@ -106,7 +100,7 @@ impl KafkaSerialize for LeaveGroupRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.group_id.encode(buf, version, is_flexible)?;
@@ -126,7 +120,7 @@ impl KafkaSerialize for LeaveGroupRequest {
 impl KafkaDeserialize for LeaveGroupRequest {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -155,7 +149,7 @@ impl KafkaSerialize for MemberIdentity {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if (3) <= version.0 {
@@ -177,7 +171,7 @@ impl KafkaSerialize for MemberIdentity {
 impl KafkaDeserialize for MemberIdentity {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let member_id = if (3) <= version.0 {

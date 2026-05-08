@@ -1,8 +1,6 @@
 #![allow(unused_imports, unused_variables)]
 use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
-use crate::traits::{
-    ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVersionTrait, SerializationError,
-};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 // -------------------------------------------------------
@@ -43,20 +41,16 @@ impl ApiResponse for WriteTxnMarkersResponse {
     fn get_api_key() -> ApiKey {
         ApiKey::new(27)
     }
-    fn get_min_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_min_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_max_supported_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_max_supported_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn get_min_flexible_version() -> ApiVersionTrait {
-        ApiVersionTrait::new(1)
+    fn get_min_flexible_version() -> ApiVer {
+        ApiVer::new(1)
     }
-    fn serialize(
-        &self,
-        version: ApiVersionTrait,
-        buf: &mut BytesMut,
-    ) -> Result<(), SerializationError> {
+    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
             (1) <= version.0 && version.0 <= (1),
             "version {} is not supported by {} (supported: 1-1)",
@@ -70,7 +64,7 @@ impl ApiResponse for WriteTxnMarkersResponse {
         }
         Ok(())
     }
-    fn deserialize(version: ApiVersionTrait, buf: &mut Bytes) -> Result<Self, SerializationError> {
+    fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let markers = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -83,7 +77,7 @@ impl KafkaSerialize for WriteTxnMarkersResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.markers.encode(buf, version, is_flexible)?;
@@ -97,7 +91,7 @@ impl KafkaSerialize for WriteTxnMarkersResponse {
 impl KafkaDeserialize for WriteTxnMarkersResponse {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let markers = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -112,7 +106,7 @@ impl KafkaSerialize for WritableTxnMarkerPartitionResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
@@ -127,7 +121,7 @@ impl KafkaSerialize for WritableTxnMarkerPartitionResult {
 impl KafkaDeserialize for WritableTxnMarkerPartitionResult {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -146,7 +140,7 @@ impl KafkaSerialize for WritableTxnMarkerResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.producer_id.encode(buf, version, is_flexible)?;
@@ -161,7 +155,7 @@ impl KafkaSerialize for WritableTxnMarkerResult {
 impl KafkaDeserialize for WritableTxnMarkerResult {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
@@ -180,7 +174,7 @@ impl KafkaSerialize for WritableTxnMarkerTopicResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
@@ -195,7 +189,7 @@ impl KafkaSerialize for WritableTxnMarkerTopicResult {
 impl KafkaDeserialize for WritableTxnMarkerTopicResult {
     fn decode<B: Buf>(
         buf: &mut B,
-        version: ApiVersionTrait,
+        version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
