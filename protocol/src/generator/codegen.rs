@@ -134,6 +134,24 @@ pub fn generate_all() -> GeneratedFiles {
     mod_rs.push_str("}\n");
     mod_rs.push('\n');
 
+    // ----- api_key_name -----
+    mod_rs.push_str("/// Return the human-readable name for a given API key.\n");
+    mod_rs.push_str("pub fn api_key_name(api_key: i16) -> &'static str {\n");
+    mod_rs.push_str("    match api_key {\n");
+    for msg in &parsed {
+        if let Some(ak) = msg
+            .api_key
+            .filter(|_| msg.message_type == MessageType::Request)
+        {
+            let name = msg.name.strip_suffix("Request").unwrap_or(&msg.name);
+            mod_rs.push_str(&format!("        {} => \"{}\",\n", ak, name));
+        }
+    }
+    mod_rs.push_str("        _ => \"Unknown\",\n");
+    mod_rs.push_str("    }\n");
+    mod_rs.push_str("}\n");
+    mod_rs.push('\n');
+
     // ----- decode_request_body -----
     mod_rs.push_str("/// Deserialize a request body for the given API key and version.\n");
     mod_rs.push_str("pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {\n");
