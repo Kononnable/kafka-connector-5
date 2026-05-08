@@ -6,8 +6,10 @@
 # undecoded messages (except ApiVersions), and port rewrites.
 #
 # Usage:
-#   ./test_multi_broker.sh            # 3 proxies (3-broker cluster)
-#   ./test_multi_broker.sh single     # 1 proxy (single-broker cluster)
+#   ./test_multi_broker.sh                     # 3 proxies (3-broker cluster)
+#   ./test_multi_broker.sh single              # 1 proxy (single-broker cluster)
+#   ./test_multi_broker.sh --debug             # show proxy output
+#   ./test_multi_broker.sh single --debug
 #
 # Exit code: 0 = all checks passed, 1 = something failed
 
@@ -17,6 +19,17 @@ PROXY_BIN="$(dirname "$0")/../../target/debug/proxy"
 KAFKA_TOPIC="test-cluster"
 PASS=0
 FAIL=0
+DEBUG=false
+
+# Parse args: extract --debug flag from any position
+ARGS=()
+for arg in "$@"; do
+    if [ "$arg" = "--debug" ]; then
+        DEBUG=true
+    else
+        ARGS+=("$arg")
+    fi
+done
 
 if [ ! -f "$PROXY_BIN" ]; then
     echo "Building proxy..."
@@ -30,7 +43,9 @@ cleanup() {
 trap cleanup EXIT
 cleanup
 
-if [ "${1:-}" = "single" ]; then
+MODE="${ARGS[0]:-}"
+
+if [ "$MODE" = "single" ]; then
     PORT_MAP="9092:9192"
     LOGDIR=$(mktemp -d /tmp/proxy_test_XXXX)
     RUST_LOG=info "$PROXY_BIN" 127.0.0.1:9192 127.0.0.1:9092 "$PORT_MAP" > "$LOGDIR/proxy.log" 2>&1 &
@@ -106,6 +121,14 @@ fi
 if [ "$PANICS" -ne 0 ]; then
     echo "  FAIL: panics in proxy log"
     FAIL=$((FAIL + 1))
+fi
+
+if $DEBUG; then
+    echo ""
+    echo "=== Proxy request/response log ==="
+    grep -E '→ REQ|← RES' < "$LOG" 2>/dev/null | head -40
+else
+    echo "  (use --debug to show proxy log)"
 fi
 
 echo ""
