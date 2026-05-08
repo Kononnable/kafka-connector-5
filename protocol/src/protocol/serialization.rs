@@ -17,10 +17,8 @@
 //! | `array`          | 4-byte length (int32) + N elements, -1 ⇒ null          |
 //! | `uuid`           | 16 raw bytes                                           |
 
-use crate::traits::SerializationError;
+pub use crate::traits::SerializationError;
 use bytes::{Buf, BufMut};
-
-
 
 // ---------------------------------------------------------------------------
 // Helper: unsigned varint encoding (used internally by varint / varlong)
@@ -44,9 +42,7 @@ pub fn encode_unsigned_varint<B: BufMut>(mut value: u64, buf: &mut B) -> usize {
 
 /// Decode an unsigned variable-length integer.
 /// Returns `(value, bytes_consumed)`.
-pub fn decode_unsigned_varint<B: Buf>(
-    buf: &mut B,
-) -> Result<(u64, usize), SerializationError> {
+pub fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), SerializationError> {
     let mut value: u64 = 0;
     let mut shift: u32 = 0;
     let mut consumed: usize = 0;
