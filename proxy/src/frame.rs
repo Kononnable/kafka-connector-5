@@ -261,55 +261,10 @@ pub fn parse_response_header(data: &[u8], is_flexible: bool) -> Result<ParsedRes
 
 /// Whether a given API key uses flexible encoding at the given protocol version.
 /// This depends on the `flexibleVersions` field in each message's JSON definition.
+/// Whether a given API key uses flexible encoding at the given protocol version.
+/// Delegates to the protocol crate's definitive mapping.
 pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
-    // Each API key has a `flexibleVersions` range from its JSON definition.
-    // If the api_version falls within that range, flexible encoding is used.
-    let range: Option<(i16, i16)> = match api_key {
-        0  => Some((9, 13)),    // Produce
-        1  => Some((12, 18)),   // Fetch
-        2  => Some((9, 13)),    // ListOffsets
-        3  => Some((9, 13)),    // Metadata
-        8  => Some((9, 13)),    // OffsetCommit
-        9  => Some((9, 13)),    // OffsetFetch
-        10 => Some((9, 9)),     // FindCoordinator
-        11 => Some((9, 10)),    // JoinGroup
-        12 => Some((9, 9)),     // Heartbeat
-        13 => Some((9, 9)),     // LeaveGroup
-        14 => Some((9, 10)),    // SyncGroup
-        15 => Some((9, 10)),    // DescribeGroups
-        16 => Some((9, 9)),     // ListGroups
-        17 => Some((9, 9)),     // SaslHandshake
-        18 => Some((3, 4)),     // ApiVersions (v3+ uses v2 header per KIP-511)
-        19 => Some((9, 10)),    // CreateTopics
-        20 => Some((9, 9)),     // DeleteTopics
-        21 => Some((9, 6)),     // DeleteRecords
-        22 => Some((9, 7)),     // InitProducerId
-        23 => Some((9, 9)),     // OffsetForLeaderEpoch
-        24 => Some((9, 4)),     // AddPartitionsToTxn
-        25 => Some((9, 4)),     // AddOffsetsToTxn
-        26 => Some((9, 5)),     // EndTxn
-        27 => Some((9, 3)),     // WriteTxnMarkers
-        28 => Some((9, 4)),     // TxnOffsetCommit
-        29 => Some((9, 4)),     // DescribeAcls
-        30 => Some((9, 4)),     // CreateAcls
-        31 => Some((9, 4)),     // DeleteAcls
-        32 => Some((9, 9)),     // DescribeConfigs
-        33 => Some((9, 4)),     // AlterConfigs
-        34 => Some((9, 5)),     // AlterReplicaLogDirs
-        35 => Some((9, 4)),     // DescribeLogDirs
-        36 => Some((9, 6)),     // SaslAuthenticate
-        37 => Some((9, 4)),     // CreatePartitions
-        38 => Some((9, 3)),     // CreateDelegationToken
-        39 => Some((9, 3)),     // RenewDelegationToken
-        40 => Some((9, 3)),     // ExpireDelegationToken
-        41 => Some((9, 3)),     // DescribeDelegationToken
-        42 => Some((9, 4)),     // ElectLeaders
-        _  => None,
-    };
-    match range {
-        Some((min_flex, max_flex)) => api_version >= min_flex && api_version <= max_flex,
-        None => false,
-    }
+    protocol::traits::is_flexible_api(api_key, api_version)
 }
 
 /// Return the byte offset where the response body starts after the response header.

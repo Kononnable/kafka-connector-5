@@ -3,6 +3,9 @@ name = "client"
 version.workspace = true
 edition.workspace = true
 
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
 [dependencies]
 tokio = { workspace = true }
 bytes = { workspace = true }

@@ -5,7 +5,7 @@
 
 use bytes::Bytes;
 use crate::generated::*;
-use crate::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use crate::traits::{ApiRequest, ApiResponse, ApiVersion};
 
 /// Format a debug string, truncating to a reasonable max length for logging.
 fn fmt_compact(s: String) -> String {

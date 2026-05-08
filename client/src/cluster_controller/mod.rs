@@ -19,7 +19,7 @@ use protocol::generated::{
     metadata_response::MetadataResponseBroker,
     MetadataRequest, MetadataResponse,
 };
-use protocol::traits::{ApiRequest, ApiResponse, ApiVersion};
+use protocol::traits::{is_flexible_api, ApiRequest, ApiResponse, ApiVersion};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -76,11 +76,11 @@ pub struct ClusterController {
 }
 
 impl ClusterController {
-    /// Create a new cluster controller, connecting to the seed broker(s)
-    /// specified in `options.bootstrap_servers`.
+    /// Create a new cluster controller.
     ///
-    /// After creation you should call [`refresh_metadata`](Self::refresh_metadata)
-    /// to discover the full cluster topology.
+    /// Connects to the first reachable bootstrap server, fetches cluster
+    /// metadata to discover all brokers, and connects to every broker in
+    /// the cluster.
     pub async fn new(options: ClusterOptions) -> Result<Arc<Self>, ClusterError> {
         let controller = Arc::new(Self {
             brokers: RwLock::new(HashMap::new()),
@@ -131,7 +131,7 @@ impl ClusterController {
         let seed_addr = seed_addr.unwrap();
 
         let node = BrokerNode {
-            node_id: -1, // unknown until metadata
+            node_id: -1, // temporary — replaced by metadata
             host: seed_addr.ip().to_string(),
             port: seed_addr.port() as i32,
             controller: Arc::clone(&broker),
@@ -141,6 +141,21 @@ impl ClusterController {
             let mut brokers = controller.brokers.write().await;
             brokers.insert(-1, node);
         }
+
+        // Fetch metadata to discover the full cluster and connect to all brokers.
+        controller.refresh_metadata(None).await?;
+
+        // Remove the seed broker entry — it's been replaced by proper metadata entries.
+        {
+            let mut brokers = controller.brokers.write().await;
+            brokers.remove(&-1);
+        }
+
+        info!(
+            "cluster initialized with {} broker(s), controller_id={}",
+            controller.broker_count().await,
+            controller.controller_node_id().await,
+        );
 
         Ok(controller)
     }
@@ -378,8 +393,14 @@ impl ClusterController {
         match raw_bytes {
             Ok(body) => {
                 // Deserialize: skip response header
-                let is_flexible = version.0 >= 9;
-                let header_size = if is_flexible { 5 } else { 4 };
+                // ApiVersionsResponse always uses v0 header per KIP-511.
+                let header_size = if R::get_api_key().0 == 18 {
+                    4
+                } else if is_flexible_api(R::get_api_key().0, version.0) {
+                    5
+                } else {
+                    4
+                };
                 let mut buf = Bytes::copy_from_slice(&body[header_size..]);
                 let resp = R::Response::deserialize(version, &mut buf)
                     .map_err(BrokerError::Protocol)?;

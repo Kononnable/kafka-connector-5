@@ -8,7 +8,7 @@ use crate::frame;
 use crate::tracker::RequestTracker;
 use bytes::{Buf, Bytes, BytesMut};
 use protocol::protocol::serialization::KafkaDeserialize;
-use protocol::traits::{ApiRequest, ApiResponse, ApiVersion};
+
 use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
@@ -137,7 +137,7 @@ where
 
 // ── Request inspection (read-only) ────────────────────────────────────
 
-use protocol::generated::MetadataResponse;
+
 
 /// Try to deserialize a request body, returning a description string.
 fn describe_request_body(api_key: i16, version: i16, body: &[u8]) -> String {

@@ -6,7 +6,7 @@
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use protocol::generated::{ApiVersionsRequest, ApiVersionsResponse};
-use protocol::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use protocol::traits::{is_flexible_api, ApiRequest, ApiResponse, ApiVersion, SerializationError};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
@@ -207,7 +207,7 @@ impl BrokerController {
         }
 
         let corr_id = self.next_corr.fetch_add(1, Ordering::Relaxed);
-        let is_flexible = api_version.0 >= 9;
+        let is_flexible = is_flexible_api(R::get_api_key().0, api_version.0);
 
         // Build the raw frame: [size: i32] [RequestHeader] [RequestBody]
         let mut frame = BytesMut::with_capacity(4096);
@@ -264,8 +264,10 @@ impl BrokerController {
         // Deserialize: skip response header
         // ResponseHeader v0: correlation_id (i32) = 4 bytes
         // ResponseHeader v1 (flexible): correlation_id (i32) + tag_buffer varint
-        let is_flexible = api_version.0 >= 9;
-        let header_size = if is_flexible {
+        // Note: ApiVersionsResponse always uses v0 header per KIP-511.
+        let header_size = if R::get_api_key().0 == 18 {
+            4
+        } else if is_flexible_api(R::get_api_key().0, api_version.0) {
             // correlation_id (4) + tag buffer (varint(0) = 1 byte)
             5
         } else {

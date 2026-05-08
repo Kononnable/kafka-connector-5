@@ -153,6 +153,74 @@ pub trait ApiResponse: Clone + fmt::Debug + Default {
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError>;
 }
 
+/// Whether a given API key uses flexible (compact) encoding at the given protocol version.
+///
+/// This mirrors the `flexibleVersions` ranges from each message's JSON definition.
+pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
+    // API keys that are never flexible
+    if matches!(api_key, 4 | 5 | 6 | 7 | 17 | 47) {
+        return false;
+    }
+    // API keys that are always flexible (all newer KRaft-era APIs)
+    if matches!(
+        api_key,
+        45 | 46 | 50 | 51 | 52 | 53 | 55 | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 64
+            | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79
+            | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 | 91 | 92
+    ) {
+        return true;
+    }
+    // Version-gated flexible encoding (from their JSON flexibleVersions)
+    let min_flex: i16 = match api_key {
+        0  => 9,  // Produce
+        1  => 12, // Fetch
+        2  => 6,  // ListOffsets
+        3  => 9,  // Metadata
+        8  => 8,  // OffsetCommit
+        9  => 6,  // OffsetFetch
+        10 => 3,  // FindCoordinator
+        11 => 6,  // JoinGroup
+        12 => 4,  // Heartbeat
+        13 => 4,  // LeaveGroup
+        14 => 4,  // SyncGroup
+        15 => 5,  // DescribeGroups
+        16 => 3,  // ListGroups
+        18 => 3,  // ApiVersions
+        19 => 5,  // CreateTopics
+        20 => 4,  // DeleteTopics
+        21 => 2,  // DeleteRecords
+        22 => 2,  // InitProducerId
+        23 => 4,  // OffsetForLeaderEpoch
+        24 => 3,  // AddPartitionsToTxn
+        25 => 3,  // AddOffsetsToTxn
+        26 => 3,  // EndTxn
+        27 => 1,  // WriteTxnMarkers
+        28 => 3,  // TxnOffsetCommit
+        29 => 2,  // DescribeAcls
+        30 => 2,  // CreateAcls
+        31 => 2,  // DeleteAcls
+        32 => 4,  // DescribeConfigs
+        33 => 2,  // AlterConfigs
+        34 => 2,  // AlterReplicaLogDirs
+        35 => 2,  // DescribeLogDirs
+        36 => 2,  // SaslAuthenticate
+        37 => 2,  // CreatePartitions
+        38 => 2,  // CreateDelegationToken
+        39 => 2,  // RenewDelegationToken
+        40 => 2,  // ExpireDelegationToken
+        41 => 2,  // DescribeDelegationToken
+        42 | 43 | 44 => 2, // DeleteGroups, ElectLeaders, IncrementalAlterConfigs
+        48 => 1,  // DescribeClientQuotas
+        49 => 1,  // AlterClientQuotas
+        54 => 1,  // EndQuorumEpoch
+        _ => {
+            // Unknown key — assume flexible (modern Kafka convention)
+            return true;
+        }
+    };
+    api_version >= min_flex
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
