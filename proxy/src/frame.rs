@@ -15,15 +15,7 @@ use protocol::protocol::serialization::{SerializationError, KafkaCodec};
 use std::fmt;
 use std::time::Instant;
 
-// ---------------------------------------------------------------------------
-// API key names (subset of common keys — extend as needed)
-// ---------------------------------------------------------------------------
 
-/// Return a human-readable name for a Kafka API key.
-/// Delegates to the generated dispatch table in the protocol crate.
-pub fn api_key_name(key: i16) -> &'static str {
-    protocol::generated::api_key_name(key)
-}
 
 // ---------------------------------------------------------------------------
 // ParsedFrame

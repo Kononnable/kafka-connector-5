@@ -177,7 +177,7 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
             tracing::info!(
                 "→ REQ  corr={} api={}({}) v={} client={} | {} bytes | {}",
                 hdr.correlation_id,
-                frame::api_key_name(hdr.api_key),
+                protocol::generated::api_key_name(hdr.api_key),
                 hdr.api_key,
                 hdr.api_version,
                 hdr.client_id,
@@ -189,7 +189,7 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
             tracing::trace!(
                 "tracking req  corr={} api={}({}) v={} | in-flight={}",
                 hdr.correlation_id,
-                frame::api_key_name(hdr.api_key),
+                protocol::generated::api_key_name(hdr.api_key),
                 hdr.api_key,
                 hdr.api_version,
                 inflight,
@@ -228,7 +228,7 @@ async fn inspect_and_rewrite_responses(
                     tracing::info!(
                         "← RES  corr={} api={}({}) v={} client={} | {} bytes | {:?} | {}",
                         res.correlation_id,
-                        frame::api_key_name(completion.api_key),
+                        protocol::generated::api_key_name(completion.api_key),
                         completion.api_key,
                         completion.api_version,
                         completion.client_id,
