@@ -7,6 +7,16 @@ use bytes::Bytes;
 use crate::generated::*;
 use crate::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
 
+/// Format a debug string, truncating to a reasonable max length for logging.
+fn fmt_compact(s: String) -> String {
+    const MAX: usize = 450;
+    if s.len() > MAX {
+        format!("{} ... ({} chars total)", &s[..MAX], s.len())
+    } else {
+        s
+    }
+}
+
 /// Deserialize a request body for the given API key and version.
 ///
 /// Returns `Ok(debug_string)` on success, `Err(error_msg)` on failure.
@@ -55,7 +65,7 @@ pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<St
         42 => ElectLeadersRequest::deserialize(ver, &mut buf).map(|v| format!("{v:?}")),
         _  => return Err(format!("unknown api key {api_key}")),
     };
-    result.map_err(|e| format!("{e}"))
+    Ok(fmt_compact(result.map_err(|e| format!("{e}"))?))
 }
 
 /// Deserialize a response body for the given API key and version.
@@ -106,5 +116,5 @@ pub fn decode_response_body(api_key: i16, version: i16, body: &[u8]) -> Result<S
         42 => ElectLeadersResponse::deserialize(ver, &mut buf).map(|v| format!("{v:?}")),
         _  => return Err(format!("unknown api key {api_key}")),
     };
-    result.map_err(|e| format!("{e}"))
+    Ok(fmt_compact(result.map_err(|e| format!("{e}"))?))
 }
