@@ -5,7 +5,7 @@
 //! cleanly regenerate it when schemas or the codegen logic change.
 
 use super::structs::{Field, MessageStruct, MessageType};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 // ---------------------------------------------------------------------------
@@ -54,8 +54,8 @@ pub fn generate_all() -> GeneratedFiles {
     }
 
     // Build apiKey → (request_name, response_name) pairing.
-    let mut pairs: std::collections::HashMap<i16, (String, String)> =
-        std::collections::HashMap::new();
+    let mut pairs: HashMap<i16, (String, String)> =
+        HashMap::new();
     for msg in &parsed {
         if let Some(ak) = msg.api_key {
             let entry = pairs
