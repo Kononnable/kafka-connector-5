@@ -25,6 +25,9 @@ impl ApiRequest for ExpireDelegationTokenRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(2)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(2)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -36,12 +39,12 @@ impl ApiRequest for ExpireDelegationTokenRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = (2) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.hmac
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Hmac"))?;
         self.expiry_time_period_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ExpiryTimePeriodMs"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -53,12 +56,11 @@ impl ApiRequest for ExpireDelegationTokenRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = (2) <= version.0;
-        let hmac = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Hmac"))?;
-        let expiry_time_period_ms =
-            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ExpiryTimePeriodMs"))?;
+        let expiry_time_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ExpiryTimePeriodMs"))?;
         Ok(Self {
             hmac,
             expiry_time_period_ms,
@@ -66,31 +68,19 @@ impl ApiRequest for ExpireDelegationTokenRequest {
     }
 }
 impl KafkaSerialize for ExpireDelegationTokenRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.hmac
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Hmac".into(),
-            })?;
-        self.expiry_time_period_ms
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ExpiryTimePeriodMs".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.hmac
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Hmac".into(),
             })?;
         self.expiry_time_period_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ExpiryTimePeriodMs".into(),
             })?;
@@ -103,55 +93,21 @@ impl KafkaSerialize for ExpireDelegationTokenRequest {
 }
 
 impl KafkaDeserialize for ExpireDelegationTokenRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Hmac` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let hmac =
-            <Vec<u8> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Hmac".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ExpiryTimePeriodMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let expiry_time_period_ms =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ExpiryTimePeriodMs".into(),
-            })?;
-        Ok(Self {
-            hmac,
-            expiry_time_period_ms,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Hmac` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let hmac = <Vec<u8> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Hmac".into(),
+        let hmac =
+            <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Hmac".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `ExpiryTimePeriodMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let expiry_time_period_ms =
-            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ExpiryTimePeriodMs".into(),
-                },
-            )?;
+        let expiry_time_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ExpiryTimePeriodMs".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

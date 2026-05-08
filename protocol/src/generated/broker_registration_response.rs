@@ -27,6 +27,9 @@ impl ApiResponse for BrokerRegistrationResponse {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(4)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -38,15 +41,15 @@ impl ApiResponse for BrokerRegistrationResponse {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = true;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.throttle_time_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
         self.error_code
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
         self.broker_epoch
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode BrokerEpoch"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -58,13 +61,12 @@ impl ApiResponse for BrokerRegistrationResponse {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = true;
-        let throttle_time_ms =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let broker_epoch = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let broker_epoch = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode BrokerEpoch"))?;
         Ok(Self {
             throttle_time_ms,
@@ -74,41 +76,24 @@ impl ApiResponse for BrokerRegistrationResponse {
     }
 }
 impl KafkaSerialize for BrokerRegistrationResponse {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.throttle_time_ms
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ThrottleTimeMs".into(),
-            })?;
-        self.error_code
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.broker_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode BrokerEpoch".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.throttle_time_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ThrottleTimeMs".into(),
             })?;
         self.error_code
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ErrorCode".into(),
             })?;
         self.broker_epoch
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode BrokerEpoch".into(),
             })?;
@@ -121,73 +106,26 @@ impl KafkaSerialize for BrokerRegistrationResponse {
 }
 
 impl KafkaDeserialize for BrokerRegistrationResponse {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let throttle_time_ms =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorCode".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `BrokerEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let broker_epoch =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode BrokerEpoch".into(),
-            })?;
-        Ok(Self {
-            throttle_time_ms,
-            error_code,
-            broker_epoch,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let throttle_time_ms =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ThrottleTimeMs".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorCode".into(),
+                message: "failed to decode ThrottleTimeMs".into(),
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `BrokerEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let broker_epoch = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode BrokerEpoch".into(),
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ErrorCode".into(),
+                }
+            })?;
+        let broker_epoch =
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode BrokerEpoch".into(),
+                }
             })?;
         if is_flexible {
             // Tagged fields (skip)

@@ -26,6 +26,9 @@ impl ApiRequest for DescribeGroupsRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(6)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(5)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -37,13 +40,13 @@ impl ApiRequest for DescribeGroupsRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = (5) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.groups
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Groups"))?;
         if (3) <= version.0 {
             self.include_authorized_operations
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode IncludeAuthorizedOperations")
                 })?;
@@ -62,13 +65,13 @@ impl ApiRequest for DescribeGroupsRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = (5) <= version.0;
-        let groups = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let groups = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Groups"))?;
         let include_authorized_operations = if (3) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| SerializationError::Decode("failed to decode IncludeAuthorizedOperations"),
-            )?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                SerializationError::Decode("failed to decode IncludeAuthorizedOperations")
+            })?
         } else {
             Default::default()
         };
@@ -79,34 +82,24 @@ impl ApiRequest for DescribeGroupsRequest {
     }
 }
 impl KafkaSerialize for DescribeGroupsRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.groups
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Groups".into(),
-            })?;
-        self.include_authorized_operations
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IncludeAuthorizedOperations".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.groups
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Groups".into(),
             })?;
-        self.include_authorized_operations
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IncludeAuthorizedOperations".into(),
-            })?;
+        if (3) <= version.0 {
+            self.include_authorized_operations
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode IncludeAuthorizedOperations".into(),
+                })?;
+        }
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -116,55 +109,23 @@ impl KafkaSerialize for DescribeGroupsRequest {
 }
 
 impl KafkaDeserialize for DescribeGroupsRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Groups` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let groups =
-            <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Groups".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `IncludeAuthorizedOperations` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let include_authorized_operations =
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IncludeAuthorizedOperations".into(),
-            })?;
-        Ok(Self {
-            groups,
-            include_authorized_operations,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Groups` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let groups = <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Groups".into(),
+        let groups =
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Groups".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `IncludeAuthorizedOperations` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let include_authorized_operations = if (3) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode IncludeAuthorizedOperations".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };

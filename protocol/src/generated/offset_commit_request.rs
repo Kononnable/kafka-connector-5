@@ -62,6 +62,9 @@ impl ApiRequest for OffsetCommitRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(10)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(8)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -73,13 +76,13 @@ impl ApiRequest for OffsetCommitRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = (8) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.group_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
         if (1) <= version.0 {
             self.generation_id_or_member_epoch
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode GenerationIdOrMemberEpoch")
                 })?;
@@ -90,7 +93,7 @@ impl ApiRequest for OffsetCommitRequest {
         }
         if (1) <= version.0 {
             self.member_id
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
         } else if !self.member_id.is_empty() {
             return Err(SerializationError::Encode(
@@ -99,7 +102,7 @@ impl ApiRequest for OffsetCommitRequest {
         }
         if (7) <= version.0 {
             self.group_instance_id
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
         } else if self.group_instance_id.is_some() {
             return Err(SerializationError::Encode(
@@ -108,7 +111,7 @@ impl ApiRequest for OffsetCommitRequest {
         }
         if (2) <= version.0 && version.0 <= (4) {
             self.retention_time_ms
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode RetentionTimeMs"))?;
         } else if self.retention_time_ms != 0 {
             return Err(SerializationError::Encode(
@@ -116,7 +119,7 @@ impl ApiRequest for OffsetCommitRequest {
             ));
         }
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -128,40 +131,37 @@ impl ApiRequest for OffsetCommitRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = (8) <= version.0;
-        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
         let generation_id_or_member_epoch = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
                 SerializationError::Decode("failed to decode GenerationIdOrMemberEpoch")
             })?
         } else {
             Default::default()
         };
         let member_id = if (1) <= version.0 {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?
         } else {
             Default::default()
         };
         let group_instance_id = if (7) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode GroupInstanceId"))?
         } else {
             Default::default()
         };
         let retention_time_ms = if (2) <= version.0 && version.0 <= (4) {
-            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode RetentionTimeMs"))?
         } else {
             Default::default()
         };
-        let topics = <Vec<OffsetCommitRequestTopic> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topics =
+            <Vec<OffsetCommitRequestTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         Ok(Self {
             group_id,
             generation_id_or_member_epoch,
@@ -173,84 +173,47 @@ impl ApiRequest for OffsetCommitRequest {
     }
 }
 impl KafkaSerialize for OffsetCommitRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.group_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupId".into(),
-            })?;
-        self.generation_id_or_member_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GenerationIdOrMemberEpoch".into(),
-            })?;
-        self.member_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberId".into(),
-            })?;
-        self.group_instance_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupInstanceId".into(),
-            })?;
-        self.retention_time_ms
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RetentionTimeMs".into(),
-            })?;
-        self.topics
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.group_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode GroupId".into(),
             })?;
-        self.generation_id_or_member_epoch
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GenerationIdOrMemberEpoch".into(),
-            })?;
-        self.member_id
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberId".into(),
-            })?;
-        if is_flexible {
-            if let Some(ref __val) = self.group_instance_id {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode_flexible(buf, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode GroupInstanceId".into(),
-                    })?;
-            } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-            }
-        } else {
-            if let Some(ref __val) = self.group_instance_id {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+        if (1) <= version.0 {
+            self.generation_id_or_member_epoch
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode GenerationIdOrMemberEpoch".into(),
+                })?;
+        }
+        if (1) <= version.0 {
+            self.member_id
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode MemberId".into(),
+                })?;
+        }
+        if (7) <= version.0 {
+            self.group_instance_id
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
                     message: "failed to encode GroupInstanceId".into(),
                 })?;
-            }
         }
-        self.retention_time_ms
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RetentionTimeMs".into(),
-            })?;
+        if (2) <= version.0 && version.0 <= (4) {
+            self.retention_time_ms
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode RetentionTimeMs".into(),
+                })?;
+        }
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topics".into(),
             })?;
@@ -263,95 +226,19 @@ impl KafkaSerialize for OffsetCommitRequest {
 }
 
 impl KafkaDeserialize for OffsetCommitRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `GroupId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let group_id =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode GroupId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `GenerationIdOrMemberEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let generation_id_or_member_epoch =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode GenerationIdOrMemberEpoch".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `MemberId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let member_id =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MemberId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `GroupInstanceId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let group_instance_id =
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GroupInstanceId".into(),
-                }
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `RetentionTimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let retention_time_ms =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RetentionTimeMs".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics =
-            <Vec<OffsetCommitRequestTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                }
-            })?;
-        Ok(Self {
-            group_id,
-            generation_id_or_member_epoch,
-            member_id,
-            group_instance_id,
-            retention_time_ms,
-            topics,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `GroupId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let group_id = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode GroupId".into(),
+        let group_id =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode GroupId".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `GenerationIdOrMemberEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let generation_id_or_member_epoch = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode GenerationIdOrMemberEpoch".into(),
                 }
@@ -359,45 +246,26 @@ impl KafkaDeserialize for OffsetCommitRequest {
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `MemberId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let member_id = if (1) <= version.0 {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode MemberId".into(),
+                }
+            })?
+        } else {
+            Default::default()
+        };
+        let group_instance_id = if (7) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
+                    message: "failed to decode GroupInstanceId".into(),
                 },
             )?
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `GroupInstanceId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let group_instance_id = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode GroupInstanceId".into(),
-                },
-            )?
-        } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GroupInstanceId".into(),
-                }
-            })?
-        };
-        tracing::trace!(
-            "  [{}] decoding field `RetentionTimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let retention_time_ms = if (2) <= version.0 && version.0 <= (4) {
-            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode RetentionTimeMs".into(),
                 }
@@ -405,19 +273,11 @@ impl KafkaDeserialize for OffsetCommitRequest {
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics = <Vec<OffsetCommitRequestTopic> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Topics".into(),
-        })?;
+        let topics =
+            <Vec<OffsetCommitRequestTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Topics".into(),
+                })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -434,67 +294,34 @@ impl KafkaDeserialize for OffsetCommitRequest {
 }
 
 impl KafkaSerialize for OffsetCommitRequestPartition {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.partition_index
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
-        self.committed_offset
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CommittedOffset".into(),
-            })?;
-        self.committed_leader_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CommittedLeaderEpoch".into(),
-            })?;
-        self.committed_metadata
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CommittedMetadata".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.partition_index
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PartitionIndex".into(),
             })?;
         self.committed_offset
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode CommittedOffset".into(),
             })?;
-        self.committed_leader_epoch
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CommittedLeaderEpoch".into(),
-            })?;
-        if is_flexible {
-            if let Some(ref __val) = self.committed_metadata {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode_flexible(buf, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode CommittedMetadata".into(),
-                    })?;
-            } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-            }
-        } else {
-            if let Some(ref __val) = self.committed_metadata {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode CommittedMetadata".into(),
+        if (6) <= version.0 {
+            self.committed_leader_epoch
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode CommittedLeaderEpoch".into(),
                 })?;
-            }
         }
+        self.committed_metadata
+            .encode(buf, version, is_flexible)
+            .map_err(|_| EncodeError::ValueTooLarge {
+                message: "failed to encode CommittedMetadata".into(),
+            })?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -504,84 +331,21 @@ impl KafkaSerialize for OffsetCommitRequestPartition {
 }
 
 impl KafkaDeserialize for OffsetCommitRequestPartition {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `CommittedOffset` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let committed_offset =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CommittedOffset".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `CommittedLeaderEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let committed_leader_epoch =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CommittedLeaderEpoch".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `CommittedMetadata` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let committed_metadata =
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode CommittedMetadata".into(),
-                }
-            })?;
-        Ok(Self {
-            partition_index,
-            committed_offset,
-            committed_leader_epoch,
-            committed_metadata,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `CommittedOffset` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let committed_offset =
-            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode CommittedOffset".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `CommittedLeaderEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
+        let committed_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode CommittedOffset".into(),
+            })?;
         let committed_leader_epoch = if (6) <= version.0 {
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode CommittedLeaderEpoch".into(),
                 }
@@ -589,24 +353,12 @@ impl KafkaDeserialize for OffsetCommitRequestPartition {
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `CommittedMetadata` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let committed_metadata = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+        let committed_metadata =
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
                 |_| DecodeError::Protocol {
                     message: "failed to decode CommittedMetadata".into(),
                 },
-            )?
-        } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode CommittedMetadata".into(),
-                }
-            })?
-        };
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -621,41 +373,28 @@ impl KafkaDeserialize for OffsetCommitRequestPartition {
 }
 
 impl KafkaSerialize for OffsetCommitRequestTopic {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.topic_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicId".into(),
-            })?;
-        self.partitions
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
-        self.name
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
+        if (0) <= version.0 && version.0 <= (9) {
+            self.name.encode(buf, version, is_flexible).map_err(|_| {
+                EncodeError::ValueTooLarge {
+                    message: "failed to encode Name".into(),
+                }
             })?;
-        self.topic_id
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicId".into(),
-            })?;
+        }
+        if (10) <= version.0 {
+            self.topic_id
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode TopicId".into(),
+                })?;
+        }
         self.partitions
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Partitions".into(),
             })?;
@@ -668,79 +407,30 @@ impl KafkaSerialize for OffsetCommitRequestTopic {
 }
 
 impl KafkaDeserialize for OffsetCommitRequestTopic {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `TopicId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topic_id =
-            <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TopicId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partitions = <Vec<OffsetCommitRequestPartition> as KafkaDeserialize>::decode(buf)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Partitions".into(),
-            })?;
-        Ok(Self {
-            name,
-            topic_id,
-            partitions,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let name = if (0) <= version.0 && version.0 <= (9) {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode Name".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `TopicId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let topic_id = if (10) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode TopicId".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `Partitions` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partitions = <Vec<OffsetCommitRequestPartition> as KafkaDeserialize>::decode_flexible(
+        let partitions = <Vec<OffsetCommitRequestPartition> as KafkaDeserialize>::decode(
             buf,
             version,
             is_flexible,

@@ -61,6 +61,9 @@ impl ApiResponse for DescribeProducersResponse {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(0)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -72,12 +75,12 @@ impl ApiResponse for DescribeProducersResponse {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = true;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.throttle_time_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -89,13 +92,11 @@ impl ApiResponse for DescribeProducersResponse {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = true;
-        let throttle_time_ms =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let topics =
-            <Vec<TopicResponse> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let topics = <Vec<TopicResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         Ok(Self {
             throttle_time_ms,
             topics,
@@ -103,31 +104,19 @@ impl ApiResponse for DescribeProducersResponse {
     }
 }
 impl KafkaSerialize for DescribeProducersResponse {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.throttle_time_ms
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ThrottleTimeMs".into(),
-            })?;
-        self.topics
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.throttle_time_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ThrottleTimeMs".into(),
             })?;
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topics".into(),
             })?;
@@ -140,57 +129,19 @@ impl KafkaSerialize for DescribeProducersResponse {
 }
 
 impl KafkaDeserialize for DescribeProducersResponse {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `ThrottleTimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let throttle_time_ms =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics = <Vec<TopicResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            }
-        })?;
-        Ok(Self {
-            throttle_time_ms,
-            topics,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `ThrottleTimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let throttle_time_ms =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ThrottleTimeMs".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics =
-            <Vec<TopicResponse> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                })?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ThrottleTimeMs".into(),
+            })?;
+        let topics = <Vec<TopicResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -203,64 +154,29 @@ impl KafkaDeserialize for DescribeProducersResponse {
 }
 
 impl KafkaSerialize for PartitionResponse {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
         self.partition_index
-            .encode(buf)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PartitionIndex".into(),
             })?;
         self.error_code
-            .encode(buf)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ErrorCode".into(),
             })?;
         self.error_message
-            .encode(buf)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ErrorMessage".into(),
             })?;
         self.active_producers
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ActiveProducers".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
-        &self,
-        buf: &mut B,
-        is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition_index
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
-        self.error_code
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        if is_flexible {
-            if let Some(ref __val) = self.error_message {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode_flexible(buf, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode ErrorMessage".into(),
-                    })?;
-            } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-            }
-        } else {
-            if let Some(ref __val) = self.error_message {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ErrorMessage".into(),
-                })?;
-            }
-        }
-        self.active_producers
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ActiveProducers".into(),
             })?;
@@ -273,104 +189,31 @@ impl KafkaSerialize for PartitionResponse {
 }
 
 impl KafkaDeserialize for PartitionResponse {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ErrorCode` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorCode".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ErrorMessage` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let error_message = <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode ErrorMessage".into(),
-            }
-        })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ActiveProducers` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let active_producers =
-            <Vec<ProducerState> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ActiveProducers".into(),
-                }
-            })?;
-        Ok(Self {
-            partition_index,
-            error_code,
-            error_message,
-            active_producers,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `ErrorCode` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let error_code = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorCode".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] decoding field `ErrorMessage` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let error_message = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ErrorMessage".into(),
-                },
-            )?
-        } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
+        let error_code =
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
-                    message: "failed to decode ErrorMessage".into(),
+                    message: "failed to decode ErrorCode".into(),
                 }
-            })?
-        };
-        tracing::trace!(
-            "  [{}] decoding field `ActiveProducers` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
+            })?;
+        let error_message = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ErrorMessage".into(),
+            })?;
         let active_producers =
-            <Vec<ProducerState> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
+            <Vec<ProducerState> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
+                |_| DecodeError::Protocol {
                     message: "failed to decode ActiveProducers".into(),
-                })?;
+                },
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -385,71 +228,39 @@ impl KafkaDeserialize for PartitionResponse {
 }
 
 impl KafkaSerialize for ProducerState {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.producer_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerId".into(),
-            })?;
-        self.producer_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerEpoch".into(),
-            })?;
-        self.last_sequence
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LastSequence".into(),
-            })?;
-        self.last_timestamp
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LastTimestamp".into(),
-            })?;
-        self.coordinator_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CoordinatorEpoch".into(),
-            })?;
-        self.current_txn_start_offset
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CurrentTxnStartOffset".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.producer_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ProducerId".into(),
             })?;
         self.producer_epoch
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ProducerEpoch".into(),
             })?;
         self.last_sequence
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode LastSequence".into(),
             })?;
         self.last_timestamp
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode LastTimestamp".into(),
             })?;
         self.coordinator_epoch
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode CoordinatorEpoch".into(),
             })?;
         self.current_txn_start_offset
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode CurrentTxnStartOffset".into(),
             })?;
@@ -462,133 +273,43 @@ impl KafkaSerialize for ProducerState {
 }
 
 impl KafkaDeserialize for ProducerState {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `ProducerId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_id =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ProducerEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_epoch =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerEpoch".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `LastSequence` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let last_sequence =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LastSequence".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `LastTimestamp` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let last_timestamp =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LastTimestamp".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `CoordinatorEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let coordinator_epoch =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CoordinatorEpoch".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `CurrentTxnStartOffset` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let current_txn_start_offset =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CurrentTxnStartOffset".into(),
-            })?;
-        Ok(Self {
-            producer_id,
-            producer_epoch,
-            last_sequence,
-            last_timestamp,
-            coordinator_epoch,
-            current_txn_start_offset,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `ProducerId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_id = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerId".into(),
+        let producer_id =
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ProducerId".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `ProducerEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_epoch = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerEpoch".into(),
+        let producer_epoch =
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ProducerEpoch".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `LastSequence` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let last_sequence = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode LastSequence".into(),
-        })?;
-        tracing::trace!(
-            "  [{}] decoding field `LastTimestamp` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let last_timestamp = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode LastTimestamp".into(),
+        let last_sequence =
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode LastSequence".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `CoordinatorEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let coordinator_epoch =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode CoordinatorEpoch".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `CurrentTxnStartOffset` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let current_txn_start_offset =
-            <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode CurrentTxnStartOffset".into(),
-                },
-            )?;
+        let last_timestamp =
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode LastTimestamp".into(),
+                }
+            })?;
+        let coordinator_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode CoordinatorEpoch".into(),
+            })?;
+        let current_txn_start_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode CurrentTxnStartOffset".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -605,31 +326,19 @@ impl KafkaDeserialize for ProducerState {
 }
 
 impl KafkaSerialize for TopicResponse {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.partitions
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.name
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
         self.partitions
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Partitions".into(),
             })?;
@@ -642,56 +351,22 @@ impl KafkaSerialize for TopicResponse {
 }
 
 impl KafkaDeserialize for TopicResponse {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partitions =
-            <Vec<PartitionResponse> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                }
-            })?;
-        Ok(Self { name, partitions })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+        let name =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `Partitions` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partitions = <Vec<PartitionResponse> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Partitions".into(),
-        })?;
+        let partitions =
+            <Vec<PartitionResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Partitions".into(),
+                })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

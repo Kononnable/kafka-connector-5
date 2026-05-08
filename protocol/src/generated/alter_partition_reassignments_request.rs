@@ -44,6 +44,9 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(1)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -55,13 +58,13 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = true;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.timeout_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode TimeoutMs"))?;
         if (1) <= version.0 {
             self.allow_replication_factor_change
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode AllowReplicationFactorChange")
                 })?;
@@ -71,7 +74,7 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
             ));
         }
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -83,22 +86,19 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = true;
-        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode TimeoutMs"))?;
         let allow_replication_factor_change = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| SerializationError::Decode("failed to decode AllowReplicationFactorChange"),
-            )?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                SerializationError::Decode("failed to decode AllowReplicationFactorChange")
+            })?
         } else {
             Default::default()
         };
-        let topics = <Vec<ReassignableTopic> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topics =
+            <Vec<ReassignableTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
         Ok(Self {
             timeout_ms,
             allow_replication_factor_change,
@@ -107,41 +107,26 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
     }
 }
 impl KafkaSerialize for AlterPartitionReassignmentsRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.timeout_ms
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TimeoutMs".into(),
-            })?;
-        self.allow_replication_factor_change
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode AllowReplicationFactorChange".into(),
-            })?;
-        self.topics
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.timeout_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TimeoutMs".into(),
             })?;
-        self.allow_replication_factor_change
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode AllowReplicationFactorChange".into(),
-            })?;
+        if (1) <= version.0 {
+            self.allow_replication_factor_change
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode AllowReplicationFactorChange".into(),
+                })?;
+        }
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topics".into(),
             })?;
@@ -154,82 +139,31 @@ impl KafkaSerialize for AlterPartitionReassignmentsRequest {
 }
 
 impl KafkaDeserialize for AlterPartitionReassignmentsRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `TimeoutMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let timeout_ms =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TimeoutMs".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `AllowReplicationFactorChange` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let allow_replication_factor_change =
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode AllowReplicationFactorChange".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics = <Vec<ReassignableTopic> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            }
-        })?;
-        Ok(Self {
-            timeout_ms,
-            allow_replication_factor_change,
-            topics,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `TimeoutMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let timeout_ms = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TimeoutMs".into(),
+        let timeout_ms =
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TimeoutMs".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `AllowReplicationFactorChange` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let allow_replication_factor_change = if (1) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode AllowReplicationFactorChange".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics = <Vec<ReassignableTopic> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Topics".into(),
-        })?;
+        let topics =
+            <Vec<ReassignableTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Topics".into(),
+                })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -243,47 +177,22 @@ impl KafkaDeserialize for AlterPartitionReassignmentsRequest {
 }
 
 impl KafkaSerialize for ReassignablePartition {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<(), EncodeError> {
         self.partition_index
-            .encode(buf)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PartitionIndex".into(),
             })?;
         self.replicas
-            .encode(buf)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Replicas".into(),
             })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
-        &self,
-        buf: &mut B,
-        is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition_index
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
-        if is_flexible {
-            if let Some(ref __val) = self.replicas {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode_flexible(buf, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode Replicas".into(),
-                    })?;
-            } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-            }
-        } else {
-            if let Some(ref __val) = self.replicas {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Replicas".into(),
-                })?;
-            }
-        }
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -293,63 +202,19 @@ impl KafkaSerialize for ReassignablePartition {
 }
 
 impl KafkaDeserialize for ReassignablePartition {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Replicas` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let replicas = <Option<Vec<i32>> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Replicas".into(),
-            }
-        })?;
-        Ok(Self {
-            partition_index,
-            replicas,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `Replicas` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let replicas = if is_flexible {
-            <Option<Vec<i32>> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Replicas".into(),
-                },
-            )?
-        } else {
-            <Option<Vec<i32>> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Replicas".into(),
-                }
-            })?
-        };
+        let replicas = <Option<Vec<i32>> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Replicas".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -362,31 +227,19 @@ impl KafkaDeserialize for ReassignablePartition {
 }
 
 impl KafkaSerialize for ReassignableTopic {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.partitions
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.name
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
         self.partitions
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Partitions".into(),
             })?;
@@ -399,56 +252,22 @@ impl KafkaSerialize for ReassignableTopic {
 }
 
 impl KafkaDeserialize for ReassignableTopic {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Partitions` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partitions =
-            <Vec<ReassignablePartition> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                }
-            })?;
-        Ok(Self { name, partitions })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+        let name =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `Partitions` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partitions = <Vec<ReassignablePartition> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Partitions".into(),
-        })?;
+        let partitions =
+            <Vec<ReassignablePartition> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Partitions".into(),
+                })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

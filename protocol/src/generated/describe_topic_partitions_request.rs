@@ -41,6 +41,9 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(0)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -52,18 +55,18 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = true;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
         self.response_partition_limit
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ResponsePartitionLimit"))?;
         if is_flexible {
             if let Some(ref __val) = self.cursor {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
                 __val
-                    .encode_flexible(buf, true)
+                    .encode(buf, version, true)
                     .map_err(|_| SerializationError::Encode("failed to encode Cursor"))?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -71,7 +74,7 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
         } else {
             if let Some(ref __val) = self.cursor {
                 __val
-                    .encode(buf)
+                    .encode(buf, version, false)
                     .map_err(|_| SerializationError::Encode("failed to encode Cursor"))?;
             }
         }
@@ -85,14 +88,11 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = true;
-        let topics =
-            <Vec<TopicRequest> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
-        let response_partition_limit =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| SerializationError::Decode("failed to decode ResponsePartitionLimit"),
-            )?;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let topics = <Vec<TopicRequest> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let response_partition_limit = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ResponsePartitionLimit"))?;
         let cursor = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)
                 .map_err(|_| SerializationError::Decode("tagged field error"))?;
@@ -100,13 +100,13 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
                 None
             } else {
                 Some(
-                    <Cursor as KafkaDeserialize>::decode_flexible(buf, version, true)
+                    <Cursor as KafkaDeserialize>::decode(buf, version, true)
                         .map_err(|_| SerializationError::Decode("failed to decode Cursor"))?,
                 )
             }
         } else {
             Some(
-                <Cursor as KafkaDeserialize>::decode(buf)
+                <Cursor as KafkaDeserialize>::decode(buf, version, false)
                     .map_err(|_| SerializationError::Decode("failed to decode Cursor"))?,
             )
         };
@@ -118,36 +118,19 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
     }
 }
 impl KafkaSerialize for DescribeTopicPartitionsRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.topics
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
-        self.response_partition_limit
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResponsePartitionLimit".into(),
-            })?;
-        if let Some(ref __val) = self.cursor {
-            __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Cursor".into(),
-            })?;
-        }
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.topics
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Topics".into(),
             })?;
         self.response_partition_limit
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ResponsePartitionLimit".into(),
             })?;
@@ -155,7 +138,7 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
             if let Some(ref __val) = self.cursor {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
                 __val
-                    .encode_flexible(buf, true)
+                    .encode(buf, version, true)
                     .map_err(|_| EncodeError::ValueTooLarge {
                         message: "failed to encode Cursor".into(),
                     })?;
@@ -164,9 +147,11 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
             }
         } else {
             if let Some(ref __val) = self.cursor {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Cursor".into(),
-                })?;
+                __val
+                    .encode(buf, version, false)
+                    .map_err(|_| EncodeError::ValueTooLarge {
+                        message: "failed to encode Cursor".into(),
+                    })?;
             }
         }
         if is_flexible {
@@ -178,91 +163,38 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
 }
 
 impl KafkaDeserialize for DescribeTopicPartitionsRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics = <Vec<TopicRequest> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            }
-        })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ResponsePartitionLimit` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let response_partition_limit =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResponsePartitionLimit".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Cursor` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let cursor =
-            Some(
-                <Cursor as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Cursor".into(),
-                })?,
-            );
-        Ok(Self {
-            topics,
-            response_partition_limit,
-            cursor,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Topics` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topics =
-            <Vec<TopicRequest> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                })?;
-        tracing::trace!(
-            "  [{}] decoding field `ResponsePartitionLimit` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let response_partition_limit =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ResponsePartitionLimit".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `Cursor` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
+        let topics = <Vec<TopicRequest> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Topics".into(),
+            })?;
+        let response_partition_limit = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ResponsePartitionLimit".into(),
+            })?;
         let cursor = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
                 Some(
-                    <Cursor as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
-                        |_| DecodeError::Protocol {
+                    <Cursor as KafkaDeserialize>::decode(buf, version, true).map_err(|_| {
+                        DecodeError::Protocol {
                             message: "failed to decode Cursor".into(),
-                        },
-                    )?,
+                        }
+                    })?,
                 )
             }
         } else {
             Some(
-                <Cursor as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Cursor".into(),
+                <Cursor as KafkaDeserialize>::decode(buf, version, false).map_err(|_| {
+                    DecodeError::Protocol {
+                        message: "failed to decode Cursor".into(),
+                    }
                 })?,
             )
         };
@@ -279,31 +211,19 @@ impl KafkaDeserialize for DescribeTopicPartitionsRequest {
 }
 
 impl KafkaSerialize for Cursor {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.topic_name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicName".into(),
-            })?;
-        self.partition_index
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.topic_name
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TopicName".into(),
             })?;
         self.partition_index
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PartitionIndex".into(),
             })?;
@@ -316,50 +236,18 @@ impl KafkaSerialize for Cursor {
 }
 
 impl KafkaDeserialize for Cursor {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `TopicName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topic_name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TopicName".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
-        Ok(Self {
-            topic_name,
-            partition_index,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `TopicName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let topic_name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode TopicName".into(),
-        })?;
-        tracing::trace!(
-            "  [{}] decoding field `PartitionIndex` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let partition_index = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let topic_name =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode TopicName".into(),
+                }
+            })?;
+        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode PartitionIndex".into(),
             })?;
@@ -375,21 +263,14 @@ impl KafkaDeserialize for Cursor {
 }
 
 impl KafkaSerialize for TopicRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.name
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
@@ -402,31 +283,16 @@ impl KafkaSerialize for TopicRequest {
 }
 
 impl KafkaDeserialize for TopicRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
-            })?;
-        Ok(Self { name })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+        let name =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
             })?;
         if is_flexible {
             // Tagged fields (skip)

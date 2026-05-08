@@ -23,6 +23,9 @@ impl ApiRequest for SaslHandshakeRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(1)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(32767)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -34,9 +37,9 @@ impl ApiRequest for SaslHandshakeRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = false;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.mechanism
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Mechanism"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -48,28 +51,21 @@ impl ApiRequest for SaslHandshakeRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = false;
-        let mechanism = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let mechanism = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Mechanism"))?;
         Ok(Self { mechanism })
     }
 }
 impl KafkaSerialize for SaslHandshakeRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.mechanism
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Mechanism".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.mechanism
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Mechanism".into(),
             })?;
@@ -82,31 +78,16 @@ impl KafkaSerialize for SaslHandshakeRequest {
 }
 
 impl KafkaDeserialize for SaslHandshakeRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Mechanism` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let mechanism =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Mechanism".into(),
-            })?;
-        Ok(Self { mechanism })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Mechanism` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let mechanism = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Mechanism".into(),
+        let mechanism =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Mechanism".into(),
+                }
             })?;
         if is_flexible {
             // Tagged fields (skip)

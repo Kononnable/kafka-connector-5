@@ -20,12 +20,15 @@ impl ApiResponse for ControlledShutdownResponse {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(-1)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(32767)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
         buf: &mut BytesMut,
     ) -> Result<(), SerializationError> {
-        let is_flexible = false;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -36,17 +39,15 @@ impl ApiResponse for ControlledShutdownResponse {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = false;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         Ok(Self {})
     }
 }
 impl KafkaSerialize for ControlledShutdownResponse {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         if is_flexible {
@@ -58,10 +59,7 @@ impl KafkaSerialize for ControlledShutdownResponse {
 }
 
 impl KafkaDeserialize for ControlledShutdownResponse {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        Ok(Self {})
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,

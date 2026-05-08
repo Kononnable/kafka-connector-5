@@ -27,6 +27,9 @@ impl ApiRequest for ApiVersionsRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(4)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(3)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -38,10 +41,10 @@ impl ApiRequest for ApiVersionsRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = (3) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (3) <= version.0 {
             self.client_software_name
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ClientSoftwareName"))?;
         } else if !self.client_software_name.is_empty() {
             return Err(SerializationError::Encode(
@@ -50,7 +53,7 @@ impl ApiRequest for ApiVersionsRequest {
         }
         if (3) <= version.0 {
             self.client_software_version
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode ClientSoftwareVersion")
                 })?;
@@ -69,15 +72,15 @@ impl ApiRequest for ApiVersionsRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = (3) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let client_software_name = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ClientSoftwareName"))?
         } else {
             Default::default()
         };
         let client_software_version = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode ClientSoftwareVersion"))?
         } else {
             Default::default()
@@ -89,34 +92,26 @@ impl ApiRequest for ApiVersionsRequest {
     }
 }
 impl KafkaSerialize for ApiVersionsRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.client_software_name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientSoftwareName".into(),
-            })?;
-        self.client_software_version
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientSoftwareVersion".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
-        self.client_software_name
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientSoftwareName".into(),
-            })?;
-        self.client_software_version
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientSoftwareVersion".into(),
-            })?;
+        if (3) <= version.0 {
+            self.client_software_name
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode ClientSoftwareName".into(),
+                })?;
+        }
+        if (3) <= version.0 {
+            self.client_software_version
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode ClientSoftwareVersion".into(),
+                })?;
+        }
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -126,60 +121,26 @@ impl KafkaSerialize for ApiVersionsRequest {
 }
 
 impl KafkaDeserialize for ApiVersionsRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `ClientSoftwareName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let client_software_name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ClientSoftwareName".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ClientSoftwareVersion` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let client_software_version =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ClientSoftwareVersion".into(),
-            })?;
-        Ok(Self {
-            client_software_name,
-            client_software_version,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `ClientSoftwareName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let client_software_name = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode ClientSoftwareName".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `ClientSoftwareVersion` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let client_software_version = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode ClientSoftwareVersion".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };

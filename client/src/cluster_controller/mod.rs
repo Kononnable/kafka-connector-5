@@ -19,7 +19,8 @@ use protocol::generated::{
     metadata_response::MetadataResponseBroker,
     MetadataRequest, MetadataResponse,
 };
-use protocol::traits::{is_flexible_api, ApiRequest, ApiResponse, ApiVersion};
+use protocol::generated::is_flexible_api;
+use protocol::traits::{ApiRequest, ApiResponse, ApiVersion};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;

@@ -29,6 +29,9 @@ impl ApiRequest for DescribeClusterRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(2)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -40,15 +43,15 @@ impl ApiRequest for DescribeClusterRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = true;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.include_cluster_authorized_operations
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| {
                 SerializationError::Encode("failed to encode IncludeClusterAuthorizedOperations")
             })?;
         if (1) <= version.0 {
             self.endpoint_type
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode EndpointType"))?;
         } else if self.endpoint_type != 0 {
             return Err(SerializationError::Encode(
@@ -57,7 +60,7 @@ impl ApiRequest for DescribeClusterRequest {
         }
         if (2) <= version.0 {
             self.include_fenced_brokers
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IncludeFencedBrokers"))?;
         } else if self.include_fenced_brokers {
             return Err(SerializationError::Encode(
@@ -74,23 +77,19 @@ impl ApiRequest for DescribeClusterRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = true;
-        let include_cluster_authorized_operations = <bool as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| {
-            SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
-        })?;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let include_cluster_authorized_operations =
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
+            })?;
         let endpoint_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode EndpointType"))?
         } else {
             Default::default()
         };
         let include_fenced_brokers = if (2) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode IncludeFencedBrokers"))?
         } else {
             Default::default()
@@ -103,44 +102,31 @@ impl ApiRequest for DescribeClusterRequest {
     }
 }
 impl KafkaSerialize for DescribeClusterRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.include_cluster_authorized_operations
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IncludeClusterAuthorizedOperations".into(),
-            })?;
-        self.endpoint_type
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode EndpointType".into(),
-            })?;
-        self.include_fenced_brokers
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IncludeFencedBrokers".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.include_cluster_authorized_operations
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode IncludeClusterAuthorizedOperations".into(),
             })?;
-        self.endpoint_type
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode EndpointType".into(),
-            })?;
-        self.include_fenced_brokers
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IncludeFencedBrokers".into(),
-            })?;
+        if (1) <= version.0 {
+            self.endpoint_type
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode EndpointType".into(),
+                })?;
+        }
+        if (2) <= version.0 {
+            self.include_fenced_brokers
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode IncludeFencedBrokers".into(),
+                })?;
+        }
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -150,63 +136,19 @@ impl KafkaSerialize for DescribeClusterRequest {
 }
 
 impl KafkaDeserialize for DescribeClusterRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `IncludeClusterAuthorizedOperations` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let include_cluster_authorized_operations = <bool as KafkaDeserialize>::decode(buf)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IncludeClusterAuthorizedOperations".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `EndpointType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let endpoint_type =
-            <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode EndpointType".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `IncludeFencedBrokers` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let include_fenced_brokers =
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IncludeFencedBrokers".into(),
-            })?;
-        Ok(Self {
-            include_cluster_authorized_operations,
-            endpoint_type,
-            include_fenced_brokers,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `IncludeClusterAuthorizedOperations` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let include_cluster_authorized_operations =
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode IncludeClusterAuthorizedOperations".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `EndpointType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
+                }
+            })?;
         let endpoint_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode EndpointType".into(),
                 }
@@ -214,17 +156,12 @@ impl KafkaDeserialize for DescribeClusterRequest {
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `IncludeFencedBrokers` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let include_fenced_brokers = if (2) <= version.0 {
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode IncludeFencedBrokers".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };

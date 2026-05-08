@@ -53,6 +53,9 @@ impl ApiRequest for ControllerRegistrationRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(0)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(0)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -64,21 +67,21 @@ impl ApiRequest for ControllerRegistrationRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = true;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.controller_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ControllerId"))?;
         self.incarnation_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode IncarnationId"))?;
         self.zk_migration_ready
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ZkMigrationReady"))?;
         self.listeners
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Listeners"))?;
         self.features
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Features"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -90,22 +93,17 @@ impl ApiRequest for ControllerRegistrationRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = true;
-        let controller_id =
-            <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?;
-        let incarnation_id =
-            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode IncarnationId"))?;
-        let zk_migration_ready =
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ZkMigrationReady"))?;
-        let listeners =
-            <Vec<Listener> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Listeners"))?;
-        let features =
-            <Vec<Feature> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Features"))?;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let controller_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?;
+        let incarnation_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode IncarnationId"))?;
+        let zk_migration_ready = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode ZkMigrationReady"))?;
+        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode Listeners"))?;
+        let features = <Vec<Feature> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode Features"))?;
         Ok(Self {
             controller_id,
             incarnation_id,
@@ -116,61 +114,34 @@ impl ApiRequest for ControllerRegistrationRequest {
     }
 }
 impl KafkaSerialize for ControllerRegistrationRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.controller_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ControllerId".into(),
-            })?;
-        self.incarnation_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IncarnationId".into(),
-            })?;
-        self.zk_migration_ready
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ZkMigrationReady".into(),
-            })?;
-        self.listeners
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Listeners".into(),
-            })?;
-        self.features
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Features".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.controller_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ControllerId".into(),
             })?;
         self.incarnation_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode IncarnationId".into(),
             })?;
         self.zk_migration_ready
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ZkMigrationReady".into(),
             })?;
         self.listeners
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Listeners".into(),
             })?;
         self.features
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Features".into(),
             })?;
@@ -183,117 +154,33 @@ impl KafkaSerialize for ControllerRegistrationRequest {
 }
 
 impl KafkaDeserialize for ControllerRegistrationRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `ControllerId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let controller_id =
-            <i32 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ControllerId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `IncarnationId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let incarnation_id =
-            <[u8; 16] as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode IncarnationId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ZkMigrationReady` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let zk_migration_ready =
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ZkMigrationReady".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Listeners` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Listeners".into(),
-            }
-        })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Features` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let features =
-            <Vec<Feature> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Features".into(),
-            })?;
-        Ok(Self {
-            controller_id,
-            incarnation_id,
-            zk_migration_ready,
-            listeners,
-            features,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `ControllerId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let controller_id = <i32 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let controller_id =
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ControllerId".into(),
+                }
+            })?;
+        let incarnation_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode ControllerId".into(),
-        })?;
-        tracing::trace!(
-            "  [{}] decoding field `IncarnationId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let incarnation_id =
-            <[u8; 16] as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode IncarnationId".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `ZkMigrationReady` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let zk_migration_ready =
-            <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ZkMigrationReady".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `Listeners` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let listeners =
-            <Vec<Listener> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Listeners".into(),
-                })?;
-        tracing::trace!(
-            "  [{}] decoding field `Features` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let features =
-            <Vec<Feature> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Features".into(),
-                })?;
+                message: "failed to decode IncarnationId".into(),
+            })?;
+        let zk_migration_ready = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode ZkMigrationReady".into(),
+            })?;
+        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Listeners".into(),
+            })?;
+        let features = <Vec<Feature> as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode Features".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -309,41 +196,24 @@ impl KafkaDeserialize for ControllerRegistrationRequest {
 }
 
 impl KafkaSerialize for Feature {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.min_supported_version
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MinSupportedVersion".into(),
-            })?;
-        self.max_supported_version
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MaxSupportedVersion".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.name
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
         self.min_supported_version
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MinSupportedVersion".into(),
             })?;
         self.max_supported_version
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MaxSupportedVersion".into(),
             })?;
@@ -356,76 +226,25 @@ impl KafkaSerialize for Feature {
 }
 
 impl KafkaDeserialize for Feature {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `MinSupportedVersion` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let min_supported_version =
-            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MinSupportedVersion".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `MaxSupportedVersion` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let max_supported_version =
-            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MaxSupportedVersion".into(),
-            })?;
-        Ok(Self {
-            name,
-            min_supported_version,
-            max_supported_version,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+        let name =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `MinSupportedVersion` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let min_supported_version =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode MinSupportedVersion".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `MaxSupportedVersion` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let max_supported_version =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode MaxSupportedVersion".into(),
-                },
-            )?;
+        let min_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MinSupportedVersion".into(),
+            })?;
+        let max_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode MaxSupportedVersion".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -439,51 +258,29 @@ impl KafkaDeserialize for Feature {
 }
 
 impl KafkaSerialize for Listener {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.host
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Host".into(),
-            })?;
-        self.port
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Port".into(),
-            })?;
-        self.security_protocol
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SecurityProtocol".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.name
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Name".into(),
             })?;
         self.host
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Host".into(),
             })?;
         self.port
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Port".into(),
             })?;
         self.security_protocol
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode SecurityProtocol".into(),
             })?;
@@ -496,93 +293,32 @@ impl KafkaSerialize for Listener {
 }
 
 impl KafkaDeserialize for Listener {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Host` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let host =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Host".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Port` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let port = <u16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Port".into(),
-        })?;
-        tracing::trace!(
-            "  [{}] classic decode field `SecurityProtocol` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let security_protocol =
-            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SecurityProtocol".into(),
-            })?;
-        Ok(Self {
-            name,
-            host,
-            port,
-            security_protocol,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Name` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let name = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
+        let name =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Name".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `Host` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let host = <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Host".into(),
+        let host =
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Host".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `Port` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let port = <u16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-            |_| DecodeError::Protocol {
+        let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+            DecodeError::Protocol {
                 message: "failed to decode Port".into(),
-            },
-        )?;
-        tracing::trace!(
-            "  [{}] decoding field `SecurityProtocol` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let security_protocol =
-            <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode SecurityProtocol".into(),
-                },
-            )?;
+            }
+        })?;
+        let security_protocol = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode SecurityProtocol".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

@@ -30,6 +30,9 @@ impl ApiRequest for FindCoordinatorRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(6)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(3)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -41,10 +44,10 @@ impl ApiRequest for FindCoordinatorRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = (3) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (0) <= version.0 && version.0 <= (3) {
             self.key
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Key"))?;
         } else if !self.key.is_empty() {
             return Err(SerializationError::Encode(
@@ -53,7 +56,7 @@ impl ApiRequest for FindCoordinatorRequest {
         }
         if (1) <= version.0 {
             self.key_type
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode KeyType"))?;
         } else if self.key_type != 0 {
             return Err(SerializationError::Encode(
@@ -62,7 +65,7 @@ impl ApiRequest for FindCoordinatorRequest {
         }
         if (4) <= version.0 {
             self.coordinator_keys
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode CoordinatorKeys"))?;
         } else if !self.coordinator_keys.is_empty() {
             return Err(SerializationError::Encode(
@@ -79,21 +82,21 @@ impl ApiRequest for FindCoordinatorRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = (3) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let key = if (0) <= version.0 && version.0 <= (3) {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode Key"))?
         } else {
             Default::default()
         };
         let key_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode KeyType"))?
         } else {
             Default::default()
         };
         let coordinator_keys = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode CoordinatorKeys"))?
         } else {
             Default::default()
@@ -106,44 +109,33 @@ impl ApiRequest for FindCoordinatorRequest {
     }
 }
 impl KafkaSerialize for FindCoordinatorRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.key
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Key".into(),
-            })?;
-        self.key_type
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode KeyType".into(),
-            })?;
-        self.coordinator_keys
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CoordinatorKeys".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
-        self.key
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Key".into(),
-            })?;
-        self.key_type
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode KeyType".into(),
-            })?;
-        self.coordinator_keys
-            .encode_flexible(buf, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CoordinatorKeys".into(),
-            })?;
+        if (0) <= version.0 && version.0 <= (3) {
+            self.key
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode Key".into(),
+                })?;
+        }
+        if (1) <= version.0 {
+            self.key_type
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode KeyType".into(),
+                })?;
+        }
+        if (4) <= version.0 {
+            self.coordinator_keys
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
+                    message: "failed to encode CoordinatorKeys".into(),
+                })?;
+        }
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -153,65 +145,22 @@ impl KafkaSerialize for FindCoordinatorRequest {
 }
 
 impl KafkaDeserialize for FindCoordinatorRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `Key` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let key = <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Key".into(),
-        })?;
-        tracing::trace!(
-            "  [{}] classic decode field `KeyType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let key_type =
-            <i8 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode KeyType".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `CoordinatorKeys` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let coordinator_keys =
-            <Vec<String> as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CoordinatorKeys".into(),
-            })?;
-        Ok(Self {
-            key,
-            key_type,
-            coordinator_keys,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `Key` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let key = if (0) <= version.0 && version.0 <= (3) {
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode Key".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `KeyType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let key_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| {
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
                 DecodeError::Protocol {
                     message: "failed to decode KeyType".into(),
                 }
@@ -219,17 +168,12 @@ impl KafkaDeserialize for FindCoordinatorRequest {
         } else {
             Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `CoordinatorKeys` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
         let coordinator_keys = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
                     message: "failed to decode CoordinatorKeys".into(),
-                },
-            )?
+                }
+            })?
         } else {
             Default::default()
         };

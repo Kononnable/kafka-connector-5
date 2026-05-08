@@ -50,17 +50,34 @@ if $DEBUG; then
     export PROXY_DECODE_MAX=0
 fi
 
+# Broker ports (cluster running on 19092/29092/39092 by default).
+# e.g. BROKER_PORTS="19092" to use a single broker.
+BROKER_PORTS="${BROKER_PORTS:-19092 29092 39092}"
+
+# Proxy listening ports (one per broker).
+PROXY_PORTS=(9192 9194 9196)
+
+# Build port-map string and proxy args.
+BA=($BROKER_PORTS)
+PORT_MAP=""
+for i in "${!BA[@]}"; do
+    [ $i -ge 3 ] && break
+    [ -n "$PORT_MAP" ] && PORT_MAP+=","
+    PORT_MAP+="${BA[$i]}:${PROXY_PORTS[$i]}"
+done
+
 if [ "$MODE" = "single" ]; then
-    PORT_MAP="9092:9192"
+    # Single-proxy mode: use only the first broker.
     LOGDIR=$(mktemp -d /tmp/proxy_test_XXXX)
-    RUST_LOG=info "$PROXY_BIN" 127.0.0.1:9192 127.0.0.1:9092 "$PORT_MAP" > "$LOGDIR/proxy.log" 2>&1 &
+    RUST_LOG=info "$PROXY_BIN" 127.0.0.1:${PROXY_PORTS[0]} 127.0.0.1:${BA[0]} "$(echo "$PORT_MAP" | cut -d, -f1)" > "$LOGDIR/proxy.log" 2>&1 &
     LOG="$LOGDIR/proxy.log"
 else
-    PORT_MAP="9092:9192,9094:9194,9096:9196"
+    # Multi-proxy mode: start one proxy per broker.
     LOGDIR=$(mktemp -d /tmp/proxy_test_XXXX)
-    RUST_LOG=info "$PROXY_BIN" 127.0.0.1:9192 127.0.0.1:9092 "$PORT_MAP" > "$LOGDIR/proxy1.log" 2>&1 &
-    RUST_LOG=info "$PROXY_BIN" 127.0.0.1:9194 127.0.0.1:9094 "$PORT_MAP" > "$LOGDIR/proxy2.log" 2>&1 &
-    RUST_LOG=info "$PROXY_BIN" 127.0.0.1:9196 127.0.0.1:9096 "$PORT_MAP" > "$LOGDIR/proxy3.log" 2>&1 &
+    for i in "${!BA[@]}"; do
+        [ $i -ge 3 ] && break
+        RUST_LOG=info "$PROXY_BIN" 127.0.0.1:${PROXY_PORTS[$i]} 127.0.0.1:${BA[$i]} "$PORT_MAP" > "$LOGDIR/proxy$((i+1)).log" 2>&1 &
+    done
     LOG="$LOGDIR/proxy1.log"
 fi
 

@@ -3,9 +3,9 @@
 //! This replaces proxy-specific match statements with a single function
 //! call that uses the protocol crate's generated types internally.
 
-use bytes::Bytes;
 use crate::generated::*;
 use crate::traits::{ApiRequest, ApiResponse, ApiVersion};
+use bytes::Bytes;
 
 /// Format a debug string, truncating to a reasonable max length for logging.
 fn fmt_compact(s: String) -> String {

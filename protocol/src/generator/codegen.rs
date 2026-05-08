@@ -108,6 +108,32 @@ pub fn generate_all() -> GeneratedFiles {
     for (module_name, _struct_name) in &module_names {
         mod_rs.push_str(&format!("pub use {}::{};\n", module_name, _struct_name));
     }
+    mod_rs.push('\n');
+
+    // Generate is_flexible_api dispatch function
+    mod_rs.push_str("use crate::traits::ApiRequest;\n");
+    mod_rs.push_str(
+        "/// Look up whether a given API key + version uses flexible (compact) wire encoding.\n",
+    );
+    mod_rs.push_str("/// Generated from each message's `flexibleVersions` field.\n");
+    mod_rs.push_str("pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {\n");
+    mod_rs.push_str("    match api_key {\n");
+
+    for msg in &parsed {
+        if let Some(ak) = msg
+            .api_key
+            .filter(|_| msg.message_type == MessageType::Request)
+        {
+            let struct_name = &msg.name;
+            mod_rs.push_str(&format!(
+                "        {} => api_version >= {}::get_min_flexible_version().0,\n",
+                ak, struct_name
+            ));
+        }
+    }
+    mod_rs.push_str("        _ => false,\n");
+    mod_rs.push_str("    }\n");
+    mod_rs.push_str("}\n");
 
     files.insert(PathBuf::from("src/generated/mod.rs"), mod_rs);
 
@@ -214,6 +240,10 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 "    fn get_max_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
                 max_v
             ));
+            code.push_str(&format!(
+                "    fn get_min_flexible_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                min_flex_version(&msg.flexible_versions)
+            ));
 
             // serialize
             code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
@@ -225,9 +255,10 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 ));
                 code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
             }
+            code.push_str(
+                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+            );
 
-            let flex_cond = flexible_condition(&msg.flexible_versions);
-            code.push_str(&format!("        let is_flexible = {};\n", flex_cond));
             for field in &msg.fields {
                 code.push_str(&generate_serialize_field(field, field));
             }
@@ -242,8 +273,9 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
             // deserialize
             code.push_str("    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
-            let flex_cond = flexible_condition(&msg.flexible_versions);
-            code.push_str(&format!("        let is_flexible = {};\n", flex_cond));
+            code.push_str(
+                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+            );
             for field in &msg.fields {
                 code.push_str(&generate_deserialize_field(field));
             }
@@ -299,6 +331,10 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 "    fn get_max_supported_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
                 max_v
             ));
+            code.push_str(&format!(
+                "    fn get_min_flexible_version() -> crate::traits::ApiVersion {{ crate::traits::ApiVersion::new({}) }}\n",
+                min_flex_version(&msg.flexible_versions)
+            ));
 
             // serialize
             code.push_str("    fn serialize(&self, version: crate::traits::ApiVersion, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
@@ -310,9 +346,10 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 ));
                 code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
             }
+            code.push_str(
+                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+            );
 
-            let flex_cond = flexible_condition(&msg.flexible_versions);
-            code.push_str(&format!("        let is_flexible = {};\n", flex_cond));
             for field in &msg.fields {
                 code.push_str(&generate_serialize_field(field, field));
             }
@@ -327,8 +364,9 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
             // deserialize
             code.push_str("    fn deserialize(version: crate::traits::ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError> {\n");
-            let flex_cond = flexible_condition(&msg.flexible_versions);
-            code.push_str(&format!("        let is_flexible = {};\n", flex_cond));
+            code.push_str(
+                "        let is_flexible = version.0 >= Self::get_min_flexible_version().0;\n",
+            );
             for field in &msg.fields {
                 code.push_str(&generate_deserialize_field(field));
             }
@@ -402,6 +440,25 @@ fn field_version_condition(field: &Field) -> Option<String> {
     }
 }
 
+/// Return the minimum flexible version number from a `flexibleVersions` string.
+/// Returns `i16::MAX` when never flexible, `0` when always flexible.
+fn min_flex_version(flexible_versions: &Option<String>) -> i16 {
+    match flexible_versions.as_deref() {
+        None | Some("none") => i16::MAX,
+        Some("0+") => 0i16,
+        Some(v) => {
+            if let Some(range) = v.split_once('-') {
+                range.0.trim().parse::<i16>().unwrap_or(0)
+            } else if let Some(base) = v.strip_suffix('+') {
+                base.trim().parse::<i16>().unwrap_or(0)
+            } else {
+                v.parse::<i16>().unwrap_or(i16::MAX)
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
 /// Generate a boolean expression that checks if `version.0` falls within the
 /// message's `flexibleVersions` range.  Returns `"false"` when not specified.
 fn flexible_condition(flexible_versions: &Option<String>) -> String {
@@ -415,8 +472,8 @@ fn flexible_condition(flexible_versions: &Option<String>) -> String {
                 format!("({}) <= version.0 && version.0 <= ({})", min, max)
             } else if let Some(base) = v.strip_suffix('+') {
                 format!("({}) <= version.0", base.trim())
-            } else if let Ok(single) = v.parse::<i16>() {
-                format!("version.0 == ({})", single)
+            } else if v.parse::<i16>().is_ok() {
+                format!("version.0 == ({})", v)
             } else {
                 "false".to_string()
             }
@@ -476,7 +533,7 @@ fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
                 "{}crate::protocol::serialization::encode_unsigned_varint(1u64, buf);\n",
                 guard
             ));
-            code.push_str(&format!("{}__val.encode_flexible(buf, true).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, field.name));
+            code.push_str(&format!("{}__val.encode(buf, version, true).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, field.name));
             code.push_str(&format!("{}}} else {{\n", guard));
             code.push_str(&format!(
                 "{}crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
@@ -488,11 +545,11 @@ fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
                 "{}if let Some(ref __val) = self.{} {{\n",
                 guard, rust_name
             ));
-            code.push_str(&format!("{}__val.encode(buf).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, field.name));
+            code.push_str(&format!("{}__val.encode(buf, version, false).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, field.name));
             code.push_str(&format!("{}}}\n", guard));
             code.push_str(&format!("{}}}\n", guard));
         } else {
-            code.push_str(&format!("{}self.{}.encode_flexible(buf, is_flexible).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, rust_name, field.name));
+            code.push_str(&format!("{}self.{}.encode(buf, version, is_flexible).map_err(|_| SerializationError::Encode(\"failed to encode {}\"))?;\n", guard, rust_name, field.name));
         }
     };
     if let Some(c) = cond {
@@ -531,10 +588,10 @@ fn generate_deserialize_field(field: &Field) -> String {
             c.push_str(&format!("{}if __present == 0 {{\n", guard));
             c.push_str(&format!("{}None\n", guard));
             c.push_str(&format!("{}}} else {{\n", guard));
-            c.push_str(&format!("{}Some(<{} as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?)\n", guard, inner_type, field.name));
+            c.push_str(&format!("{}Some(<{} as KafkaDeserialize>::decode(buf, version, true).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?)\n", guard, inner_type, field.name));
             c.push_str(&format!("{}}}\n", guard));
             c.push_str(&format!("{}}} else {{\n", guard));
-            c.push_str(&format!("{}Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?)\n", guard, inner_type, field.name));
+            c.push_str(&format!("{}Some(<{} as KafkaDeserialize>::decode(buf, version, false).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?)\n", guard, inner_type, field.name));
             c.push_str(&format!("{}}}\n", guard));
             c
         };
@@ -553,10 +610,10 @@ fn generate_deserialize_field(field: &Field) -> String {
         code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
         if field.tag.is_some() {
             code.push_str("            if is_flexible { Default::default() } else {\n");
-            code.push_str(&format!("                <{} as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
+            code.push_str(&format!("                <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
             code.push_str("            }\n");
         } else {
-            code.push_str(&format!("            <{} as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
+            code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
         }
         code.push_str("        } else {\n");
         code.push_str("            Default::default()\n");
@@ -567,10 +624,10 @@ fn generate_deserialize_field(field: &Field) -> String {
                 "        let {} = if is_flexible {{ Default::default() }} else {{\n",
                 rust_name
             ));
-            code.push_str(&format!("            <{} as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
+            code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?\n", rust_type, field.name));
             code.push_str("        };\n");
         } else {
-            code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?;\n", rust_name, rust_type, field.name));
+            code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| SerializationError::Decode(\"failed to decode {}\"))?;\n", rust_name, rust_type, field.name));
         }
     }
     code
@@ -580,50 +637,40 @@ fn generate_deserialize_field(field: &Field) -> String {
 fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String {
     let mut code = String::new();
     code.push_str(&format!("impl KafkaSerialize for {} {{\n", struct_name));
-    // Classic encode
-    code.push_str("    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {\n");
+    code.push_str("    fn encode<B: BufMut>(&self, buf: &mut B, version: crate::traits::ApiVersion, is_flexible: bool) -> Result<(), EncodeError> {\n");
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
-        if f.nullable_versions.is_some() && !nullable_has_builtin_flex(f) {
-            // Nullable struct: unwrap Option first
-            code.push_str(&format!(
-                "        if let Some(ref __val) = self.{} {{\n",
-                rust_name
-            ));
-            code.push_str(&format!("            __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", f.name));
-            code.push_str("        }\n");
-        } else {
-            code.push_str(&format!("        self.{}.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", rust_name, f.name));
+        let cond = field_version_condition(f);
+        let has_version_gate = cond.is_some();
+        let needs_presence = f.nullable_versions.is_some() && !nullable_has_builtin_flex(f);
+        if let Some(ref c) = cond {
+            code.push_str(&format!("        if {} {{\n", c));
         }
-    }
-    code.push_str("        Ok(())\n");
-    code.push_str("    }\n");
-    // Flexible encode
-    code.push_str("    fn encode_flexible<B: BufMut>(&self, buf: &mut B, is_flexible: bool) -> Result<(), EncodeError> {\n");
-    for f in fields {
-        let rust_name = escape_field_name(&camel_to_snake(&f.name));
-        if f.nullable_versions.is_some() {
-            // Nullable field: handle None with a presence marker in flexible mode
-            code.push_str("        if is_flexible {\n");
+        if needs_presence {
+            // Nullable struct: presence marker + sub-message encode
+            code.push_str("            if is_flexible {\n");
             code.push_str(&format!(
-                "            if let Some(ref __val) = self.{} {{\n",
+                "                if let Some(ref __val) = self.{} {{\n",
                 rust_name
             ));
-            code.push_str("                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);\n");
-            code.push_str(&format!("                __val.encode_flexible(buf, true).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", f.name));
+            code.push_str("                    crate::protocol::serialization::encode_unsigned_varint(1u64, buf);\n");
+            code.push_str(&format!("                    __val.encode(buf, version, true).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\" .into() }})?;\n", f.name));
+            code.push_str("                } else {\n");
+            code.push_str("                    crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n");
+            code.push_str("                }\n");
             code.push_str("            } else {\n");
-            code.push_str("                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n");
-            code.push_str("            }\n");
-            code.push_str("        } else {\n");
             code.push_str(&format!(
-                "            if let Some(ref __val) = self.{} {{\n",
+                "                if let Some(ref __val) = self.{} {{\n",
                 rust_name
             ));
-            code.push_str(&format!("                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", f.name));
+            code.push_str(&format!("                    __val.encode(buf, version, false).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\" .into() }})?;\n", f.name));
+            code.push_str("                }\n");
             code.push_str("            }\n");
-            code.push_str("        }\n");
         } else {
-            code.push_str(&format!("        self.{}.encode_flexible(buf, is_flexible).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\".into() }})?;\n", rust_name, f.name));
+            code.push_str(&format!("            self.{}.encode(buf, version, is_flexible).map_err(|_| EncodeError::ValueTooLarge {{ message: \"failed to encode {}\" .into() }})?;\n", rust_name, f.name));
+        }
+        if has_version_gate {
+            code.push_str("        }\n");
         }
     }
     code.push_str("        if is_flexible {\n");
@@ -638,103 +685,66 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
     code
 }
 
-/// Generate a `KafkaDeserialize` impl for a struct (main or nested).
 fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> String {
     let mut code = String::new();
     code.push_str(&format!("impl KafkaDeserialize for {} {{\n", struct_name));
-    // Classic decode
-    code.push_str("    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {\n");
+    code.push_str("    fn decode<B: Buf>(buf: &mut B, version: crate::traits::ApiVersion, is_flexible: bool) -> Result<Self, DecodeError> {\n");
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let rust_type = map_field_type(f);
-        code.push_str(&format!("        tracing::trace!(\"  [{{}}] classic decode field `{}` ({{}} bytes remaining)\", stringify!(Self), buf.remaining());\n", f.name));
-        if f.nullable_versions.is_some() && !nullable_has_builtin_flex(f) {
-            let inner_type = strip_option_wrapper(&rust_type);
-            code.push_str(&format!("        let {} = Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?);\n", rust_name, inner_type, f.name));
+        let cond = field_version_condition(f);
+        let has_version_gate = cond.is_some();
+        let needs_presence = f.nullable_versions.is_some() && !nullable_has_builtin_flex(f);
+        let is_tagged = f.tag.is_some();
+        let inner_type = if needs_presence {
+            strip_option_wrapper(&rust_type)
         } else {
-            code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?;\n", rust_name, rust_type, f.name));
-        }
-    }
-    code.push_str(&format!(
-        "        Ok(Self {{ {} }})\n",
-        fields
-            .iter()
-            .map(|f| escape_field_name(&camel_to_snake(&f.name)))
-            .collect::<Vec<_>>()
-            .join(", ")
-    ));
-    code.push_str("    }\n");
-    // Flexible decode
-    code.push_str("    fn decode_flexible<B: Buf>(buf: &mut B, version: crate::traits::ApiVersion, is_flexible: bool) -> Result<Self, DecodeError> {\n");
-    for f in fields {
-        let rust_name = escape_field_name(&camel_to_snake(&f.name));
-        let rust_type = map_field_type(f);
-        // Debug: log field being decoded with remaining bytes
-        code.push_str(&format!("        tracing::trace!(\"  [{{}}] decoding field `{}` ({{}} bytes remaining)\", stringify!(Self), buf.remaining());\n", f.name));
-        if f.nullable_versions.is_some() {
-            let is_tagged = f.tag.is_some();
-            let inner_type = strip_option_wrapper(&rust_type);
-            let has_builtin = nullable_has_builtin_flex(f);
+            String::new()
+        };
+        if needs_presence {
+            // Presence marker + sub-message decode
+            if let Some(ref c) = cond {
+                code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
+            }
+            code.push_str(&format!("        let {} = if is_flexible {{\n", rust_name));
+            code.push_str("            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+            code.push_str("            if __present == 0 {\n");
+            code.push_str("                None\n");
+            code.push_str("            } else {\n");
+            code.push_str(&format!("                Some(<{} as KafkaDeserialize>::decode(buf, version, true).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\" .into() }})?)\n", inner_type, f.name));
+            code.push_str("            }\n");
+            code.push_str("        } else {\n");
+            code.push_str(&format!("            Some(<{} as KafkaDeserialize>::decode(buf, version, false).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\" .into() }})?)\n", inner_type, f.name));
+            code.push_str("        };\n");
+            if has_version_gate {
+                code.push_str("        } else {\n");
+                code.push_str("            Default::default()\n");
+                code.push_str("        };\n");
+            }
+        } else if let Some(ref c) = cond {
+            // Version-gated non-nullable field
+            code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
             if is_tagged {
-                // Tagged nullable field: skip inline in flexible mode
-                code.push_str(&format!("        let {} = if is_flexible {{\n", rust_name));
-                code.push_str("            Default::default()\n");
-                code.push_str("        } else {\n");
-                if has_builtin {
-                    code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));
-                } else {
-                    code.push_str(&format!("            Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?)\n", inner_type, f.name));
-                }
-                code.push_str("        };\n");
+                code.push_str("            if is_flexible { Default::default() } else {\n");
+                code.push_str(&format!("                <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\" .into() }})?\n", rust_type, f.name));
+                code.push_str("            }\n");
             } else {
-                code.push_str(&format!("        let {} = if is_flexible {{\n", rust_name));
-                if has_builtin {
-                    // Types with built-in flexible encoding (string, bytes, array)
-                    code.push_str(&format!("            <{} as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));
-                } else {
-                    // Nullable struct fields: presence marker + sub-message
-                    code.push_str("            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
-                    code.push_str("            if __present == 0 {\n");
-                    code.push_str("                None\n");
-                    code.push_str("            } else {\n");
-                    code.push_str(&format!("                Some(<{} as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?)\n", inner_type, f.name));
-                    code.push_str("            }\n");
-                }
-                code.push_str("        } else {\n");
-                if has_builtin {
-                    code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));
-                } else {
-                    code.push_str(&format!("            Some(<{} as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?)\n", inner_type, f.name));
-                }
-                code.push_str("        };\n");
+                code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\" .into() }})?\n", rust_type, f.name));
             }
+            code.push_str("        } else {\n");
+            code.push_str("            Default::default()\n");
+            code.push_str("        };\n");
+        } else if is_tagged {
+            // Tagged field: skip when flexible
+            code.push_str(&format!(
+                "        let {} = if is_flexible {{ Default::default() }} else {{\n",
+                rust_name
+            ));
+            code.push_str(&format!("            <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\" .into() }})?\n", rust_type, f.name));
+            code.push_str("        };\n");
         } else {
-            // Check if this field is a tagged field (has a tag number)
-            let is_tagged = f.tag.is_some();
-            let cond = field_version_condition(f);
-            if is_tagged || cond.is_some() {
-                // For tagged fields: skip inline when flexible (will come from tag buffer)
-                // For version-gated fields: only decode when version matches
-                if let Some(c) = cond {
-                    code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
-                } else {
-                    code.push_str(&format!("        let {} = if true {{\n", rust_name));
-                }
-                if is_tagged {
-                    code.push_str("            if is_flexible {\n");
-                    code.push_str("                Default::default()\n");
-                    code.push_str("            } else {\n");
-                    code.push_str(&format!("                <{} as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));
-                    code.push_str("            }\n");
-                } else {
-                    code.push_str(&format!("            <{} as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?\n", rust_type, f.name));
-                }
-                code.push_str("        } else {\n");
-                code.push_str("            Default::default()\n");
-                code.push_str("        };\n");
-            } else {
-                code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\".into() }})?;\n", rust_name, rust_type, f.name));
-            }
+            // Unconditional field
+            code.push_str(&format!("        let {} = <{} as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| DecodeError::Protocol {{ message: \"failed to decode {}\" .into() }})?;\n", rust_name, rust_type, f.name));
         }
     }
     code.push_str("        if is_flexible {\n");
@@ -754,8 +764,6 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
     code
 }
 
-/// Recursively collect nested struct definitions from fields.
-/// Key = struct name (PascalCase), value = list of fields.
 fn collect_nested_structs(fields: &[Field], out: &mut BTreeMap<String, Vec<Field>>) {
     for field in fields {
         if !field.fields.is_empty() {

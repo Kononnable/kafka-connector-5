@@ -6,7 +6,8 @@
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use protocol::generated::{ApiVersionsRequest, ApiVersionsResponse};
-use protocol::traits::{is_flexible_api, ApiRequest, ApiResponse, ApiVersion, SerializationError};
+use protocol::generated::is_flexible_api;
+use protocol::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};

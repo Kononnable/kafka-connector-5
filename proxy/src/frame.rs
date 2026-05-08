@@ -142,7 +142,7 @@ pub fn request_body_offset(data: &[u8], is_flexible: bool) -> usize {
     // (2-byte i16 length prefix, -1 = null), even in flexible mode.
     // This is because older brokers must be able to parse the request header
     // from newer clients before they negotiate the version range.
-    let _: Option<String> = match KafkaDeserialize::decode(&mut cur) {
+    let _: Option<String> = match KafkaDeserialize::decode(&mut cur, protocol::traits::ApiVersion::new(0), false) {
         Ok(v) => v,
         Err(_) => return data.len(),
     };
@@ -205,11 +205,11 @@ pub fn try_parse_size(data: &[u8]) -> Option<usize> {
 /// from newer clients before version negotiation.
 pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequestHeader, DecodeError> {
     let mut buf: &[u8] = data;
-    let api_key = i16::decode(&mut buf)?;
-    let api_version = i16::decode(&mut buf)?;
-    let correlation_id = i32::decode(&mut buf)?;
+    let api_key = i16::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
+    let api_version = i16::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
+    let correlation_id = i32::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
     // ClientId is ALWAYS classic NULLABLE_STRING (i16 length prefix), not compact!
-    let client_id = match String::decode(&mut buf) {
+    let client_id = match String::decode(&mut buf, protocol::traits::ApiVersion::new(0), false) {
         Ok(s) => s,
         Err(DecodeError::UnexpectedNull) => String::new(),
         Err(e) => return Err(e),
@@ -240,7 +240,7 @@ pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequ
 ///   correlation_id (i32) + tag_buffer (unsigned varint)
 pub fn parse_response_header(data: &[u8], is_flexible: bool) -> Result<ParsedResponseHeader, DecodeError> {
     let mut buf: &[u8] = data;
-    let correlation_id = i32::decode(&mut buf)?;
+    let correlation_id = i32::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
     // For flexible (v1), skip tag_buffer bytes
     if is_flexible {
         let (tag_count, _) =
@@ -262,9 +262,9 @@ pub fn parse_response_header(data: &[u8], is_flexible: bool) -> Result<ParsedRes
 /// Whether a given API key uses flexible encoding at the given protocol version.
 /// This depends on the `flexibleVersions` field in each message's JSON definition.
 /// Whether a given API key uses flexible encoding at the given protocol version.
-/// Delegates to the protocol crate's definitive mapping.
+/// Delegates to the protocol crate's generated dispatch table.
 pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
-    protocol::traits::is_flexible_api(api_key, api_version)
+    protocol::generated::is_flexible_api(api_key, api_version)
 }
 
 /// Return the byte offset where the response body starts after the response header.
@@ -311,8 +311,8 @@ pub fn consume_frame(buf: &[u8], is_request: bool) -> Option<(ParsedFrame, usize
         // Determine header version by peeking at api_key/api_version
         let hdr_is_flex = {
             let mut peek: &[u8] = raw;
-            let ak = i16::decode(&mut peek).unwrap_or(0);
-            let av = i16::decode(&mut peek).unwrap_or(0);
+            let ak = i16::decode(&mut peek, protocol::traits::ApiVersion::new(0), false).unwrap_or(0);
+            let av = i16::decode(&mut peek, protocol::traits::ApiVersion::new(0), false).unwrap_or(0);
             is_flexible_api(ak, av)
         };
         match parse_request_header(raw, hdr_is_flex) {

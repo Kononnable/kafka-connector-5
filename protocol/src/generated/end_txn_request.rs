@@ -29,6 +29,9 @@ impl ApiRequest for EndTxnRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(5)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(3)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -40,18 +43,18 @@ impl ApiRequest for EndTxnRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = (3) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.transactional_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode TransactionalId"))?;
         self.producer_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ProducerId"))?;
         self.producer_epoch
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode ProducerEpoch"))?;
         self.committed
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Committed"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -63,15 +66,14 @@ impl ApiRequest for EndTxnRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = (3) <= version.0;
-        let transactional_id =
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TransactionalId"))?;
-        let producer_id = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
+        let transactional_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| SerializationError::Decode("failed to decode TransactionalId"))?;
+        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ProducerId"))?;
-        let producer_epoch = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode ProducerEpoch"))?;
-        let committed = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let committed = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode Committed"))?;
         Ok(Self {
             transactional_id,
@@ -82,51 +84,29 @@ impl ApiRequest for EndTxnRequest {
     }
 }
 impl KafkaSerialize for EndTxnRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.transactional_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TransactionalId".into(),
-            })?;
-        self.producer_id
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerId".into(),
-            })?;
-        self.producer_epoch
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerEpoch".into(),
-            })?;
-        self.committed
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Committed".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.transactional_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode TransactionalId".into(),
             })?;
         self.producer_id
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ProducerId".into(),
             })?;
         self.producer_epoch
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode ProducerEpoch".into(),
             })?;
         self.committed
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Committed".into(),
             })?;
@@ -139,92 +119,32 @@ impl KafkaSerialize for EndTxnRequest {
 }
 
 impl KafkaDeserialize for EndTxnRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `TransactionalId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let transactional_id =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TransactionalId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ProducerId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_id =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerId".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `ProducerEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_epoch =
-            <i16 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerEpoch".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Committed` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let committed =
-            <bool as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Committed".into(),
-            })?;
-        Ok(Self {
-            transactional_id,
-            producer_id,
-            producer_epoch,
-            committed,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `TransactionalId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let transactional_id =
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode TransactionalId".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `ProducerId` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_id = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let transactional_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerId".into(),
+                message: "failed to decode TransactionalId".into(),
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `ProducerEpoch` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let producer_epoch = <i16 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerEpoch".into(),
+        let producer_id =
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ProducerId".into(),
+                }
             })?;
-        tracing::trace!(
-            "  [{}] decoding field `Committed` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let committed = <bool as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Committed".into(),
+        let producer_epoch =
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode ProducerEpoch".into(),
+                }
+            })?;
+        let committed =
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
+                DecodeError::Protocol {
+                    message: "failed to decode Committed".into(),
+                }
             })?;
         if is_flexible {
             // Tagged fields (skip)

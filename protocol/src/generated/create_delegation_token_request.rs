@@ -39,6 +39,9 @@ impl ApiRequest for CreateDelegationTokenRequest {
     fn get_max_supported_version() -> crate::traits::ApiVersion {
         crate::traits::ApiVersion::new(3)
     }
+    fn get_min_flexible_version() -> crate::traits::ApiVersion {
+        crate::traits::ApiVersion::new(2)
+    }
     fn serialize(
         &self,
         version: crate::traits::ApiVersion,
@@ -50,10 +53,10 @@ impl ApiRequest for CreateDelegationTokenRequest {
             version.0,
             stringify!(Self)
         );
-        let is_flexible = (2) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (3) <= version.0 {
             self.owner_principal_type
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode OwnerPrincipalType"))?;
         } else if self.owner_principal_type.is_some() {
             return Err(SerializationError::Encode(
@@ -62,7 +65,7 @@ impl ApiRequest for CreateDelegationTokenRequest {
         }
         if (3) <= version.0 {
             self.owner_principal_name
-                .encode_flexible(buf, is_flexible)
+                .encode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode OwnerPrincipalName"))?;
         } else if self.owner_principal_name.is_some() {
             return Err(SerializationError::Encode(
@@ -70,10 +73,10 @@ impl ApiRequest for CreateDelegationTokenRequest {
             ));
         }
         self.renewers
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode Renewers"))?;
         self.max_lifetime_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Encode("failed to encode MaxLifetimeMs"))?;
         if is_flexible {
             // Tagged fields (none yet)
@@ -85,26 +88,23 @@ impl ApiRequest for CreateDelegationTokenRequest {
         version: crate::traits::ApiVersion,
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
-        let is_flexible = (2) <= version.0;
+        let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let owner_principal_type = if (3) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode OwnerPrincipalType"))?
         } else {
             Default::default()
         };
         let owner_principal_name = if (3) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
                 .map_err(|_| SerializationError::Decode("failed to decode OwnerPrincipalName"))?
         } else {
             Default::default()
         };
-        let renewers = <Vec<CreatableRenewers> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| SerializationError::Decode("failed to decode Renewers"))?;
-        let max_lifetime_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let renewers =
+            <Vec<CreatableRenewers> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| SerializationError::Decode("failed to decode Renewers"))?;
+        let max_lifetime_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| SerializationError::Decode("failed to decode MaxLifetimeMs"))?;
         Ok(Self {
             owner_principal_type,
@@ -115,77 +115,33 @@ impl ApiRequest for CreateDelegationTokenRequest {
     }
 }
 impl KafkaSerialize for CreateDelegationTokenRequest {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.owner_principal_type
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode OwnerPrincipalType".into(),
-            })?;
-        self.owner_principal_name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode OwnerPrincipalName".into(),
-            })?;
-        self.renewers
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Renewers".into(),
-            })?;
-        self.max_lifetime_ms
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MaxLifetimeMs".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
-        if is_flexible {
-            if let Some(ref __val) = self.owner_principal_type {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode_flexible(buf, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode OwnerPrincipalType".into(),
-                    })?;
-            } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-            }
-        } else {
-            if let Some(ref __val) = self.owner_principal_type {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+        if (3) <= version.0 {
+            self.owner_principal_type
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
                     message: "failed to encode OwnerPrincipalType".into(),
                 })?;
-            }
         }
-        if is_flexible {
-            if let Some(ref __val) = self.owner_principal_name {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode_flexible(buf, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode OwnerPrincipalName".into(),
-                    })?;
-            } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
-            }
-        } else {
-            if let Some(ref __val) = self.owner_principal_name {
-                __val.encode(buf).map_err(|_| EncodeError::ValueTooLarge {
+        if (3) <= version.0 {
+            self.owner_principal_name
+                .encode(buf, version, is_flexible)
+                .map_err(|_| EncodeError::ValueTooLarge {
                     message: "failed to encode OwnerPrincipalName".into(),
                 })?;
-            }
         }
         self.renewers
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode Renewers".into(),
             })?;
         self.max_lifetime_ms
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode MaxLifetimeMs".into(),
             })?;
@@ -198,115 +154,35 @@ impl KafkaSerialize for CreateDelegationTokenRequest {
 }
 
 impl KafkaDeserialize for CreateDelegationTokenRequest {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `OwnerPrincipalType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let owner_principal_type =
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode OwnerPrincipalType".into(),
-                }
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `OwnerPrincipalName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let owner_principal_name =
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode OwnerPrincipalName".into(),
-                }
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `Renewers` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let renewers = <Vec<CreatableRenewers> as KafkaDeserialize>::decode(buf).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Renewers".into(),
-            }
-        })?;
-        tracing::trace!(
-            "  [{}] classic decode field `MaxLifetimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let max_lifetime_ms =
-            <i64 as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MaxLifetimeMs".into(),
-            })?;
-        Ok(Self {
-            owner_principal_type,
-            owner_principal_name,
-            renewers,
-            max_lifetime_ms,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `OwnerPrincipalType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let owner_principal_type = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+        let owner_principal_type = if (3) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
                 |_| DecodeError::Protocol {
                     message: "failed to decode OwnerPrincipalType".into(),
                 },
             )?
         } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode OwnerPrincipalType".into(),
-                }
-            })?
+            Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `OwnerPrincipalName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let owner_principal_name = if is_flexible {
-            <Option<String> as KafkaDeserialize>::decode_flexible(buf, version, true).map_err(
+        let owner_principal_name = if (3) <= version.0 {
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
                 |_| DecodeError::Protocol {
                     message: "failed to decode OwnerPrincipalName".into(),
                 },
             )?
         } else {
-            <Option<String> as KafkaDeserialize>::decode(buf).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode OwnerPrincipalName".into(),
-                }
-            })?
+            Default::default()
         };
-        tracing::trace!(
-            "  [{}] decoding field `Renewers` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let renewers = <Vec<CreatableRenewers> as KafkaDeserialize>::decode_flexible(
-            buf,
-            version,
-            is_flexible,
-        )
-        .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Renewers".into(),
-        })?;
-        tracing::trace!(
-            "  [{}] decoding field `MaxLifetimeMs` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let max_lifetime_ms = <i64 as KafkaDeserialize>::decode_flexible(buf, version, is_flexible)
+        let renewers =
+            <Vec<CreatableRenewers> as KafkaDeserialize>::decode(buf, version, is_flexible)
+                .map_err(|_| DecodeError::Protocol {
+                    message: "failed to decode Renewers".into(),
+                })?;
+        let max_lifetime_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
             .map_err(|_| DecodeError::Protocol {
                 message: "failed to decode MaxLifetimeMs".into(),
             })?;
@@ -324,31 +200,19 @@ impl KafkaDeserialize for CreateDelegationTokenRequest {
 }
 
 impl KafkaSerialize for CreatableRenewers {
-    fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), EncodeError> {
-        self.principal_type
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PrincipalType".into(),
-            })?;
-        self.principal_name
-            .encode(buf)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PrincipalName".into(),
-            })?;
-        Ok(())
-    }
-    fn encode_flexible<B: BufMut>(
+    fn encode<B: BufMut>(
         &self,
         buf: &mut B,
+        version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<(), EncodeError> {
         self.principal_type
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PrincipalType".into(),
             })?;
         self.principal_name
-            .encode_flexible(buf, is_flexible)
+            .encode(buf, version, is_flexible)
             .map_err(|_| EncodeError::ValueTooLarge {
                 message: "failed to encode PrincipalName".into(),
             })?;
@@ -361,57 +225,19 @@ impl KafkaSerialize for CreatableRenewers {
 }
 
 impl KafkaDeserialize for CreatableRenewers {
-    fn decode<B: Buf>(buf: &mut B) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] classic decode field `PrincipalType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let principal_type =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PrincipalType".into(),
-            })?;
-        tracing::trace!(
-            "  [{}] classic decode field `PrincipalName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let principal_name =
-            <String as KafkaDeserialize>::decode(buf).map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PrincipalName".into(),
-            })?;
-        Ok(Self {
-            principal_type,
-            principal_name,
-        })
-    }
-    fn decode_flexible<B: Buf>(
+    fn decode<B: Buf>(
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
     ) -> Result<Self, DecodeError> {
-        tracing::trace!(
-            "  [{}] decoding field `PrincipalType` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let principal_type =
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode PrincipalType".into(),
-                },
-            )?;
-        tracing::trace!(
-            "  [{}] decoding field `PrincipalName` ({} bytes remaining)",
-            stringify!(Self),
-            buf.remaining()
-        );
-        let principal_name =
-            <String as KafkaDeserialize>::decode_flexible(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode PrincipalName".into(),
-                },
-            )?;
+        let principal_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalType".into(),
+            })?;
+        let principal_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
+            .map_err(|_| DecodeError::Protocol {
+                message: "failed to decode PrincipalName".into(),
+            })?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
