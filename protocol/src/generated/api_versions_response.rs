@@ -128,48 +128,51 @@ impl ApiResponse for ApiVersionsResponse {
             ));
         }
         if is_flexible {
-            let mut __tag_count = 0u64;
+            let mut tag_count = 0u64;
             if !self.supported_features.is_empty() {
-                __tag_count += 1;
+                tag_count += 1;
             }
             if self.finalized_features_epoch != 0 {
-                __tag_count += 1;
+                tag_count += 1;
             }
             if !self.finalized_features.is_empty() {
-                __tag_count += 1;
+                tag_count += 1;
             }
             if self.zk_migration_ready {
-                __tag_count += 1;
+                tag_count += 1;
             }
-            encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(tag_count, buf);
             if !self.supported_features.is_empty() {
                 encode_unsigned_varint(0u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.supported_features.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.supported_features
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
             if self.finalized_features_epoch != 0 {
                 encode_unsigned_varint(1u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
+                let mut tmp_buf = bytes::BytesMut::new();
                 self.finalized_features_epoch
-                    .encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
             if !self.finalized_features.is_empty() {
                 encode_unsigned_varint(2u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.finalized_features.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.finalized_features
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
             if self.zk_migration_ready {
                 encode_unsigned_varint(3u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.zk_migration_ready.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.zk_migration_ready
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
         }
         Ok(())
@@ -220,8 +223,8 @@ impl ApiResponse for ApiVersionsResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = decode_unsigned_varint(buf)?;
-            for _ in 0..__tag_count {
+            let (tag_count, _) = decode_unsigned_varint(buf)?;
+            for _ in 0..tag_count {
                 let (__tag_id, _) = decode_unsigned_varint(buf)?;
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
@@ -280,48 +283,51 @@ impl KafkaSerialize for ApiVersionsResponse {
             self.zk_migration_ready.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            let mut __tag_count = 0u64;
+            let mut tag_count = 0u64;
             if !self.supported_features.is_empty() {
-                __tag_count += 1;
+                tag_count += 1;
             }
             if self.finalized_features_epoch != 0 {
-                __tag_count += 1;
+                tag_count += 1;
             }
             if !self.finalized_features.is_empty() {
-                __tag_count += 1;
+                tag_count += 1;
             }
             if self.zk_migration_ready {
-                __tag_count += 1;
+                tag_count += 1;
             }
-            encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(tag_count, buf);
             if !self.supported_features.is_empty() {
                 encode_unsigned_varint(0u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.supported_features.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.supported_features
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
             if self.finalized_features_epoch != 0 {
                 encode_unsigned_varint(1u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
+                let mut tmp_buf = bytes::BytesMut::new();
                 self.finalized_features_epoch
-                    .encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
             if !self.finalized_features.is_empty() {
                 encode_unsigned_varint(2u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.finalized_features.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.finalized_features
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
             if self.zk_migration_ready {
                 encode_unsigned_varint(3u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.zk_migration_ready.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.zk_migration_ready
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
         }
         Ok(())
@@ -378,8 +384,8 @@ impl KafkaDeserialize for ApiVersionsResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = decode_unsigned_varint(buf)?;
-            for _ in 0..__tag_count {
+            let (tag_count, _) = decode_unsigned_varint(buf)?;
+            for _ in 0..tag_count {
                 let (__tag_id, _) = decode_unsigned_varint(buf)?;
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {

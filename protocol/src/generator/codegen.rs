@@ -54,8 +54,7 @@ pub fn generate_all() -> GeneratedFiles {
     }
 
     // Build apiKey → (request_name, response_name) pairing.
-    let mut pairs: HashMap<i16, (String, String)> =
-        HashMap::new();
+    let mut pairs: HashMap<i16, (String, String)> = HashMap::new();
     for msg in &parsed {
         if let Some(ak) = msg.api_key {
             let entry = pairs
@@ -524,17 +523,14 @@ fn generate_tagged_encode_body(fields: &[Field]) -> String {
         code.push_str("            encode_unsigned_varint(0u64, buf);\n");
         return code;
     }
-    code.push_str("            let mut __tag_count = 0u64;\n");
+    code.push_str("            let mut tag_count = 0u64;\n");
     for f in &tagged {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         if let Some(check) = non_default_check(&rust_name, f) {
-            code.push_str(&format!(
-                "            if {} {{ __tag_count += 1; }}\n",
-                check
-            ));
+            code.push_str(&format!("            if {} {{ tag_count += 1; }}\n", check));
         }
     }
-    code.push_str("            encode_unsigned_varint(__tag_count, buf);\n");
+    code.push_str("            encode_unsigned_varint(tag_count, buf);\n");
     for f in &tagged {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let _inner_type = map_field_type(f);
@@ -546,22 +542,22 @@ fn generate_tagged_encode_body(fields: &[Field]) -> String {
                 "                encode_unsigned_varint({}u64, buf);\n",
                 tag_id
             ));
-            code.push_str("                let mut __tmp = bytes::BytesMut::new();\n");
+            code.push_str("                let mut tmp_buf = bytes::BytesMut::new();\n");
             if needs_presence {
                 code.push_str(&format!(
-                    "                if let Some(ref __val) = self.{} {{\n",
+                    "                if let Some(ref val) = self.{} {{\n",
                     rust_name
                 ));
-                code.push_str("                    __val.encode(&mut __tmp, version, true)?;\n");
+                code.push_str("                    val.encode(&mut tmp_buf, version, true)?;\n");
                 code.push_str("                }\n");
             } else {
                 code.push_str(&format!(
-                    "                self.{}.encode(&mut __tmp, version, true)?;\n",
+                    "                self.{}.encode(&mut tmp_buf, version, true)?;\n",
                     rust_name
                 ));
             }
-            code.push_str("                encode_unsigned_varint(__tmp.len() as u64, buf);\n");
-            code.push_str("                buf.put_slice(&__tmp);\n");
+            code.push_str("                encode_unsigned_varint(tmp_buf.len() as u64, buf);\n");
+            code.push_str("                buf.put_slice(&tmp_buf);\n");
             code.push_str("            }\n");
         }
     }
@@ -577,8 +573,8 @@ fn generate_tagged_decode_body(fields: &[Field]) -> String {
         code.push_str("            let (_tag_count, _) = decode_unsigned_varint(buf)?;\n");
         return code;
     }
-    code.push_str("            let (__tag_count, _) = decode_unsigned_varint(buf)?;\n");
-    code.push_str("            for _ in 0..__tag_count {\n");
+    code.push_str("            let (tag_count, _) = decode_unsigned_varint(buf)?;\n");
+    code.push_str("            for _ in 0..tag_count {\n");
     code.push_str("                let (__tag_id, _) = decode_unsigned_varint(buf)?;\n");
     code.push_str("                let (__tag_len, _) = decode_unsigned_varint(buf)?;\n");
     code.push_str("                match __tag_id {\n");
@@ -642,20 +638,20 @@ fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
         if needs_presence {
             code.push_str(&format!("{}if is_flexible {{\n", guard));
             code.push_str(&format!(
-                "{}if let Some(ref __val) = self.{} {{\n",
+                "{}if let Some(ref val) = self.{} {{\n",
                 guard, rust_name
             ));
             code.push_str(&format!("{}encode_unsigned_varint(1u64, buf);\n", guard));
-            code.push_str(&format!("{}__val.encode(buf, version, true)?;\n", guard));
+            code.push_str(&format!("{}val.encode(buf, version, true)?;\n", guard));
             code.push_str(&format!("{}}} else {{\n", guard));
             code.push_str(&format!("{}encode_unsigned_varint(0u64, buf);\n", guard));
             code.push_str(&format!("{}}}\n", guard));
             code.push_str(&format!("{}}} else {{\n", guard));
             code.push_str(&format!(
-                "{}if let Some(ref __val) = self.{} {{\n",
+                "{}if let Some(ref val) = self.{} {{\n",
                 guard, rust_name
             ));
-            code.push_str(&format!("{}__val.encode(buf, version, false)?;\n", guard));
+            code.push_str(&format!("{}val.encode(buf, version, false)?;\n", guard));
             code.push_str(&format!("{}}}\n", guard));
             code.push_str(&format!("{}}}\n", guard));
         } else {
@@ -698,10 +694,10 @@ fn generate_deserialize_field(field: &Field) -> String {
             let mut c = String::new();
             c.push_str(&format!("{}if is_flexible {{\n", guard));
             c.push_str(&format!(
-                "{}let (__present, _) = decode_unsigned_varint(buf)?;\n",
+                "{}let (present, _) = decode_unsigned_varint(buf)?;\n",
                 guard
             ));
-            c.push_str(&format!("{}if __present == 0 {{\n", guard));
+            c.push_str(&format!("{}if present == 0 {{\n", guard));
             c.push_str(&format!("{}None\n", guard));
             c.push_str(&format!("{}}} else {{\n", guard));
             c.push_str(&format!(
@@ -786,20 +782,20 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
         if needs_presence {
             code.push_str("            if is_flexible {\n");
             code.push_str(&format!(
-                "                if let Some(ref __val) = self.{} {{\n",
+                "                if let Some(ref val) = self.{} {{\n",
                 rust_name
             ));
             code.push_str("                    encode_unsigned_varint(1u64, buf);\n");
-            code.push_str("                    __val.encode(buf, version, true)?;\n");
+            code.push_str("                    val.encode(buf, version, true)?;\n");
             code.push_str("                } else {\n");
             code.push_str("                    encode_unsigned_varint(0u64, buf);\n");
             code.push_str("                }\n");
             code.push_str("            } else {\n");
             code.push_str(&format!(
-                "                if let Some(ref __val) = self.{} {{\n",
+                "                if let Some(ref val) = self.{} {{\n",
                 rust_name
             ));
-            code.push_str("                    __val.encode(buf, version, false)?;\n");
+            code.push_str("                    val.encode(buf, version, false)?;\n");
             code.push_str("                }\n");
             code.push_str("            }\n");
         } else if is_tagged && !has_version_gate {
@@ -848,8 +844,8 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
                 code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
             }
             code.push_str(&format!("        let {} = if is_flexible {{\n", rust_name));
-            code.push_str("            let (__present, _) = decode_unsigned_varint(buf)?;\n");
-            code.push_str("            if __present == 0 {\n");
+            code.push_str("            let (present, _) = decode_unsigned_varint(buf)?;\n");
+            code.push_str("            if present == 0 {\n");
             code.push_str("                None\n");
             code.push_str("            } else {\n");
             code.push_str("                Some(KafkaDeserialize::decode(buf, version, true)?)\n");

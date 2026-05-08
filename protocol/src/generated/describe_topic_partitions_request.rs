@@ -58,15 +58,15 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
         self.response_partition_limit
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.cursor {
+            if let Some(ref val) = self.cursor {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.cursor {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.cursor {
+                val.encode(buf, version, false)?;
             }
         }
         if is_flexible {
@@ -79,8 +79,8 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let response_partition_limit = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let cursor = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)
@@ -109,15 +109,15 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
         self.response_partition_limit
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.cursor {
+            if let Some(ref val) = self.cursor {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.cursor {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.cursor {
+                val.encode(buf, version, false)?;
             }
         }
         if is_flexible {
@@ -136,8 +136,8 @@ impl KafkaDeserialize for DescribeTopicPartitionsRequest {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let response_partition_limit = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let cursor = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)

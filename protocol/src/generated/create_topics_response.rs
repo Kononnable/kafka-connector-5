@@ -256,18 +256,18 @@ impl KafkaSerialize for CreatableTopicResult {
             self.configs.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            let mut __tag_count = 0u64;
+            let mut tag_count = 0u64;
             if self.topic_config_error_code != 0 {
-                __tag_count += 1;
+                tag_count += 1;
             }
-            encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(tag_count, buf);
             if self.topic_config_error_code != 0 {
                 encode_unsigned_varint(0u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
+                let mut tmp_buf = bytes::BytesMut::new();
                 self.topic_config_error_code
-                    .encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                    .encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
         }
         Ok(())
@@ -317,8 +317,8 @@ impl KafkaDeserialize for CreatableTopicResult {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = decode_unsigned_varint(buf)?;
-            for _ in 0..__tag_count {
+            let (tag_count, _) = decode_unsigned_varint(buf)?;
+            for _ in 0..tag_count {
                 let (__tag_id, _) = decode_unsigned_varint(buf)?;
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {

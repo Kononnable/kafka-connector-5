@@ -70,15 +70,15 @@ impl ApiResponse for ShareGroupHeartbeatResponse {
         self.heartbeat_interval_ms
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.assignment {
+            if let Some(ref val) = self.assignment {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.assignment {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.assignment {
+                val.encode(buf, version, false)?;
             }
         }
         if is_flexible {
@@ -95,8 +95,8 @@ impl ApiResponse for ShareGroupHeartbeatResponse {
         let member_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let heartbeat_interval_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let assignment = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)
@@ -133,15 +133,15 @@ impl KafkaSerialize for ShareGroupHeartbeatResponse {
         self.heartbeat_interval_ms
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.assignment {
+            if let Some(ref val) = self.assignment {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.assignment {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.assignment {
+                val.encode(buf, version, false)?;
             }
         }
         if is_flexible {
@@ -164,8 +164,8 @@ impl KafkaDeserialize for ShareGroupHeartbeatResponse {
         let member_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let heartbeat_interval_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let assignment = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)

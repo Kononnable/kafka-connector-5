@@ -131,17 +131,17 @@ impl ApiResponse for ProduceResponse {
             ));
         }
         if is_flexible {
-            let mut __tag_count = 0u64;
+            let mut tag_count = 0u64;
             if !self.node_endpoints.is_empty() {
-                __tag_count += 1;
+                tag_count += 1;
             }
-            encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(tag_count, buf);
             if !self.node_endpoints.is_empty() {
                 encode_unsigned_varint(0u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.node_endpoints.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.node_endpoints.encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
         }
         Ok(())
@@ -164,8 +164,8 @@ impl ApiResponse for ProduceResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = decode_unsigned_varint(buf)?;
-            for _ in 0..__tag_count {
+            let (tag_count, _) = decode_unsigned_varint(buf)?;
+            for _ in 0..tag_count {
                 let (__tag_id, _) = decode_unsigned_varint(buf)?;
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
@@ -200,17 +200,17 @@ impl KafkaSerialize for ProduceResponse {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            let mut __tag_count = 0u64;
+            let mut tag_count = 0u64;
             if !self.node_endpoints.is_empty() {
-                __tag_count += 1;
+                tag_count += 1;
             }
-            encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(tag_count, buf);
             if !self.node_endpoints.is_empty() {
                 encode_unsigned_varint(0u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.node_endpoints.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.node_endpoints.encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
         }
         Ok(())
@@ -239,8 +239,8 @@ impl KafkaDeserialize for ProduceResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = decode_unsigned_varint(buf)?;
-            for _ in 0..__tag_count {
+            let (tag_count, _) = decode_unsigned_varint(buf)?;
+            for _ in 0..tag_count {
                 let (__tag_id, _) = decode_unsigned_varint(buf)?;
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
@@ -444,17 +444,17 @@ impl KafkaSerialize for PartitionProduceResponse {
             self.current_leader.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            let mut __tag_count = 0u64;
+            let mut tag_count = 0u64;
             if self.current_leader != Default::default() {
-                __tag_count += 1;
+                tag_count += 1;
             }
-            encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(tag_count, buf);
             if self.current_leader != Default::default() {
                 encode_unsigned_varint(0u64, buf);
-                let mut __tmp = bytes::BytesMut::new();
-                self.current_leader.encode(&mut __tmp, version, true)?;
-                encode_unsigned_varint(__tmp.len() as u64, buf);
-                buf.put_slice(&__tmp);
+                let mut tmp_buf = bytes::BytesMut::new();
+                self.current_leader.encode(&mut tmp_buf, version, true)?;
+                encode_unsigned_varint(tmp_buf.len() as u64, buf);
+                buf.put_slice(&tmp_buf);
             }
         }
         Ok(())
@@ -500,8 +500,8 @@ impl KafkaDeserialize for PartitionProduceResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = decode_unsigned_varint(buf)?;
-            for _ in 0..__tag_count {
+            let (tag_count, _) = decode_unsigned_varint(buf)?;
+            for _ in 0..tag_count {
                 let (__tag_id, _) = decode_unsigned_varint(buf)?;
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {

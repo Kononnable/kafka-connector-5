@@ -160,15 +160,15 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
         self.rebalance_timeout_ms
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.topology {
+            if let Some(ref val) = self.topology {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.topology {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.topology {
+                val.encode(buf, version, false)?;
             }
         }
         self.active_tasks.encode(buf, version, is_flexible)?;
@@ -176,15 +176,15 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
         self.warmup_tasks.encode(buf, version, is_flexible)?;
         self.process_id.encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.user_endpoint {
+            if let Some(ref val) = self.user_endpoint {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.user_endpoint {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.user_endpoint {
+                val.encode(buf, version, false)?;
             }
         }
         self.client_tags.encode(buf, version, is_flexible)?;
@@ -207,8 +207,8 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
         let rack_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topology = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)
@@ -221,8 +221,8 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
         let warmup_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let process_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let user_endpoint = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)
@@ -275,15 +275,15 @@ impl KafkaSerialize for StreamsGroupHeartbeatRequest {
         self.rebalance_timeout_ms
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.topology {
+            if let Some(ref val) = self.topology {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.topology {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.topology {
+                val.encode(buf, version, false)?;
             }
         }
         self.active_tasks.encode(buf, version, is_flexible)?;
@@ -291,15 +291,15 @@ impl KafkaSerialize for StreamsGroupHeartbeatRequest {
         self.warmup_tasks.encode(buf, version, is_flexible)?;
         self.process_id.encode(buf, version, is_flexible)?;
         if is_flexible {
-            if let Some(ref __val) = self.user_endpoint {
+            if let Some(ref val) = self.user_endpoint {
                 encode_unsigned_varint(1u64, buf);
-                __val.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
             } else {
                 encode_unsigned_varint(0u64, buf);
             }
         } else {
-            if let Some(ref __val) = self.user_endpoint {
-                __val.encode(buf, version, false)?;
+            if let Some(ref val) = self.user_endpoint {
+                val.encode(buf, version, false)?;
             }
         }
         self.client_tags.encode(buf, version, is_flexible)?;
@@ -328,8 +328,8 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
         let rack_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topology = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)
@@ -342,8 +342,8 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
         let warmup_tasks = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let process_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let user_endpoint = if is_flexible {
-            let (__present, _) = decode_unsigned_varint(buf)?;
-            if __present == 0 {
+            let (present, _) = decode_unsigned_varint(buf)?;
+            if present == 0 {
                 None
             } else {
                 Some(KafkaDeserialize::decode(buf, version, true)?)
