@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -46,21 +46,11 @@ impl ApiRequest for PushTelemetryRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.client_instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ClientInstanceId"))?;
-        self.subscription_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode SubscriptionId"))?;
-        self.terminating
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Terminating"))?;
-        self.compression_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode CompressionType"))?;
-        self.metrics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Metrics"))?;
+        self.client_instance_id.encode(buf, version, is_flexible)?;
+        self.subscription_id.encode(buf, version, is_flexible)?;
+        self.terminating.encode(buf, version, is_flexible)?;
+        self.compression_type.encode(buf, version, is_flexible)?;
+        self.metrics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -72,16 +62,11 @@ impl ApiRequest for PushTelemetryRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ClientInstanceId"))?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode SubscriptionId"))?;
-        let terminating = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Terminating"))?;
-        let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode CompressionType"))?;
-        let metrics = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Metrics"))?;
+        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let terminating = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let metrics = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             client_instance_id,
             subscription_id,
@@ -97,32 +82,12 @@ impl KafkaSerialize for PushTelemetryRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.client_instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientInstanceId".into(),
-            })?;
-        self.subscription_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SubscriptionId".into(),
-            })?;
-        self.terminating
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Terminating".into(),
-            })?;
-        self.compression_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CompressionType".into(),
-            })?;
-        self.metrics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Metrics".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.client_instance_id.encode(buf, version, is_flexible)?;
+        self.subscription_id.encode(buf, version, is_flexible)?;
+        self.terminating.encode(buf, version, is_flexible)?;
+        self.compression_type.encode(buf, version, is_flexible)?;
+        self.metrics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -136,31 +101,12 @@ impl KafkaDeserialize for PushTelemetryRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ClientInstanceId".into(),
-            })?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SubscriptionId".into(),
-            })?;
-        let terminating =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Terminating".into(),
-                }
-            })?;
-        let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CompressionType".into(),
-            })?;
-        let metrics =
-            <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Metrics".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let terminating = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let compression_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let metrics = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

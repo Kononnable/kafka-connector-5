@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -52,9 +52,7 @@ impl ApiRequest for DescribeQuorumRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -66,8 +64,7 @@ impl ApiRequest for DescribeQuorumRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self { topics })
     }
 }
@@ -77,12 +74,8 @@ impl KafkaSerialize for DescribeQuorumRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -96,11 +89,8 @@ impl KafkaDeserialize for DescribeQuorumRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let topics = <Vec<TopicData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -115,12 +105,8 @@ impl KafkaSerialize for PartitionData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition_index
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.partition_index.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -134,11 +120,8 @@ impl KafkaDeserialize for PartitionData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -153,17 +136,9 @@ impl KafkaSerialize for TopicData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.topic_name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicName".into(),
-            })?;
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.topic_name.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -177,19 +152,10 @@ impl KafkaDeserialize for TopicData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let topic_name =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicName".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let topic_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions =
-            <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                },
-            )?;
+            <Vec<PartitionData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

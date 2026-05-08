@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -91,12 +91,8 @@ impl ApiResponse for DescribeConfigsResponse {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
-        self.results
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Results"))?;
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -108,11 +104,9 @@ impl ApiResponse for DescribeConfigsResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let results =
-            <Vec<DescribeConfigsResult> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Results"))?;
+            <Vec<DescribeConfigsResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             throttle_time_ms,
             results,
@@ -125,17 +119,9 @@ impl KafkaSerialize for DescribeConfigsResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ThrottleTimeMs".into(),
-            })?;
-        self.results
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Results".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -149,16 +135,10 @@ impl KafkaDeserialize for DescribeConfigsResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let results =
-            <Vec<DescribeConfigsResult> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Results".into(),
-                })?;
+            <Vec<DescribeConfigsResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -176,54 +156,22 @@ impl KafkaSerialize for DescribeConfigsResourceResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.value
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Value".into(),
-            })?;
-        self.read_only
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ReadOnly".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.name.encode(buf, version, is_flexible)?;
+        self.value.encode(buf, version, is_flexible)?;
+        self.read_only.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.config_source
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ConfigSource".into(),
-                })?;
+            self.config_source.encode(buf, version, is_flexible)?;
         }
-        self.is_sensitive
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IsSensitive".into(),
-            })?;
+        self.is_sensitive.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.synonyms
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Synonyms".into(),
-                })?;
+            self.synonyms.encode(buf, version, is_flexible)?;
         }
         if (3) <= version.0 {
-            self.config_type
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ConfigType".into(),
-                })?;
+            self.config_type.encode(buf, version, is_flexible)?;
         }
         if (3) <= version.0 {
-            self.documentation
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Documentation".into(),
-                })?;
+            self.documentation.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -238,61 +186,28 @@ impl KafkaDeserialize for DescribeConfigsResourceResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
-            })?;
-        let value = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Value".into(),
-            })?;
-        let read_only =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ReadOnly".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let value = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let read_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let config_source = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ConfigSource".into(),
-                }
-            })?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let is_sensitive =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode IsSensitive".into(),
-                }
-            })?;
+        let is_sensitive = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let synonyms = if (1) <= version.0 {
-            <Vec<DescribeConfigsSynonym> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Synonyms".into(),
-                })?
+            <Vec<DescribeConfigsSynonym> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let config_type = if (3) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ConfigType".into(),
-                }
-            })?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let documentation = if (3) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Documentation".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -319,32 +234,12 @@ impl KafkaSerialize for DescribeConfigsResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.error_message
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorMessage".into(),
-            })?;
-        self.resource_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResourceType".into(),
-            })?;
-        self.resource_name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResourceName".into(),
-            })?;
-        self.configs
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Configs".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.error_message.encode(buf, version, is_flexible)?;
+        self.resource_type.encode(buf, version, is_flexible)?;
+        self.resource_name.encode(buf, version, is_flexible)?;
+        self.configs.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -358,35 +253,17 @@ impl KafkaDeserialize for DescribeConfigsResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
-        let error_message = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorMessage".into(),
-            })?;
-        let resource_type =
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ResourceType".into(),
-                }
-            })?;
-        let resource_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResourceName".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_message =
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let resource_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let resource_name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let configs = <Vec<DescribeConfigsResourceResult> as KafkaDeserialize>::decode(
             buf,
             version,
             is_flexible,
-        )
-        .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Configs".into(),
-        })?;
+        )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -407,27 +284,15 @@ impl KafkaSerialize for DescribeConfigsSynonym {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (1) <= version.0 {
-            self.name.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Name".into(),
-                }
-            })?;
+            self.name.encode(buf, version, is_flexible)?;
         }
         if (1) <= version.0 {
-            self.value.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Value".into(),
-                }
-            })?;
+            self.value.encode(buf, version, is_flexible)?;
         }
         if (1) <= version.0 {
-            self.source.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Source".into(),
-                }
-            })?;
+            self.source.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -442,31 +307,19 @@ impl KafkaDeserialize for DescribeConfigsSynonym {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (1) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let value = if (1) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Value".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let source = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Source".into(),
-                }
-            })?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -65,42 +65,25 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
-        self.member_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MemberEpoch"))?;
-        self.instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode InstanceId"))?;
-        self.rack_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.member_id.encode(buf, version, is_flexible)?;
+        self.member_epoch.encode(buf, version, is_flexible)?;
+        self.instance_id.encode(buf, version, is_flexible)?;
+        self.rack_id.encode(buf, version, is_flexible)?;
         self.rebalance_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RebalanceTimeoutMs"))?;
+            .encode(buf, version, is_flexible)?;
         self.subscribed_topic_names
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode SubscribedTopicNames"))?;
+            .encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
             self.subscribed_topic_regex
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode SubscribedTopicRegex"))?;
+                .encode(buf, version, is_flexible)?;
         } else if self.subscribed_topic_regex.is_some() {
             return Err(SerializationError::Encode(
                 "field 'SubscribedTopicRegex' is not available in this version",
             ));
         }
-        self.server_assignor
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ServerAssignor"))?;
-        self.topic_partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode TopicPartitions"))?;
+        self.server_assignor.encode(buf, version, is_flexible)?;
+        self.topic_partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -112,33 +95,23 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MemberEpoch"))?;
-        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode InstanceId"))?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RackId"))?;
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RebalanceTimeoutMs"))?;
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let subscribed_topic_names =
-            <Option<Vec<String>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode SubscribedTopicNames"))?;
+            <Option<Vec<String>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let subscribed_topic_regex = if (1) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode SubscribedTopicRegex"))?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let server_assignor =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ServerAssignor"))?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topic_partitions =
-            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TopicPartitions"))?;
+            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             group_id,
             member_id,
@@ -159,59 +132,22 @@ impl KafkaSerialize for ConsumerGroupHeartbeatRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupId".into(),
-            })?;
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberId".into(),
-            })?;
-        self.member_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberEpoch".into(),
-            })?;
-        self.instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode InstanceId".into(),
-            })?;
-        self.rack_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RackId".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.member_id.encode(buf, version, is_flexible)?;
+        self.member_epoch.encode(buf, version, is_flexible)?;
+        self.instance_id.encode(buf, version, is_flexible)?;
+        self.rack_id.encode(buf, version, is_flexible)?;
         self.rebalance_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RebalanceTimeoutMs".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         self.subscribed_topic_names
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SubscribedTopicNames".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
             self.subscribed_topic_regex
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode SubscribedTopicRegex".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
-        self.server_assignor
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ServerAssignor".into(),
-            })?;
-        self.topic_partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicPartitions".into(),
-            })?;
+        self.server_assignor.encode(buf, version, is_flexible)?;
+        self.topic_partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -225,63 +161,24 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let group_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GroupId".into(),
-                }
-            })?;
-        let member_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
-            })?;
-        let member_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberEpoch".into(),
-                }
-            })?;
-        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode InstanceId".into(),
-        })?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RackId".into(),
-            })?;
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RebalanceTimeoutMs".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let subscribed_topic_names =
-            <Option<Vec<String>> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode SubscribedTopicNames".into(),
-                },
-            )?;
+            <Option<Vec<String>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let subscribed_topic_regex = if (1) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode SubscribedTopicRegex".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let server_assignor =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ServerAssignor".into(),
-                },
-            )?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topic_partitions =
-            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TopicPartitions".into(),
-            })?;
+            <Option<Vec<TopicPartitions>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -307,17 +204,9 @@ impl KafkaSerialize for TopicPartitions {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.topic_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicId".into(),
-            })?;
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.topic_id.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -331,17 +220,9 @@ impl KafkaDeserialize for TopicPartitions {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let topic_id =
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Partitions".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let topic_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

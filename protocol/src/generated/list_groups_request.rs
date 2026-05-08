@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -43,18 +43,14 @@ impl ApiRequest for ListGroupsRequest {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (4) <= version.0 {
-            self.states_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode StatesFilter"))?;
+            self.states_filter.encode(buf, version, is_flexible)?;
         } else if !self.states_filter.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'StatesFilter' is not available in this version",
             ));
         }
         if (5) <= version.0 {
-            self.types_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode TypesFilter"))?;
+            self.types_filter.encode(buf, version, is_flexible)?;
         } else if !self.types_filter.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'TypesFilter' is not available in this version",
@@ -72,14 +68,12 @@ impl ApiRequest for ListGroupsRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let states_filter = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode StatesFilter"))?
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let types_filter = if (5) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TypesFilter"))?
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -95,20 +89,12 @@ impl KafkaSerialize for ListGroupsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (4) <= version.0 {
-            self.states_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode StatesFilter".into(),
-                })?;
+            self.states_filter.encode(buf, version, is_flexible)?;
         }
         if (5) <= version.0 {
-            self.types_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TypesFilter".into(),
-                })?;
+            self.types_filter.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -123,22 +109,14 @@ impl KafkaDeserialize for ListGroupsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let states_filter = if (4) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode StatesFilter".into(),
-                }
-            })?
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let types_filter = if (5) <= version.0 {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TypesFilter".into(),
-                }
-            })?
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

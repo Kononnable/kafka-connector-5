@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -70,18 +70,10 @@ impl ApiRequest for ShareAcknowledgeRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
-        self.share_session_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ShareSessionEpoch"))?;
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.member_id.encode(buf, version, is_flexible)?;
+        self.share_session_epoch.encode(buf, version, is_flexible)?;
+        self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -93,14 +85,11 @@ impl ApiRequest for ShareAcknowledgeRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
-        let member_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
-        let share_session_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ShareSessionEpoch"))?;
-        let topics = <Vec<AcknowledgeTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let group_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let share_session_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics =
+            <Vec<AcknowledgeTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             group_id,
             member_id,
@@ -115,27 +104,11 @@ impl KafkaSerialize for ShareAcknowledgeRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupId".into(),
-            })?;
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberId".into(),
-            })?;
-        self.share_session_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ShareSessionEpoch".into(),
-            })?;
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.member_id.encode(buf, version, is_flexible)?;
+        self.share_session_epoch.encode(buf, version, is_flexible)?;
+        self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -149,23 +122,12 @@ impl KafkaDeserialize for ShareAcknowledgeRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let group_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode GroupId".into(),
-            })?;
-        let member_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MemberId".into(),
-            })?;
-        let share_session_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ShareSessionEpoch".into(),
-            })?;
-        let topics = <Vec<AcknowledgeTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let group_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let share_session_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topics =
+            <Vec<AcknowledgeTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -185,17 +147,10 @@ impl KafkaSerialize for AcknowledgePartition {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition_index
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.partition_index.encode(buf, version, is_flexible)?;
         self.acknowledgement_batches
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode AcknowledgementBatches".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -209,16 +164,10 @@ impl KafkaDeserialize for AcknowledgePartition {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let acknowledgement_batches =
-            <Vec<AcknowledgementBatch> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode AcknowledgementBatches".into(),
-                })?;
+            <Vec<AcknowledgementBatch> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -236,17 +185,9 @@ impl KafkaSerialize for AcknowledgeTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.topic_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicId".into(),
-            })?;
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.topic_id.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -260,18 +201,10 @@ impl KafkaDeserialize for AcknowledgeTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let topic_id =
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let topic_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions =
-            <Vec<AcknowledgePartition> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                })?;
+            <Vec<AcknowledgePartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -289,22 +222,10 @@ impl KafkaSerialize for AcknowledgementBatch {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.first_offset
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode FirstOffset".into(),
-            })?;
-        self.last_offset
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LastOffset".into(),
-            })?;
-        self.acknowledge_types
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode AcknowledgeTypes".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.first_offset.encode(buf, version, is_flexible)?;
+        self.last_offset.encode(buf, version, is_flexible)?;
+        self.acknowledge_types.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -318,23 +239,10 @@ impl KafkaDeserialize for AcknowledgementBatch {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let first_offset =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode FirstOffset".into(),
-                }
-            })?;
-        let last_offset =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode LastOffset".into(),
-                }
-            })?;
-        let acknowledge_types = <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode AcknowledgeTypes".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let first_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let last_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let acknowledge_types = <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -61,17 +61,13 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (3) <= version.0 {
-            self.replica_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ReplicaId"))?;
+            self.replica_id.encode(buf, version, is_flexible)?;
         } else if self.replica_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'ReplicaId' is not available in this version",
             ));
         }
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -84,14 +80,12 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let replica_id = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ReplicaId"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics =
-            <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+            <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self { replica_id, topics })
     }
 }
@@ -101,19 +95,11 @@ impl KafkaSerialize for OffsetForLeaderEpochRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (3) <= version.0 {
-            self.replica_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ReplicaId".into(),
-                })?;
+            self.replica_id.encode(buf, version, is_flexible)?;
         }
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
+        self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -127,21 +113,14 @@ impl KafkaDeserialize for OffsetForLeaderEpochRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let replica_id = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ReplicaId".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics =
-            <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                })?;
+            <Vec<OffsetForLeaderTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -156,24 +135,13 @@ impl KafkaSerialize for OffsetForLeaderPartition {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partition".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.partition.encode(buf, version, is_flexible)?;
         if (2) <= version.0 {
             self.current_leader_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode CurrentLeaderEpoch".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
-        self.leader_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LeaderEpoch".into(),
-            })?;
+        self.leader_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -187,28 +155,14 @@ impl KafkaDeserialize for OffsetForLeaderPartition {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let partition =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partition".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let current_leader_epoch = if (2) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode CurrentLeaderEpoch".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let leader_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode LeaderEpoch".into(),
-                }
-            })?;
+        let leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -227,17 +181,9 @@ impl KafkaSerialize for OffsetForLeaderTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.topic
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topic".into(),
-            })?;
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.topic.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -251,18 +197,10 @@ impl KafkaDeserialize for OffsetForLeaderTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let topic =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Topic".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let topic = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions =
-            <Vec<OffsetForLeaderPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                })?;
+            <Vec<OffsetForLeaderPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

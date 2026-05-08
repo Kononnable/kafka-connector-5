@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -50,22 +50,13 @@ impl ApiResponse for InitProducerIdResponse {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
-        self.producer_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ProducerId"))?;
-        self.producer_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ProducerEpoch"))?;
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.producer_id.encode(buf, version, is_flexible)?;
+        self.producer_epoch.encode(buf, version, is_flexible)?;
         if (6) <= version.0 {
             self.ongoing_txn_producer_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode OngoingTxnProducerId"))?;
+                .encode(buf, version, is_flexible)?;
         } else if self.ongoing_txn_producer_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'OngoingTxnProducerId' is not available in this version",
@@ -73,10 +64,7 @@ impl ApiResponse for InitProducerIdResponse {
         }
         if (6) <= version.0 {
             self.ongoing_txn_producer_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| {
-                    SerializationError::Encode("failed to encode OngoingTxnProducerEpoch")
-                })?;
+                .encode(buf, version, is_flexible)?;
         } else if self.ongoing_txn_producer_epoch != 0 {
             return Err(SerializationError::Encode(
                 "field 'OngoingTxnProducerEpoch' is not available in this version",
@@ -93,24 +81,17 @@ impl ApiResponse for InitProducerIdResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProducerId"))?;
-        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProducerEpoch"))?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let ongoing_txn_producer_id = if (6) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode OngoingTxnProducerId"))?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let ongoing_txn_producer_epoch = if (6) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode OngoingTxnProducerEpoch")
-            })?
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -130,40 +111,18 @@ impl KafkaSerialize for InitProducerIdResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ThrottleTimeMs".into(),
-            })?;
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.producer_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerId".into(),
-            })?;
-        self.producer_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerEpoch".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.producer_id.encode(buf, version, is_flexible)?;
+        self.producer_epoch.encode(buf, version, is_flexible)?;
         if (6) <= version.0 {
             self.ongoing_txn_producer_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode OngoingTxnProducerId".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if (6) <= version.0 {
             self.ongoing_txn_producer_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode OngoingTxnProducerEpoch".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -178,44 +137,18 @@ impl KafkaDeserialize for InitProducerIdResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
-        let producer_id =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ProducerId".into(),
-                }
-            })?;
-        let producer_epoch =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ProducerEpoch".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let ongoing_txn_producer_id = if (6) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode OngoingTxnProducerId".into(),
-                }
-            })?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let ongoing_txn_producer_epoch = if (6) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode OngoingTxnProducerEpoch".into(),
-                }
-            })?
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

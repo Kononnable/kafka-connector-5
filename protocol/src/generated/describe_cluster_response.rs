@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -68,38 +68,21 @@ impl ApiResponse for DescribeClusterResponse {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
-        self.error_message
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ErrorMessage"))?;
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.error_message.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.endpoint_type
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode EndpointType"))?;
+            self.endpoint_type.encode(buf, version, is_flexible)?;
         } else if self.endpoint_type != 0 {
             return Err(SerializationError::Encode(
                 "field 'EndpointType' is not available in this version",
             ));
         }
-        self.cluster_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
-        self.controller_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ControllerId"))?;
-        self.brokers
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Brokers"))?;
+        self.cluster_id.encode(buf, version, is_flexible)?;
+        self.controller_id.encode(buf, version, is_flexible)?;
+        self.brokers.encode(buf, version, is_flexible)?;
         self.cluster_authorized_operations
-            .encode(buf, version, is_flexible)
-            .map_err(|_| {
-                SerializationError::Encode("failed to encode ClusterAuthorizedOperations")
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -111,29 +94,21 @@ impl ApiResponse for DescribeClusterResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let error_message = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ErrorMessage"))?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_message =
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let endpoint_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode EndpointType"))?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let cluster_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?;
-        let controller_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ControllerId"))?;
+        let cluster_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let controller_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let brokers =
-            <Vec<DescribeClusterBroker> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Brokers"))?;
+            <Vec<DescribeClusterBroker> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let cluster_authorized_operations =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode ClusterAuthorizedOperations")
-            })?;
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -152,49 +127,18 @@ impl KafkaSerialize for DescribeClusterResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ThrottleTimeMs".into(),
-            })?;
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.error_message
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorMessage".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.error_message.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.endpoint_type
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode EndpointType".into(),
-                })?;
+            self.endpoint_type.encode(buf, version, is_flexible)?;
         }
-        self.cluster_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClusterId".into(),
-            })?;
-        self.controller_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ControllerId".into(),
-            })?;
-        self.brokers
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Brokers".into(),
-            })?;
+        self.cluster_id.encode(buf, version, is_flexible)?;
+        self.controller_id.encode(buf, version, is_flexible)?;
+        self.brokers.encode(buf, version, is_flexible)?;
         self.cluster_authorized_operations
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClusterAuthorizedOperations".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -208,53 +152,22 @@ impl KafkaDeserialize for DescribeClusterResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
-        let error_message = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorMessage".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_message =
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let endpoint_type = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode EndpointType".into(),
-                }
-            })?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let cluster_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ClusterId".into(),
-                }
-            })?;
-        let controller_id =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ControllerId".into(),
-                }
-            })?;
+        let cluster_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let controller_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let brokers =
-            <Vec<DescribeClusterBroker> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Brokers".into(),
-                })?;
+            <Vec<DescribeClusterBroker> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let cluster_authorized_operations =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ClusterAuthorizedOperations".into(),
-                }
-            })?;
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -278,33 +191,13 @@ impl KafkaSerialize for DescribeClusterBroker {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.broker_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode BrokerId".into(),
-            })?;
-        self.host
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Host".into(),
-            })?;
-        self.port
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Port".into(),
-            })?;
-        self.rack
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Rack".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.broker_id.encode(buf, version, is_flexible)?;
+        self.host.encode(buf, version, is_flexible)?;
+        self.port.encode(buf, version, is_flexible)?;
+        self.rack.encode(buf, version, is_flexible)?;
         if (2) <= version.0 {
-            self.is_fenced
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode IsFenced".into(),
-                })?;
+            self.is_fenced.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -319,34 +212,13 @@ impl KafkaDeserialize for DescribeClusterBroker {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let broker_id =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode BrokerId".into(),
-                }
-            })?;
-        let host =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Host".into(),
-                }
-            })?;
-        let port = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Port".into(),
-            }
-        })?;
-        let rack = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Rack".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let broker_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let port = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rack = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let is_fenced = if (2) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode IsFenced".into(),
-                }
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -58,21 +58,15 @@ impl ApiResponse for LeaveGroupResponse {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (1) <= version.0 {
-            self.throttle_time_ms
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+            self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
                 "field 'ThrottleTimeMs' is not available in this version",
             ));
         }
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        self.error_code.encode(buf, version, is_flexible)?;
         if (3) <= version.0 {
-            self.members
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode Members"))?;
+            self.members.encode(buf, version, is_flexible)?;
         } else if !self.members.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'Members' is not available in this version",
@@ -90,16 +84,13 @@ impl ApiResponse for LeaveGroupResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let members = if (3) <= version.0 {
-            <Vec<MemberResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Members"))?
+            <Vec<MemberResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -116,25 +107,13 @@ impl KafkaSerialize for LeaveGroupResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (1) <= version.0 {
-            self.throttle_time_ms
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ThrottleTimeMs".into(),
-                })?;
+            self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
+        self.error_code.encode(buf, version, is_flexible)?;
         if (3) <= version.0 {
-            self.members
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Members".into(),
-                })?;
+            self.members.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -149,28 +128,15 @@ impl KafkaDeserialize for LeaveGroupResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ThrottleTimeMs".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let members = if (3) <= version.0 {
-            <Vec<MemberResponse> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Members".into(),
-                },
-            )?
+            <Vec<MemberResponse> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -192,27 +158,15 @@ impl KafkaSerialize for MemberResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (3) <= version.0 {
-            self.member_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode MemberId".into(),
-                })?;
+            self.member_id.encode(buf, version, is_flexible)?;
         }
         if (3) <= version.0 {
-            self.group_instance_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode GroupInstanceId".into(),
-                })?;
+            self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         if (3) <= version.0 {
-            self.error_code
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ErrorCode".into(),
-                })?;
+            self.error_code.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -227,31 +181,19 @@ impl KafkaDeserialize for MemberResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let member_id = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let group_instance_id = if (3) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode GroupInstanceId".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

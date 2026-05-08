@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -74,9 +74,7 @@ impl ApiResponse for ReadShareGroupStateResponse {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.results
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Results"))?;
+        self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -88,8 +86,8 @@ impl ApiResponse for ReadShareGroupStateResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let results = <Vec<ReadStateResult> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Results"))?;
+        let results =
+            <Vec<ReadStateResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self { results })
     }
 }
@@ -99,12 +97,8 @@ impl KafkaSerialize for ReadShareGroupStateResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.results
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Results".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -118,11 +112,9 @@ impl KafkaDeserialize for ReadShareGroupStateResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let results = <Vec<ReadStateResult> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Results".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let results =
+            <Vec<ReadStateResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -137,37 +129,13 @@ impl KafkaSerialize for PartitionResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partition".into(),
-            })?;
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.error_message
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorMessage".into(),
-            })?;
-        self.state_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode StateEpoch".into(),
-            })?;
-        self.start_offset
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode StartOffset".into(),
-            })?;
-        self.state_batches
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode StateBatches".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.partition.encode(buf, version, is_flexible)?;
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.error_message.encode(buf, version, is_flexible)?;
+        self.state_epoch.encode(buf, version, is_flexible)?;
+        self.start_offset.encode(buf, version, is_flexible)?;
+        self.state_batches.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -181,41 +149,15 @@ impl KafkaDeserialize for PartitionResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let partition =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partition".into(),
-                }
-            })?;
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
-        let error_message = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ErrorMessage".into(),
-            })?;
-        let state_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode StateEpoch".into(),
-                }
-            })?;
-        let start_offset =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode StartOffset".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_message =
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let state_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let start_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let state_batches =
-            <Vec<StateBatch> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode StateBatches".into(),
-                },
-            )?;
+            <Vec<StateBatch> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -237,17 +179,9 @@ impl KafkaSerialize for ReadStateResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.topic_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicId".into(),
-            })?;
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.topic_id.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -261,19 +195,10 @@ impl KafkaDeserialize for ReadStateResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let topic_id =
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let topic_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let partitions =
-            <Vec<PartitionResult> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                },
-            )?;
+            <Vec<PartitionResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -291,27 +216,11 @@ impl KafkaSerialize for StateBatch {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.first_offset
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode FirstOffset".into(),
-            })?;
-        self.last_offset
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode LastOffset".into(),
-            })?;
-        self.delivery_state
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode DeliveryState".into(),
-            })?;
-        self.delivery_count
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode DeliveryCount".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.first_offset.encode(buf, version, is_flexible)?;
+        self.last_offset.encode(buf, version, is_flexible)?;
+        self.delivery_state.encode(buf, version, is_flexible)?;
+        self.delivery_count.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -325,31 +234,11 @@ impl KafkaDeserialize for StateBatch {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let first_offset =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode FirstOffset".into(),
-                }
-            })?;
-        let last_offset =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode LastOffset".into(),
-                }
-            })?;
-        let delivery_state =
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode DeliveryState".into(),
-                }
-            })?;
-        let delivery_count =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode DeliveryCount".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let first_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let last_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let delivery_state = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let delivery_count = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

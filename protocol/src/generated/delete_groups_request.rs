@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -38,9 +38,7 @@ impl ApiRequest for DeleteGroupsRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.groups_names
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode GroupsNames"))?;
+        self.groups_names.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -52,8 +50,7 @@ impl ApiRequest for DeleteGroupsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let groups_names = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupsNames"))?;
+        let groups_names = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self { groups_names })
     }
 }
@@ -63,12 +60,8 @@ impl KafkaSerialize for DeleteGroupsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.groups_names
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupsNames".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.groups_names.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -82,11 +75,8 @@ impl KafkaDeserialize for DeleteGroupsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let groups_names = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode GroupsNames".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let groups_names = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

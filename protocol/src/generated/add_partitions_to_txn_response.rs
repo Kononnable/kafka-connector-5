@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -73,13 +73,9 @@ impl ApiResponse for AddPartitionsToTxnResponse {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
         if (4) <= version.0 {
-            self.error_code
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+            self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
             return Err(SerializationError::Encode(
                 "field 'ErrorCode' is not available in this version",
@@ -87,8 +83,7 @@ impl ApiResponse for AddPartitionsToTxnResponse {
         }
         if (4) <= version.0 {
             self.results_by_transaction
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ResultsByTransaction"))?;
+                .encode(buf, version, is_flexible)?;
         } else if !self.results_by_transaction.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'ResultsByTransaction' is not available in this version",
@@ -96,10 +91,7 @@ impl ApiResponse for AddPartitionsToTxnResponse {
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.results_by_topic_v3_and_below
-                .encode(buf, version, is_flexible)
-                .map_err(|_| {
-                    SerializationError::Encode("failed to encode ResultsByTopicV3AndBelow")
-                })?;
+                .encode(buf, version, is_flexible)?;
         } else if !self.results_by_topic_v3_and_below.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'ResultsByTopicV3AndBelow' is not available in this version",
@@ -116,17 +108,14 @@ impl ApiResponse for AddPartitionsToTxnResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let error_code = if (4) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let results_by_transaction = if (4) <= version.0 {
-            <Vec<AddPartitionsToTxnResult> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ResultsByTransaction"))?
+            <Vec<AddPartitionsToTxnResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -135,8 +124,7 @@ impl ApiResponse for AddPartitionsToTxnResponse {
                 buf,
                 version,
                 is_flexible,
-            )
-            .map_err(|_| SerializationError::Decode("failed to decode ResultsByTopicV3AndBelow"))?
+            )?
         } else {
             Default::default()
         };
@@ -154,32 +142,18 @@ impl KafkaSerialize for AddPartitionsToTxnResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ThrottleTimeMs".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
         if (4) <= version.0 {
-            self.error_code
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ErrorCode".into(),
-                })?;
+            self.error_code.encode(buf, version, is_flexible)?;
         }
         if (4) <= version.0 {
             self.results_by_transaction
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ResultsByTransaction".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.results_by_topic_v3_and_below
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ResultsByTopicV3AndBelow".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -194,25 +168,15 @@ impl KafkaDeserialize for AddPartitionsToTxnResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let error_code = if (4) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let results_by_transaction = if (4) <= version.0 {
-            <Vec<AddPartitionsToTxnResult> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResultsByTransaction".into(),
-            })?
+            <Vec<AddPartitionsToTxnResult> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -221,10 +185,7 @@ impl KafkaDeserialize for AddPartitionsToTxnResponse {
                 buf,
                 version,
                 is_flexible,
-            )
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResultsByTopicV3AndBelow".into(),
-            })?
+            )?
         } else {
             Default::default()
         };
@@ -247,17 +208,10 @@ impl KafkaSerialize for AddPartitionsToTxnPartitionResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition_index
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndex".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.partition_index.encode(buf, version, is_flexible)?;
         self.partition_error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionErrorCode".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -271,15 +225,9 @@ impl KafkaDeserialize for AddPartitionsToTxnPartitionResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionIndex".into(),
-            })?;
-        let partition_error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionErrorCode".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let partition_index = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -297,20 +245,12 @@ impl KafkaSerialize for AddPartitionsToTxnResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (4) <= version.0 {
-            self.transactional_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TransactionalId".into(),
-                })?;
+            self.transactional_id.encode(buf, version, is_flexible)?;
         }
         if (4) <= version.0 {
-            self.topic_results
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TopicResults".into(),
-                })?;
+            self.topic_results.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -325,13 +265,9 @@ impl KafkaDeserialize for AddPartitionsToTxnResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let transactional_id = if (4) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TransactionalId".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -340,10 +276,7 @@ impl KafkaDeserialize for AddPartitionsToTxnResult {
                 buf,
                 version,
                 is_flexible,
-            )
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TopicResults".into(),
-            })?
+            )?
         } else {
             Default::default()
         };
@@ -364,17 +297,10 @@ impl KafkaSerialize for AddPartitionsToTxnTopicResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.name.encode(buf, version, is_flexible)?;
         self.results_by_partition
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResultsByPartition".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -388,22 +314,14 @@ impl KafkaDeserialize for AddPartitionsToTxnTopicResult {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let results_by_partition =
             <Vec<AddPartitionsToTxnPartitionResult> as KafkaDeserialize>::decode(
                 buf,
                 version,
                 is_flexible,
-            )
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResultsByPartition".into(),
-            })?;
+            )?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

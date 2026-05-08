@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -55,26 +55,20 @@ impl ApiRequest for DeleteTopicsRequest {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (6) <= version.0 {
-            self.topics
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+            self.topics.encode(buf, version, is_flexible)?;
         } else if !self.topics.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'Topics' is not available in this version",
             ));
         }
         if (0) <= version.0 && version.0 <= (5) {
-            self.topic_names
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode TopicNames"))?;
+            self.topic_names.encode(buf, version, is_flexible)?;
         } else if !self.topic_names.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'TopicNames' is not available in this version",
             ));
         }
-        self.timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode TimeoutMs"))?;
+        self.timeout_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -87,19 +81,16 @@ impl ApiRequest for DeleteTopicsRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = if (6) <= version.0 {
-            <Vec<DeleteTopicState> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Topics"))?
+            <Vec<DeleteTopicState> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_names = if (0) <= version.0 && version.0 <= (5) {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TopicNames"))?
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode TimeoutMs"))?;
+        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             topics,
             topic_names,
@@ -113,26 +104,14 @@ impl KafkaSerialize for DeleteTopicsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (6) <= version.0 {
-            self.topics.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Topics".into(),
-                }
-            })?;
+            self.topics.encode(buf, version, is_flexible)?;
         }
         if (0) <= version.0 && version.0 <= (5) {
-            self.topic_names
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TopicNames".into(),
-                })?;
+            self.topic_names.encode(buf, version, is_flexible)?;
         }
-        self.timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TimeoutMs".into(),
-            })?;
+        self.timeout_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -146,31 +125,18 @@ impl KafkaDeserialize for DeleteTopicsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let topics = if (6) <= version.0 {
-            <Vec<DeleteTopicState> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                },
-            )?
+            <Vec<DeleteTopicState> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_names = if (0) <= version.0 && version.0 <= (5) {
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicNames".into(),
-                }
-            })?
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let timeout_ms =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TimeoutMs".into(),
-                }
-            })?;
+        let timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -189,20 +155,12 @@ impl KafkaSerialize for DeleteTopicState {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (6) <= version.0 {
-            self.name.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Name".into(),
-                }
-            })?;
+            self.name.encode(buf, version, is_flexible)?;
         }
         if (6) <= version.0 {
-            self.topic_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TopicId".into(),
-                })?;
+            self.topic_id.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -217,22 +175,14 @@ impl KafkaDeserialize for DeleteTopicState {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let name = if (6) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (6) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?
+            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -54,33 +54,16 @@ impl ApiResponse for GetTelemetrySubscriptionsResponse {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
-        self.client_instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ClientInstanceId"))?;
-        self.subscription_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode SubscriptionId"))?;
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.client_instance_id.encode(buf, version, is_flexible)?;
+        self.subscription_id.encode(buf, version, is_flexible)?;
         self.accepted_compression_types
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode AcceptedCompressionTypes"))?;
-        self.push_interval_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode PushIntervalMs"))?;
-        self.telemetry_max_bytes
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode TelemetryMaxBytes"))?;
-        self.delta_temporality
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode DeltaTemporality"))?;
-        self.requested_metrics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RequestedMetrics"))?;
+            .encode(buf, version, is_flexible)?;
+        self.push_interval_ms.encode(buf, version, is_flexible)?;
+        self.telemetry_max_bytes.encode(buf, version, is_flexible)?;
+        self.delta_temporality.encode(buf, version, is_flexible)?;
+        self.requested_metrics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -92,27 +75,17 @@ impl ApiResponse for GetTelemetrySubscriptionsResponse {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?;
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ClientInstanceId"))?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode SubscriptionId"))?;
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let accepted_compression_types =
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode AcceptedCompressionTypes")
-            })?;
-        let push_interval_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode PushIntervalMs"))?;
-        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode TelemetryMaxBytes"))?;
-        let delta_temporality = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode DeltaTemporality"))?;
+            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let push_interval_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let delta_temporality = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let requested_metrics =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode RequestedMetrics"))?;
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -132,52 +105,17 @@ impl KafkaSerialize for GetTelemetrySubscriptionsResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.throttle_time_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ThrottleTimeMs".into(),
-            })?;
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
-        self.client_instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientInstanceId".into(),
-            })?;
-        self.subscription_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SubscriptionId".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.throttle_time_ms.encode(buf, version, is_flexible)?;
+        self.error_code.encode(buf, version, is_flexible)?;
+        self.client_instance_id.encode(buf, version, is_flexible)?;
+        self.subscription_id.encode(buf, version, is_flexible)?;
         self.accepted_compression_types
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode AcceptedCompressionTypes".into(),
-            })?;
-        self.push_interval_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PushIntervalMs".into(),
-            })?;
-        self.telemetry_max_bytes
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TelemetryMaxBytes".into(),
-            })?;
-        self.delta_temporality
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode DeltaTemporality".into(),
-            })?;
-        self.requested_metrics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RequestedMetrics".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
+        self.push_interval_ms.encode(buf, version, is_flexible)?;
+        self.telemetry_max_bytes.encode(buf, version, is_flexible)?;
+        self.delta_temporality.encode(buf, version, is_flexible)?;
+        self.requested_metrics.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -191,49 +129,18 @@ impl KafkaDeserialize for GetTelemetrySubscriptionsResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ThrottleTimeMs".into(),
-            })?;
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
-        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ClientInstanceId".into(),
-            })?;
-        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SubscriptionId".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let throttle_time_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_instance_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let subscription_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let accepted_compression_types =
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode AcceptedCompressionTypes".into(),
-                }
-            })?;
-        let push_interval_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PushIntervalMs".into(),
-            })?;
-        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TelemetryMaxBytes".into(),
-            })?;
-        let delta_temporality = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode DeltaTemporality".into(),
-            })?;
+            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let push_interval_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let telemetry_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let delta_temporality = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let requested_metrics =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode RequestedMetrics".into(),
-                }
-            })?;
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

@@ -18,45 +18,16 @@
 //! | `uuid`           | 16 raw bytes                                           |
 
 use bytes::{Buf, BufMut};
-use thiserror::Error as DeriveError;
 
 // ---------------------------------------------------------------------------
-// Error types
+// Error types (re-exported from traits)
 // ---------------------------------------------------------------------------
 
-/// Errors that can occur during encoding.
-#[derive(Debug, Clone, DeriveError)]
-pub enum EncodeError {
-    /// The value is too large to fit in the required field width.
-    #[error("value too large: {message}")]
-    ValueTooLarge { message: String },
-}
+/// Encode errors — alias for `crate::traits::SerializationError`.
+pub use crate::traits::SerializationError as EncodeError;
 
-/// Errors that can occur during decoding.
-#[derive(Debug, Clone, DeriveError)]
-pub enum DecodeError {
-    /// The buffer ran out of bytes before the value could be fully read.
-    #[error("insufficient bytes in buffer")]
-    InsufficientBytes,
-    /// The encoded length is negative but the type does not support null.
-    #[error("unexpected null value")]
-    UnexpectedNull,
-    /// The encoded length is invalid (e.g. negative length for a non-nullable type).
-    #[error("invalid length: {message}")]
-    InvalidLength { message: String },
-    /// The string data is not valid UTF-8.
-    #[error("invalid UTF-8 string")]
-    InvalidUtf8,
-    /// A generic protocol error.
-    #[error("protocol error: {message}")]
-    Protocol { message: String },
-}
-
-impl From<std::str::Utf8Error> for DecodeError {
-    fn from(_: std::str::Utf8Error) -> Self {
-        Self::InvalidUtf8
-    }
-}
+/// Decode errors — alias for `crate::traits::SerializationError`.
+pub use crate::traits::SerializationError as DecodeError;
 
 // ---------------------------------------------------------------------------
 // Helper: unsigned varint encoding (used internally by varint / varlong)
@@ -80,13 +51,15 @@ pub fn encode_unsigned_varint<B: BufMut>(mut value: u64, buf: &mut B) -> usize {
 
 /// Decode an unsigned variable-length integer.
 /// Returns `(value, bytes_consumed)`.
-pub fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), DecodeError> {
+pub fn decode_unsigned_varint<B: Buf>(
+    buf: &mut B,
+) -> Result<(u64, usize), crate::traits::SerializationError> {
     let mut value: u64 = 0;
     let mut shift: u32 = 0;
     let mut consumed: usize = 0;
     loop {
         if !buf.has_remaining() {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         let byte = buf.get_u8();
         consumed += 1;
@@ -96,7 +69,7 @@ pub fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), Decod
         }
         shift += 7;
         if shift >= 64 {
-            return Err(DecodeError::Protocol {
+            return Err(crate::traits::SerializationError::Protocol {
                 message: "varint is too large".into(),
             });
         }
@@ -161,7 +134,7 @@ impl KafkaDeserialize for i8 {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 1 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_i8())
     }
@@ -186,7 +159,7 @@ impl KafkaDeserialize for i16 {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 2 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_i16())
     }
@@ -211,7 +184,7 @@ impl KafkaDeserialize for i32 {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 4 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_i32())
     }
@@ -236,7 +209,7 @@ impl KafkaDeserialize for i64 {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 8 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_i64())
     }
@@ -261,7 +234,7 @@ impl KafkaDeserialize for f64 {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 8 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_f64())
     }
@@ -286,7 +259,7 @@ impl KafkaDeserialize for u32 {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 4 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_u32())
     }
@@ -311,7 +284,7 @@ impl KafkaDeserialize for u16 {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 2 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_u16())
     }
@@ -340,7 +313,7 @@ impl KafkaDeserialize for bool {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 1 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         Ok(buf.get_u8() != 0)
     }
@@ -452,13 +425,13 @@ impl KafkaDeserialize for String {
             }
             let n = (raw_len - 1) as usize;
             if buf.remaining() < n {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let bytes = &buf.copy_to_bytes(n)[..];
             Ok(std::str::from_utf8(bytes)?.to_owned())
         } else {
             if buf.remaining() < 2 {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let len = buf.get_i16();
             match len {
@@ -469,7 +442,7 @@ impl KafkaDeserialize for String {
                 n => {
                     let n = n as usize;
                     if buf.remaining() < n {
-                        return Err(DecodeError::InsufficientBytes);
+                        return Err(crate::traits::SerializationError::InsufficientBytes);
                     }
                     let bytes = &buf.copy_to_bytes(n)[..];
                     Ok(std::str::from_utf8(bytes)?.to_owned())
@@ -534,13 +507,13 @@ impl KafkaDeserialize for Option<String> {
             }
             let n = (raw_len - 1) as usize;
             if buf.remaining() < n {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let bytes = &buf.copy_to_bytes(n)[..];
             Ok(Some(std::str::from_utf8(bytes)?.to_owned()))
         } else {
             if buf.remaining() < 2 {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let len = buf.get_i16();
             match len {
@@ -551,7 +524,7 @@ impl KafkaDeserialize for Option<String> {
                 n => {
                     let n = n as usize;
                     if buf.remaining() < n {
-                        return Err(DecodeError::InsufficientBytes);
+                        return Err(crate::traits::SerializationError::InsufficientBytes);
                     }
                     let bytes = &buf.copy_to_bytes(n)[..];
                     Ok(Some(std::str::from_utf8(bytes)?.to_owned()))
@@ -603,12 +576,12 @@ impl KafkaDeserialize for Vec<u8> {
             }
             let n = (raw_len - 1) as usize;
             if buf.remaining() < n {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             Ok(buf.copy_to_bytes(n).to_vec())
         } else {
             if buf.remaining() < 4 {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let len = buf.get_i32();
             match len {
@@ -619,7 +592,7 @@ impl KafkaDeserialize for Vec<u8> {
                 n => {
                     let n = n as usize;
                     if buf.remaining() < n {
-                        return Err(DecodeError::InsufficientBytes);
+                        return Err(crate::traits::SerializationError::InsufficientBytes);
                     }
                     Ok(buf.copy_to_bytes(n).to_vec())
                 }
@@ -673,12 +646,12 @@ impl KafkaDeserialize for Option<Vec<u8>> {
             }
             let n = (raw_len - 1) as usize;
             if buf.remaining() < n {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             Ok(Some(buf.copy_to_bytes(n).to_vec()))
         } else {
             if buf.remaining() < 4 {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let len = buf.get_i32();
             match len {
@@ -689,7 +662,7 @@ impl KafkaDeserialize for Option<Vec<u8>> {
                 n => {
                     let n = n as usize;
                     if buf.remaining() < n {
-                        return Err(DecodeError::InsufficientBytes);
+                        return Err(crate::traits::SerializationError::InsufficientBytes);
                     }
                     Ok(Some(buf.copy_to_bytes(n).to_vec()))
                 }
@@ -750,7 +723,7 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Vec<T> {
             Ok(items)
         } else {
             if buf.remaining() < 4 {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let len = buf.get_i32();
             match len {
@@ -826,7 +799,7 @@ impl<T: KafkaDeserialize> KafkaDeserialize for Option<Vec<T>> {
             Ok(Some(items))
         } else {
             if buf.remaining() < 4 {
-                return Err(DecodeError::InsufficientBytes);
+                return Err(crate::traits::SerializationError::InsufficientBytes);
             }
             let len = buf.get_i32();
             match len {
@@ -869,7 +842,7 @@ impl KafkaDeserialize for [u8; 16] {
         _is_flexible: bool,
     ) -> Result<Self, DecodeError> {
         if buf.remaining() < 16 {
-            return Err(DecodeError::InsufficientBytes);
+            return Err(crate::traits::SerializationError::InsufficientBytes);
         }
         let mut out = [0u8; 16];
         buf.copy_to_slice(&mut out);

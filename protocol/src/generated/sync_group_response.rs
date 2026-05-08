@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -50,38 +50,28 @@ impl ApiResponse for SyncGroupResponse {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (1) <= version.0 {
-            self.throttle_time_ms
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+            self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
                 "field 'ThrottleTimeMs' is not available in this version",
             ));
         }
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        self.error_code.encode(buf, version, is_flexible)?;
         if (5) <= version.0 {
-            self.protocol_type
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
+            self.protocol_type.encode(buf, version, is_flexible)?;
         } else if self.protocol_type.is_some() {
             return Err(SerializationError::Encode(
                 "field 'ProtocolType' is not available in this version",
             ));
         }
         if (5) <= version.0 {
-            self.protocol_name
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ProtocolName"))?;
+            self.protocol_name.encode(buf, version, is_flexible)?;
         } else if self.protocol_name.is_some() {
             return Err(SerializationError::Encode(
                 "field 'ProtocolName' is not available in this version",
             ));
         }
-        self.assignment
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Assignment"))?;
+        self.assignment.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -94,27 +84,22 @@ impl ApiResponse for SyncGroupResponse {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ThrottleTimeMs"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ErrorCode"))?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let protocol_type = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ProtocolType"))?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_name = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ProtocolName"))?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Assignment"))?;
+        let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             throttle_time_ms,
             error_code,
@@ -130,38 +115,18 @@ impl KafkaSerialize for SyncGroupResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (1) <= version.0 {
-            self.throttle_time_ms
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ThrottleTimeMs".into(),
-                })?;
+            self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
-        self.error_code
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ErrorCode".into(),
-            })?;
+        self.error_code.encode(buf, version, is_flexible)?;
         if (5) <= version.0 {
-            self.protocol_type
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ProtocolType".into(),
-                })?;
+            self.protocol_type.encode(buf, version, is_flexible)?;
         }
         if (5) <= version.0 {
-            self.protocol_name
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ProtocolName".into(),
-                })?;
+            self.protocol_name.encode(buf, version, is_flexible)?;
         }
-        self.assignment
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Assignment".into(),
-            })?;
+        self.assignment.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -175,46 +140,24 @@ impl KafkaDeserialize for SyncGroupResponse {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let throttle_time_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ThrottleTimeMs".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ErrorCode".into(),
-                }
-            })?;
+        let error_code = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let protocol_type = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ProtocolType".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_name = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ProtocolName".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let assignment =
-            <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Assignment".into(),
-                }
-            })?;
+        let assignment = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

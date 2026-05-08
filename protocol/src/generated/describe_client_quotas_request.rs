@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -50,12 +50,8 @@ impl ApiRequest for DescribeClientQuotasRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.components
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Components"))?;
-        self.strict
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Strict"))?;
+        self.components.encode(buf, version, is_flexible)?;
+        self.strict.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -68,10 +64,8 @@ impl ApiRequest for DescribeClientQuotasRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let components =
-            <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Components"))?;
-        let strict = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Strict"))?;
+            <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let strict = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self { components, strict })
     }
 }
@@ -81,17 +75,9 @@ impl KafkaSerialize for DescribeClientQuotasRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.components
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Components".into(),
-            })?;
-        self.strict
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Strict".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.components.encode(buf, version, is_flexible)?;
+        self.strict.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -105,19 +91,10 @@ impl KafkaDeserialize for DescribeClientQuotasRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let components =
-            <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Components".into(),
-                },
-            )?;
-        let strict =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Strict".into(),
-                }
-            })?;
+            <Vec<ComponentData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let strict = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -132,22 +109,10 @@ impl KafkaSerialize for ComponentData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.entity_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode EntityType".into(),
-            })?;
-        self.match_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MatchType".into(),
-            })?;
-        self.r#match
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Match".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.entity_type.encode(buf, version, is_flexible)?;
+        self.match_type.encode(buf, version, is_flexible)?;
+        self.r#match.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -161,23 +126,10 @@ impl KafkaDeserialize for ComponentData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let entity_type =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode EntityType".into(),
-                }
-            })?;
-        let match_type =
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MatchType".into(),
-                }
-            })?;
-        let r#match = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Match".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let entity_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let match_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let r#match = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

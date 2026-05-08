@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -60,9 +60,7 @@ impl ApiRequest for WriteTxnMarkersRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.markers
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Markers"))?;
+        self.markers.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -75,8 +73,7 @@ impl ApiRequest for WriteTxnMarkersRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let markers =
-            <Vec<WritableTxnMarker> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Markers"))?;
+            <Vec<WritableTxnMarker> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self { markers })
     }
 }
@@ -86,12 +83,8 @@ impl KafkaSerialize for WriteTxnMarkersRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.markers
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Markers".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.markers.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -105,12 +98,9 @@ impl KafkaDeserialize for WriteTxnMarkersRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let markers =
-            <Vec<WritableTxnMarker> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Markers".into(),
-                })?;
+            <Vec<WritableTxnMarker> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -125,32 +115,12 @@ impl KafkaSerialize for WritableTxnMarker {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.producer_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerId".into(),
-            })?;
-        self.producer_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerEpoch".into(),
-            })?;
-        self.transaction_result
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TransactionResult".into(),
-            })?;
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
-        self.coordinator_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CoordinatorEpoch".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.producer_id.encode(buf, version, is_flexible)?;
+        self.producer_epoch.encode(buf, version, is_flexible)?;
+        self.transaction_result.encode(buf, version, is_flexible)?;
+        self.topics.encode(buf, version, is_flexible)?;
+        self.coordinator_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -164,32 +134,13 @@ impl KafkaDeserialize for WritableTxnMarker {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let producer_id =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ProducerId".into(),
-                }
-            })?;
-        let producer_epoch =
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ProducerEpoch".into(),
-                }
-            })?;
-        let transaction_result = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TransactionResult".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let producer_id = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let producer_epoch = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let transaction_result = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topics =
-            <Vec<WritableTxnMarkerTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Topics".into(),
-                })?;
-        let coordinator_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CoordinatorEpoch".into(),
-            })?;
+            <Vec<WritableTxnMarkerTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let coordinator_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -210,17 +161,9 @@ impl KafkaSerialize for WritableTxnMarkerTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.partition_indexes
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionIndexes".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.name.encode(buf, version, is_flexible)?;
+        self.partition_indexes.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -234,17 +177,9 @@ impl KafkaDeserialize for WritableTxnMarkerTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
-            })?;
-        let partition_indexes = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode PartitionIndexes".into(),
-        })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition_indexes = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

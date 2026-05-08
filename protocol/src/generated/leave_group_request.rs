@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -57,22 +57,16 @@ impl ApiRequest for LeaveGroupRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
+        self.group_id.encode(buf, version, is_flexible)?;
         if (0) <= version.0 && version.0 <= (2) {
-            self.member_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+            self.member_id.encode(buf, version, is_flexible)?;
         } else if !self.member_id.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'MemberId' is not available in this version",
             ));
         }
         if (3) <= version.0 {
-            self.members
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode Members"))?;
+            self.members.encode(buf, version, is_flexible)?;
         } else if !self.members.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'Members' is not available in this version",
@@ -89,17 +83,14 @@ impl ApiRequest for LeaveGroupRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let member_id = if (0) <= version.0 && version.0 <= (2) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let members = if (3) <= version.0 {
-            <Vec<MemberIdentity> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Members"))?
+            <Vec<MemberIdentity> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -116,25 +107,13 @@ impl KafkaSerialize for LeaveGroupRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupId".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.group_id.encode(buf, version, is_flexible)?;
         if (0) <= version.0 && version.0 <= (2) {
-            self.member_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode MemberId".into(),
-                })?;
+            self.member_id.encode(buf, version, is_flexible)?;
         }
         if (3) <= version.0 {
-            self.members
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Members".into(),
-                })?;
+            self.members.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -149,28 +128,15 @@ impl KafkaDeserialize for LeaveGroupRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let group_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GroupId".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let member_id = if (0) <= version.0 && version.0 <= (2) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let members = if (3) <= version.0 {
-            <Vec<MemberIdentity> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Members".into(),
-                },
-            )?
+            <Vec<MemberIdentity> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -192,27 +158,15 @@ impl KafkaSerialize for MemberIdentity {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (3) <= version.0 {
-            self.member_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode MemberId".into(),
-                })?;
+            self.member_id.encode(buf, version, is_flexible)?;
         }
         if (3) <= version.0 {
-            self.group_instance_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode GroupInstanceId".into(),
-                })?;
+            self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         if (5) <= version.0 {
-            self.reason.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Reason".into(),
-                }
-            })?;
+            self.reason.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -227,31 +181,19 @@ impl KafkaDeserialize for MemberIdentity {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let member_id = if (3) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let group_instance_id = if (3) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode GroupInstanceId".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let reason = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Reason".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

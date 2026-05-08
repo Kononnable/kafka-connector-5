@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -66,12 +66,8 @@ impl ApiRequest for AlterClientQuotasRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.entries
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Entries"))?;
-        self.validate_only
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ValidateOnly"))?;
+        self.entries.encode(buf, version, is_flexible)?;
+        self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -83,10 +79,8 @@ impl ApiRequest for AlterClientQuotasRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let entries = <Vec<EntryData> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Entries"))?;
-        let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ValidateOnly"))?;
+        let entries = <Vec<EntryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             entries,
             validate_only,
@@ -99,17 +93,9 @@ impl KafkaSerialize for AlterClientQuotasRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.entries
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Entries".into(),
-            })?;
-        self.validate_only
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ValidateOnly".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.entries.encode(buf, version, is_flexible)?;
+        self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -123,17 +109,9 @@ impl KafkaDeserialize for AlterClientQuotasRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let entries = <Vec<EntryData> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Entries".into(),
-            })?;
-        let validate_only =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ValidateOnly".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let entries = <Vec<EntryData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let validate_only = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -151,17 +129,9 @@ impl KafkaSerialize for EntityData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.entity_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode EntityType".into(),
-            })?;
-        self.entity_name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode EntityName".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.entity_type.encode(buf, version, is_flexible)?;
+        self.entity_name.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -175,17 +145,9 @@ impl KafkaDeserialize for EntityData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let entity_type =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode EntityType".into(),
-                }
-            })?;
-        let entity_name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode EntityName".into(),
-        })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let entity_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let entity_name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -203,17 +165,9 @@ impl KafkaSerialize for EntryData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.entity
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Entity".into(),
-            })?;
-        self.ops
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Ops".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.entity.encode(buf, version, is_flexible)?;
+        self.ops.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -227,17 +181,9 @@ impl KafkaDeserialize for EntryData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let entity = <Vec<EntityData> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Entity".into(),
-            })?;
-        let ops =
-            <Vec<OpData> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Ops".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let entity = <Vec<EntityData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let ops = <Vec<OpData> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -252,22 +198,10 @@ impl KafkaSerialize for OpData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.key
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Key".into(),
-            })?;
-        self.value
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Value".into(),
-            })?;
-        self.remove
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Remove".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.key.encode(buf, version, is_flexible)?;
+        self.value.encode(buf, version, is_flexible)?;
+        self.remove.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -281,24 +215,10 @@ impl KafkaDeserialize for OpData {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let key =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Key".into(),
-                }
-            })?;
-        let value = <f64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Value".into(),
-            }
-        })?;
-        let remove =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Remove".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let key = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let value = <f64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let remove = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

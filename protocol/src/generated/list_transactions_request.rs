@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -46,16 +46,10 @@ impl ApiRequest for ListTransactionsRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.state_filters
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode StateFilters"))?;
-        self.producer_id_filters
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ProducerIdFilters"))?;
+        self.state_filters.encode(buf, version, is_flexible)?;
+        self.producer_id_filters.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.duration_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode DurationFilter"))?;
+            self.duration_filter.encode(buf, version, is_flexible)?;
         } else if self.duration_filter != 0 {
             return Err(SerializationError::Encode(
                 "field 'DurationFilter' is not available in this version",
@@ -63,10 +57,7 @@ impl ApiRequest for ListTransactionsRequest {
         }
         if (2) <= version.0 {
             self.transactional_id_pattern
-                .encode(buf, version, is_flexible)
-                .map_err(|_| {
-                    SerializationError::Encode("failed to encode TransactionalIdPattern")
-                })?;
+                .encode(buf, version, is_flexible)?;
         } else if self.transactional_id_pattern.is_some() {
             return Err(SerializationError::Encode(
                 "field 'TransactionalIdPattern' is not available in this version",
@@ -83,20 +74,16 @@ impl ApiRequest for ListTransactionsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let state_filters = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode StateFilters"))?;
-        let producer_id_filters = <Vec<i64> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProducerIdFilters"))?;
+        let state_filters = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let producer_id_filters =
+            <Vec<i64> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let duration_filter = if (1) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode DurationFilter"))?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let transactional_id_pattern = if (2) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| SerializationError::Decode("failed to decode TransactionalIdPattern"),
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -114,30 +101,15 @@ impl KafkaSerialize for ListTransactionsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.state_filters
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode StateFilters".into(),
-            })?;
-        self.producer_id_filters
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProducerIdFilters".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.state_filters.encode(buf, version, is_flexible)?;
+        self.producer_id_filters.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.duration_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode DurationFilter".into(),
-                })?;
+            self.duration_filter.encode(buf, version, is_flexible)?;
         }
         if (2) <= version.0 {
             self.transactional_id_pattern
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TransactionalIdPattern".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -152,30 +124,17 @@ impl KafkaDeserialize for ListTransactionsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let state_filters = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode StateFilters".into(),
-            })?;
-        let producer_id_filters = <Vec<i64> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProducerIdFilters".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let state_filters = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let producer_id_filters =
+            <Vec<i64> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let duration_filter = if (1) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode DurationFilter".into(),
-                }
-            })?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let transactional_id_pattern = if (2) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode TransactionalIdPattern".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

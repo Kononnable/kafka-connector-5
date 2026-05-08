@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -52,43 +52,32 @@ impl ApiRequest for InitProducerIdRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.transactional_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode TransactionalId"))?;
+        self.transactional_id.encode(buf, version, is_flexible)?;
         self.transaction_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode TransactionTimeoutMs"))?;
+            .encode(buf, version, is_flexible)?;
         if (3) <= version.0 {
-            self.producer_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ProducerId"))?;
+            self.producer_id.encode(buf, version, is_flexible)?;
         } else if self.producer_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'ProducerId' is not available in this version",
             ));
         }
         if (3) <= version.0 {
-            self.producer_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ProducerEpoch"))?;
+            self.producer_epoch.encode(buf, version, is_flexible)?;
         } else if self.producer_epoch != 0 {
             return Err(SerializationError::Encode(
                 "field 'ProducerEpoch' is not available in this version",
             ));
         }
         if (6) <= version.0 {
-            self.enable2_pc
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode Enable2Pc"))?;
+            self.enable2_pc.encode(buf, version, is_flexible)?;
         } else if self.enable2_pc {
             return Err(SerializationError::Encode(
                 "field 'Enable2Pc' is not available in this version",
             ));
         }
         if (6) <= version.0 {
-            self.keep_prepared_txn
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode KeepPreparedTxn"))?;
+            self.keep_prepared_txn.encode(buf, version, is_flexible)?;
         } else if self.keep_prepared_txn {
             return Err(SerializationError::Encode(
                 "field 'KeepPreparedTxn' is not available in this version",
@@ -106,32 +95,25 @@ impl ApiRequest for InitProducerIdRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let transactional_id =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TransactionalId"))?;
-        let transaction_timeout_ms =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TransactionTimeoutMs"))?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let transaction_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let producer_id = if (3) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ProducerId"))?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_epoch = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ProducerEpoch"))?
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let enable2_pc = if (6) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Enable2Pc"))?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let keep_prepared_txn = if (6) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode KeepPreparedTxn"))?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -151,44 +133,21 @@ impl KafkaSerialize for InitProducerIdRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.transactional_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TransactionalId".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.transactional_id.encode(buf, version, is_flexible)?;
         self.transaction_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TransactionTimeoutMs".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if (3) <= version.0 {
-            self.producer_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ProducerId".into(),
-                })?;
+            self.producer_id.encode(buf, version, is_flexible)?;
         }
         if (3) <= version.0 {
-            self.producer_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ProducerEpoch".into(),
-                })?;
+            self.producer_epoch.encode(buf, version, is_flexible)?;
         }
         if (6) <= version.0 {
-            self.enable2_pc
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Enable2Pc".into(),
-                })?;
+            self.enable2_pc.encode(buf, version, is_flexible)?;
         }
         if (6) <= version.0 {
-            self.keep_prepared_txn
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode KeepPreparedTxn".into(),
-                })?;
+            self.keep_prepared_txn.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -203,50 +162,27 @@ impl KafkaDeserialize for InitProducerIdRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let transactional_id =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode TransactionalId".into(),
-                },
-            )?;
-        let transaction_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode TransactionTimeoutMs".into(),
-        })?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let transaction_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let producer_id = if (3) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ProducerId".into(),
-                }
-            })?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_epoch = if (3) <= version.0 {
-            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ProducerEpoch".into(),
-                }
-            })?
+            <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let enable2_pc = if (6) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Enable2Pc".into(),
-                }
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let keep_prepared_txn = if (6) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode KeepPreparedTxn".into(),
-                }
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

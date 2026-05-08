@@ -6,6 +6,12 @@
 use bytes::{Bytes, BytesMut};
 use std::fmt;
 
+impl From<std::str::Utf8Error> for SerializationError {
+    fn from(_: std::str::Utf8Error) -> Self {
+        Self::InvalidUtf8
+    }
+}
+
 // ---------------------------------------------------------------------------
 // ApiVersion
 // ---------------------------------------------------------------------------
@@ -92,15 +98,30 @@ pub enum SerializationError {
     /// The wire data is malformed or incomplete.
     #[error("decode error: {0}")]
     Decode(&'static str),
-    /// A value could not be encoded (e.g. string too long).
+    /// A value could not be encoded (e.g. string too large).
     #[error("encode error: {0}")]
     Encode(&'static str),
     /// The requested version is not supported by this message.
     #[error("unsupported version {0}")]
     UnsupportedVersion(ApiVersion),
-    /// The buffer ran out of space.
-    #[error("buffer underrun")]
-    BufferUnderrun,
+    /// The buffer ran out of bytes while reading.
+    #[error("insufficient bytes")]
+    InsufficientBytes,
+    /// The encoded length is negative but the type does not support null.
+    #[error("unexpected null value")]
+    UnexpectedNull,
+    /// The encoded length is invalid.
+    #[error("invalid length: {message}")]
+    InvalidLength { message: String },
+    /// The string data is not valid UTF-8.
+    #[error("invalid UTF-8 string")]
+    InvalidUtf8,
+    /// A value is too large for its wire representation.
+    #[error("value too large: {message}")]
+    ValueTooLarge { message: String },
+    /// A generic protocol error.
+    #[error("protocol error: {message}")]
+    Protocol { message: String },
 }
 
 // ---------------------------------------------------------------------------

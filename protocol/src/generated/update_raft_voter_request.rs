@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -66,24 +66,14 @@ impl ApiRequest for UpdateRaftVoterRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.cluster_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
+        self.cluster_id.encode(buf, version, is_flexible)?;
         self.current_leader_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode CurrentLeaderEpoch"))?;
-        self.voter_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode VoterId"))?;
-        self.voter_directory_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode VoterDirectoryId"))?;
-        self.listeners
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Listeners"))?;
+            .encode(buf, version, is_flexible)?;
+        self.voter_id.encode(buf, version, is_flexible)?;
+        self.voter_directory_id.encode(buf, version, is_flexible)?;
+        self.listeners.encode(buf, version, is_flexible)?;
         self.kraft_version_feature
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode KRaftVersionFeature"))?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -95,19 +85,13 @@ impl ApiRequest for UpdateRaftVoterRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?;
-        let current_leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode CurrentLeaderEpoch"))?;
-        let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode VoterId"))?;
-        let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode VoterDirectoryId"))?;
-        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Listeners"))?;
+        let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let current_leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let kraft_version_feature =
-            <KRaftVersionFeature as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode KRaftVersionFeature"))?;
+            <KRaftVersionFeature as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             cluster_id,
             current_leader_epoch,
@@ -124,37 +108,15 @@ impl KafkaSerialize for UpdateRaftVoterRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.cluster_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClusterId".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.cluster_id.encode(buf, version, is_flexible)?;
         self.current_leader_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CurrentLeaderEpoch".into(),
-            })?;
-        self.voter_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode VoterId".into(),
-            })?;
-        self.voter_directory_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode VoterDirectoryId".into(),
-            })?;
-        self.listeners
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Listeners".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
+        self.voter_id.encode(buf, version, is_flexible)?;
+        self.voter_directory_id.encode(buf, version, is_flexible)?;
+        self.listeners.encode(buf, version, is_flexible)?;
         self.kraft_version_feature
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode KRaftVersionFeature".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -168,35 +130,14 @@ impl KafkaDeserialize for UpdateRaftVoterRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ClusterId".into(),
-            })?;
-        let current_leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode CurrentLeaderEpoch".into(),
-            })?;
-        let voter_id =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode VoterId".into(),
-                }
-            })?;
-        let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode VoterDirectoryId".into(),
-            })?;
-        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Listeners".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let cluster_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let current_leader_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let voter_id = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let voter_directory_id = <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let listeners = <Vec<Listener> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let kraft_version_feature =
-            <KRaftVersionFeature as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode KRaftVersionFeature".into(),
-                },
-            )?;
+            <KRaftVersionFeature as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -218,17 +159,11 @@ impl KafkaSerialize for KRaftVersionFeature {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         self.min_supported_version
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MinSupportedVersion".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         self.max_supported_version
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MaxSupportedVersion".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -242,15 +177,9 @@ impl KafkaDeserialize for KRaftVersionFeature {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let min_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MinSupportedVersion".into(),
-            })?;
-        let max_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode MaxSupportedVersion".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let min_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let max_supported_version = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -268,22 +197,10 @@ impl KafkaSerialize for Listener {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.host
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Host".into(),
-            })?;
-        self.port
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Port".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.name.encode(buf, version, is_flexible)?;
+        self.host.encode(buf, version, is_flexible)?;
+        self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -297,24 +214,10 @@ impl KafkaDeserialize for Listener {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
-            })?;
-        let host =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Host".into(),
-                }
-            })?;
-        let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Port".into(),
-            }
-        })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

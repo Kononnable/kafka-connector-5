@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -40,9 +40,7 @@ impl ApiRequest for ListConfigResourcesRequest {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (1) <= version.0 {
-            self.resource_types
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ResourceTypes"))?;
+            self.resource_types.encode(buf, version, is_flexible)?;
         } else if !self.resource_types.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'ResourceTypes' is not available in this version",
@@ -60,8 +58,7 @@ impl ApiRequest for ListConfigResourcesRequest {
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let resource_types = if (1) <= version.0 {
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ResourceTypes"))?
+            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -74,13 +71,9 @@ impl KafkaSerialize for ListConfigResourcesRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (1) <= version.0 {
-            self.resource_types
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ResourceTypes".into(),
-                })?;
+            self.resource_types.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -95,13 +88,9 @@ impl KafkaDeserialize for ListConfigResourcesRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let resource_types = if (1) <= version.0 {
-            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ResourceTypes".into(),
-                }
-            })?
+            <Vec<i8> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -52,32 +52,20 @@ impl ApiRequest for DescribeAclsRequest {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.resource_type_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ResourceTypeFilter"))?;
+            .encode(buf, version, is_flexible)?;
         self.resource_name_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ResourceNameFilter"))?;
+            .encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.pattern_type_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode PatternTypeFilter"))?;
+            self.pattern_type_filter.encode(buf, version, is_flexible)?;
         } else if self.pattern_type_filter != 0 {
             return Err(SerializationError::Encode(
                 "field 'PatternTypeFilter' is not available in this version",
             ));
         }
-        self.principal_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode PrincipalFilter"))?;
-        self.host_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode HostFilter"))?;
-        self.operation
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Operation"))?;
-        self.permission_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode PermissionType"))?;
+        self.principal_filter.encode(buf, version, is_flexible)?;
+        self.host_filter.encode(buf, version, is_flexible)?;
+        self.operation.encode(buf, version, is_flexible)?;
+        self.permission_type.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -89,26 +77,19 @@ impl ApiRequest for DescribeAclsRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let resource_type_filter = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ResourceTypeFilter"))?;
+        let resource_type_filter = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let resource_name_filter =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ResourceNameFilter"))?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let pattern_type_filter = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode PatternTypeFilter"))?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let principal_filter =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode PrincipalFilter"))?;
-        let host_filter = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode HostFilter"))?;
-        let operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Operation"))?;
-        let permission_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode PermissionType"))?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let host_filter = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let permission_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             resource_type_filter,
             resource_name_filter,
@@ -126,44 +107,18 @@ impl KafkaSerialize for DescribeAclsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         self.resource_type_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResourceTypeFilter".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         self.resource_name_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ResourceNameFilter".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
-            self.pattern_type_filter
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode PatternTypeFilter".into(),
-                })?;
+            self.pattern_type_filter.encode(buf, version, is_flexible)?;
         }
-        self.principal_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PrincipalFilter".into(),
-            })?;
-        self.host_filter
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode HostFilter".into(),
-            })?;
-        self.operation
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Operation".into(),
-            })?;
-        self.permission_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PermissionType".into(),
-            })?;
+        self.principal_filter.encode(buf, version, is_flexible)?;
+        self.host_filter.encode(buf, version, is_flexible)?;
+        self.operation.encode(buf, version, is_flexible)?;
+        self.permission_type.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -177,48 +132,20 @@ impl KafkaDeserialize for DescribeAclsRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let resource_type_filter = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ResourceTypeFilter".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let resource_type_filter = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let resource_name_filter =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ResourceNameFilter".into(),
-                },
-            )?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let pattern_type_filter = if (1) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode PatternTypeFilter".into(),
-                }
-            })?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let principal_filter =
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode PrincipalFilter".into(),
-                },
-            )?;
-        let host_filter = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode HostFilter".into(),
-        })?;
-        let operation =
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Operation".into(),
-                }
-            })?;
-        let permission_type =
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode PermissionType".into(),
-                }
-            })?;
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let host_filter = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let operation = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let permission_type = <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -152,83 +152,48 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
-        self.member_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MemberEpoch"))?;
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.member_id.encode(buf, version, is_flexible)?;
+        self.member_epoch.encode(buf, version, is_flexible)?;
         self.endpoint_information_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode EndpointInformationEpoch"))?;
-        self.instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode InstanceId"))?;
-        self.rack_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
+            .encode(buf, version, is_flexible)?;
+        self.instance_id.encode(buf, version, is_flexible)?;
+        self.rack_id.encode(buf, version, is_flexible)?;
         self.rebalance_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RebalanceTimeoutMs"))?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.topology {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode(buf, version, true)
-                    .map_err(|_| SerializationError::Encode("failed to encode Topology"))?;
+                __val.encode(buf, version, true)?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.topology {
-                __val
-                    .encode(buf, version, false)
-                    .map_err(|_| SerializationError::Encode("failed to encode Topology"))?;
+                __val.encode(buf, version, false)?;
             }
         }
-        self.active_tasks
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ActiveTasks"))?;
-        self.standby_tasks
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode StandbyTasks"))?;
-        self.warmup_tasks
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode WarmupTasks"))?;
-        self.process_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ProcessId"))?;
+        self.active_tasks.encode(buf, version, is_flexible)?;
+        self.standby_tasks.encode(buf, version, is_flexible)?;
+        self.warmup_tasks.encode(buf, version, is_flexible)?;
+        self.process_id.encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.user_endpoint {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode(buf, version, true)
-                    .map_err(|_| SerializationError::Encode("failed to encode UserEndpoint"))?;
+                __val.encode(buf, version, true)?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.user_endpoint {
-                __val
-                    .encode(buf, version, false)
-                    .map_err(|_| SerializationError::Encode("failed to encode UserEndpoint"))?;
+                __val.encode(buf, version, false)?;
             }
         }
-        self.client_tags
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ClientTags"))?;
-        self.task_offsets
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode TaskOffsets"))?;
-        self.task_end_offsets
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode TaskEndOffsets"))?;
+        self.client_tags.encode(buf, version, is_flexible)?;
+        self.task_offsets.encode(buf, version, is_flexible)?;
+        self.task_end_offsets.encode(buf, version, is_flexible)?;
         self.shutdown_application
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ShutdownApplication"))?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -240,78 +205,48 @@ impl ApiRequest for StreamsGroupHeartbeatRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
-        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MemberEpoch"))?;
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let endpoint_information_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode EndpointInformationEpoch")
-            })?;
-        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode InstanceId"))?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RackId"))?;
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RebalanceTimeoutMs"))?;
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topology = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)
-                .map_err(|_| SerializationError::Decode("tagged field error"))?;
+            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(
-                    <Topology as KafkaDeserialize>::decode(buf, version, true)
-                        .map_err(|_| SerializationError::Decode("failed to decode Topology"))?,
-                )
+                Some(<Topology as KafkaDeserialize>::decode(buf, version, true)?)
             }
         } else {
-            Some(
-                <Topology as KafkaDeserialize>::decode(buf, version, false)
-                    .map_err(|_| SerializationError::Decode("failed to decode Topology"))?,
-            )
+            Some(<Topology as KafkaDeserialize>::decode(buf, version, false)?)
         };
         let active_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ActiveTasks"))?;
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let standby_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode StandbyTasks"))?;
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let warmup_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode WarmupTasks"))?;
-        let process_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProcessId"))?;
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let process_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let user_endpoint = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)
-                .map_err(|_| SerializationError::Decode("tagged field error"))?;
+            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(
-                    <Endpoint as KafkaDeserialize>::decode(buf, version, true)
-                        .map_err(|_| SerializationError::Decode("failed to decode UserEndpoint"))?,
-                )
+                Some(<Endpoint as KafkaDeserialize>::decode(buf, version, true)?)
             }
         } else {
-            Some(
-                <Endpoint as KafkaDeserialize>::decode(buf, version, false)
-                    .map_err(|_| SerializationError::Decode("failed to decode UserEndpoint"))?,
-            )
+            Some(<Endpoint as KafkaDeserialize>::decode(buf, version, false)?)
         };
         let client_tags =
-            <Option<Vec<KeyValue>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ClientTags"))?;
+            <Option<Vec<KeyValue>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let task_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TaskOffsets"))?;
+            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let task_end_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode TaskEndOffsets"))?;
-        let shutdown_application = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ShutdownApplication"))?;
+            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let shutdown_application = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             group_id,
             member_id,
@@ -339,122 +274,49 @@ impl KafkaSerialize for StreamsGroupHeartbeatRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupId".into(),
-            })?;
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberId".into(),
-            })?;
-        self.member_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberEpoch".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.member_id.encode(buf, version, is_flexible)?;
+        self.member_epoch.encode(buf, version, is_flexible)?;
         self.endpoint_information_epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode EndpointInformationEpoch".into(),
-            })?;
-        self.instance_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode InstanceId".into(),
-            })?;
-        self.rack_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RackId".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
+        self.instance_id.encode(buf, version, is_flexible)?;
+        self.rack_id.encode(buf, version, is_flexible)?;
         self.rebalance_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RebalanceTimeoutMs".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.topology {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode(buf, version, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode Topology".into(),
-                    })?;
+                __val.encode(buf, version, true)?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.topology {
-                __val
-                    .encode(buf, version, false)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode Topology".into(),
-                    })?;
+                __val.encode(buf, version, false)?;
             }
         }
-        self.active_tasks
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ActiveTasks".into(),
-            })?;
-        self.standby_tasks
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode StandbyTasks".into(),
-            })?;
-        self.warmup_tasks
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode WarmupTasks".into(),
-            })?;
-        self.process_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProcessId".into(),
-            })?;
+        self.active_tasks.encode(buf, version, is_flexible)?;
+        self.standby_tasks.encode(buf, version, is_flexible)?;
+        self.warmup_tasks.encode(buf, version, is_flexible)?;
+        self.process_id.encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.user_endpoint {
                 crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
-                __val
-                    .encode(buf, version, true)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode UserEndpoint".into(),
-                    })?;
+                __val.encode(buf, version, true)?;
             } else {
                 crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.user_endpoint {
-                __val
-                    .encode(buf, version, false)
-                    .map_err(|_| EncodeError::ValueTooLarge {
-                        message: "failed to encode UserEndpoint".into(),
-                    })?;
+                __val.encode(buf, version, false)?;
             }
         }
-        self.client_tags
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientTags".into(),
-            })?;
-        self.task_offsets
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TaskOffsets".into(),
-            })?;
-        self.task_end_offsets
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TaskEndOffsets".into(),
-            })?;
+        self.client_tags.encode(buf, version, is_flexible)?;
+        self.task_offsets.encode(buf, version, is_flexible)?;
+        self.task_end_offsets.encode(buf, version, is_flexible)?;
         self.shutdown_application
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ShutdownApplication".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -468,128 +330,49 @@ impl KafkaDeserialize for StreamsGroupHeartbeatRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let group_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GroupId".into(),
-                }
-            })?;
-        let member_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
-            })?;
-        let member_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberEpoch".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let member_epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let endpoint_information_epoch =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode EndpointInformationEpoch".into(),
-                }
-            })?;
-        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode InstanceId".into(),
-        })?;
-        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RackId".into(),
-            })?;
-        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RebalanceTimeoutMs".into(),
-            })?;
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let instance_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rack_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let rebalance_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let topology = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(
-                    <Topology as KafkaDeserialize>::decode(buf, version, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode Topology".into(),
-                        }
-                    })?,
-                )
+                Some(<Topology as KafkaDeserialize>::decode(buf, version, true)?)
             }
         } else {
-            Some(
-                <Topology as KafkaDeserialize>::decode(buf, version, false).map_err(|_| {
-                    DecodeError::Protocol {
-                        message: "failed to decode Topology".into(),
-                    }
-                })?,
-            )
+            Some(<Topology as KafkaDeserialize>::decode(buf, version, false)?)
         };
         let active_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ActiveTasks".into(),
-                },
-            )?;
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let standby_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode StandbyTasks".into(),
-                },
-            )?;
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let warmup_tasks =
-            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode WarmupTasks".into(),
-                },
-            )?;
-        let process_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProcessId".into(),
-            })?;
+            <Option<Vec<TaskIds>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let process_id = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let user_endpoint = if is_flexible {
             let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
-                Some(
-                    <Endpoint as KafkaDeserialize>::decode(buf, version, true).map_err(|_| {
-                        DecodeError::Protocol {
-                            message: "failed to decode UserEndpoint".into(),
-                        }
-                    })?,
-                )
+                Some(<Endpoint as KafkaDeserialize>::decode(buf, version, true)?)
             }
         } else {
-            Some(
-                <Endpoint as KafkaDeserialize>::decode(buf, version, false).map_err(|_| {
-                    DecodeError::Protocol {
-                        message: "failed to decode UserEndpoint".into(),
-                    }
-                })?,
-            )
+            Some(<Endpoint as KafkaDeserialize>::decode(buf, version, false)?)
         };
         let client_tags =
-            <Option<Vec<KeyValue>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode ClientTags".into(),
-                })?;
+            <Option<Vec<KeyValue>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let task_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode TaskOffsets".into(),
-                })?;
+            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let task_end_offsets =
-            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode TaskEndOffsets".into(),
-                })?;
-        let shutdown_application = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ShutdownApplication".into(),
-            })?;
+            <Option<Vec<TaskOffset>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let shutdown_application = <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -622,22 +405,11 @@ impl KafkaSerialize for CopartitionGroup {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.source_topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SourceTopics".into(),
-            })?;
-        self.source_topic_regex
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SourceTopicRegex".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.source_topics.encode(buf, version, is_flexible)?;
+        self.source_topic_regex.encode(buf, version, is_flexible)?;
         self.repartition_source_topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RepartitionSourceTopics".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -651,21 +423,11 @@ impl KafkaDeserialize for CopartitionGroup {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let source_topics = <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SourceTopics".into(),
-            })?;
-        let source_topic_regex = <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SourceTopicRegex".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let source_topics = <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let source_topic_regex = <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let repartition_source_topics =
-            <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode RepartitionSourceTopics".into(),
-                }
-            })?;
+            <Vec<i16> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -684,17 +446,9 @@ impl KafkaSerialize for Endpoint {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.host
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Host".into(),
-            })?;
-        self.port
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Port".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.host.encode(buf, version, is_flexible)?;
+        self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -708,18 +462,9 @@ impl KafkaDeserialize for Endpoint {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let host =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Host".into(),
-                }
-            })?;
-        let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Port".into(),
-            }
-        })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let host = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let port = <u16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -734,17 +479,9 @@ impl KafkaSerialize for KeyValue {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.key
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Key".into(),
-            })?;
-        self.value
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Value".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.key.encode(buf, version, is_flexible)?;
+        self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -758,19 +495,9 @@ impl KafkaDeserialize for KeyValue {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let key =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Key".into(),
-                }
-            })?;
-        let value =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Value".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let key = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let value = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -785,42 +512,17 @@ impl KafkaSerialize for Subtopology {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.subtopology_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SubtopologyId".into(),
-            })?;
-        self.source_topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SourceTopics".into(),
-            })?;
-        self.source_topic_regex
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SourceTopicRegex".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.subtopology_id.encode(buf, version, is_flexible)?;
+        self.source_topics.encode(buf, version, is_flexible)?;
+        self.source_topic_regex.encode(buf, version, is_flexible)?;
         self.state_changelog_topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode StateChangelogTopics".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         self.repartition_sink_topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RepartitionSinkTopics".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         self.repartition_source_topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RepartitionSourceTopics".into(),
-            })?;
-        self.copartition_groups
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode CopartitionGroups".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
+        self.copartition_groups.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -834,44 +536,19 @@ impl KafkaDeserialize for Subtopology {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SubtopologyId".into(),
-            })?;
-        let source_topics = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SourceTopics".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let source_topics = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let source_topic_regex =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode SourceTopicRegex".into(),
-                }
-            })?;
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let state_changelog_topics =
-            <Vec<TopicInfo> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode StateChangelogTopics".into(),
-                },
-            )?;
+            <Vec<TopicInfo> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let repartition_sink_topics =
-            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode RepartitionSinkTopics".into(),
-                }
-            })?;
+            <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let repartition_source_topics =
-            <Vec<TopicInfo> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode RepartitionSourceTopics".into(),
-                },
-            )?;
+            <Vec<TopicInfo> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let copartition_groups =
-            <Vec<CopartitionGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode CopartitionGroups".into(),
-                })?;
+            <Vec<CopartitionGroup> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -894,17 +571,9 @@ impl KafkaSerialize for TaskIds {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.subtopology_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SubtopologyId".into(),
-            })?;
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.subtopology_id.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -918,15 +587,9 @@ impl KafkaDeserialize for TaskIds {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SubtopologyId".into(),
-            })?;
-        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Partitions".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partitions = <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -944,22 +607,10 @@ impl KafkaSerialize for TaskOffset {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.subtopology_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SubtopologyId".into(),
-            })?;
-        self.partition
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partition".into(),
-            })?;
-        self.offset
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Offset".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.subtopology_id.encode(buf, version, is_flexible)?;
+        self.partition.encode(buf, version, is_flexible)?;
+        self.offset.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -973,23 +624,10 @@ impl KafkaDeserialize for TaskOffset {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SubtopologyId".into(),
-            })?;
-        let partition =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partition".into(),
-                }
-            })?;
-        let offset =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Offset".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let subtopology_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -1008,27 +646,11 @@ impl KafkaSerialize for TopicInfo {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
-        self.replication_factor
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ReplicationFactor".into(),
-            })?;
-        self.topic_configs
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode TopicConfigs".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.name.encode(buf, version, is_flexible)?;
+        self.partitions.encode(buf, version, is_flexible)?;
+        self.replication_factor.encode(buf, version, is_flexible)?;
+        self.topic_configs.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -1042,27 +664,11 @@ impl KafkaDeserialize for TopicInfo {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
-            })?;
-        let partitions =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                }
-            })?;
-        let replication_factor = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ReplicationFactor".into(),
-            })?;
-        let topic_configs = <Vec<KeyValue> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode TopicConfigs".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let partitions = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let replication_factor = <i16 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let topic_configs = <Vec<KeyValue> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -1082,17 +688,9 @@ impl KafkaSerialize for Topology {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.epoch
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Epoch".into(),
-            })?;
-        self.subtopologies
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Subtopologies".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.epoch.encode(buf, version, is_flexible)?;
+        self.subtopologies.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -1106,18 +704,10 @@ impl KafkaDeserialize for Topology {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-            DecodeError::Protocol {
-                message: "failed to decode Epoch".into(),
-            }
-        })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let epoch = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let subtopologies =
-            <Vec<Subtopology> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Subtopologies".into(),
-                },
-            )?;
+            <Vec<Subtopology> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

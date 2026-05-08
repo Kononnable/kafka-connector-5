@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -56,15 +56,10 @@ impl ApiRequest for MetadataRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        self.topics.encode(buf, version, is_flexible)?;
         if (4) <= version.0 {
             self.allow_auto_topic_creation
-                .encode(buf, version, is_flexible)
-                .map_err(|_| {
-                    SerializationError::Encode("failed to encode AllowAutoTopicCreation")
-                })?;
+                .encode(buf, version, is_flexible)?;
         } else if self.allow_auto_topic_creation {
             return Err(SerializationError::Encode(
                 "field 'AllowAutoTopicCreation' is not available in this version",
@@ -72,12 +67,7 @@ impl ApiRequest for MetadataRequest {
         }
         if (8) <= version.0 && version.0 <= (10) {
             self.include_cluster_authorized_operations
-                .encode(buf, version, is_flexible)
-                .map_err(|_| {
-                    SerializationError::Encode(
-                        "failed to encode IncludeClusterAuthorizedOperations",
-                    )
-                })?;
+                .encode(buf, version, is_flexible)?;
         } else if self.include_cluster_authorized_operations {
             return Err(SerializationError::Encode(
                 "field 'IncludeClusterAuthorizedOperations' is not available in this version",
@@ -85,10 +75,7 @@ impl ApiRequest for MetadataRequest {
         }
         if (8) <= version.0 {
             self.include_topic_authorized_operations
-                .encode(buf, version, is_flexible)
-                .map_err(|_| {
-                    SerializationError::Encode("failed to encode IncludeTopicAuthorizedOperations")
-                })?;
+                .encode(buf, version, is_flexible)?;
         } else if self.include_topic_authorized_operations {
             return Err(SerializationError::Encode(
                 "field 'IncludeTopicAuthorizedOperations' is not available in this version",
@@ -109,26 +96,19 @@ impl ApiRequest for MetadataRequest {
             buf,
             version,
             is_flexible,
-        )
-        .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        )?;
         let allow_auto_topic_creation = if (4) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode AllowAutoTopicCreation")
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode IncludeClusterAuthorizedOperations")
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_topic_authorized_operations = if (8) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode IncludeTopicAuthorizedOperations")
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -146,32 +126,19 @@ impl KafkaSerialize for MetadataRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.topics.encode(buf, version, is_flexible)?;
         if (4) <= version.0 {
             self.allow_auto_topic_creation
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode AllowAutoTopicCreation".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if (8) <= version.0 && version.0 <= (10) {
             self.include_cluster_authorized_operations
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode IncludeClusterAuthorizedOperations".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if (8) <= version.0 {
             self.include_topic_authorized_operations
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode IncludeTopicAuthorizedOperations".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -186,39 +153,24 @@ impl KafkaDeserialize for MetadataRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let topics = <Option<Vec<MetadataRequestTopic>> as KafkaDeserialize>::decode(
             buf,
             version,
             is_flexible,
-        )
-        .map_err(|_| DecodeError::Protocol {
-            message: "failed to decode Topics".into(),
-        })?;
+        )?;
         let allow_auto_topic_creation = if (4) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode AllowAutoTopicCreation".into(),
-                }
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode IncludeClusterAuthorizedOperations".into(),
-                }
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_topic_authorized_operations = if (8) <= version.0 {
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode IncludeTopicAuthorizedOperations".into(),
-                }
-            })?
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -241,19 +193,11 @@ impl KafkaSerialize for MetadataRequestTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (10) <= version.0 {
-            self.topic_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TopicId".into(),
-                })?;
+            self.topic_id.encode(buf, version, is_flexible)?;
         }
-        self.name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
+        self.name.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -267,20 +211,13 @@ impl KafkaDeserialize for MetadataRequestTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let topic_id = if (10) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?
+            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Name".into(),
-            })?;
+        let name = <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

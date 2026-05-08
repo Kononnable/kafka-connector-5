@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -63,43 +63,28 @@ impl ApiRequest for JoinGroupRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
-        self.session_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode SessionTimeoutMs"))?;
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.session_timeout_ms.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
             self.rebalance_timeout_ms
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode RebalanceTimeoutMs"))?;
+                .encode(buf, version, is_flexible)?;
         } else if self.rebalance_timeout_ms != 0 {
             return Err(SerializationError::Encode(
                 "field 'RebalanceTimeoutMs' is not available in this version",
             ));
         }
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        self.member_id.encode(buf, version, is_flexible)?;
         if (5) <= version.0 {
-            self.group_instance_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+            self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
             return Err(SerializationError::Encode(
                 "field 'GroupInstanceId' is not available in this version",
             ));
         }
-        self.protocol_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
-        self.protocols
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Protocols"))?;
+        self.protocol_type.encode(buf, version, is_flexible)?;
+        self.protocols.encode(buf, version, is_flexible)?;
         if (8) <= version.0 {
-            self.reason
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode Reason"))?;
+            self.reason.encode(buf, version, is_flexible)?;
         } else if self.reason.is_some() {
             return Err(SerializationError::Encode(
                 "field 'Reason' is not available in this version",
@@ -116,32 +101,24 @@ impl ApiRequest for JoinGroupRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupId"))?;
-        let session_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode SessionTimeoutMs"))?;
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let session_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode RebalanceTimeoutMs"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MemberId"))?;
+        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let group_instance_id = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode GroupInstanceId"))?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ProtocolType"))?;
+        let protocol_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let protocols =
-            <Vec<JoinGroupRequestProtocol> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Protocols"))?;
+            <Vec<JoinGroupRequestProtocol> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let reason = if (8) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode Reason"))?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -163,52 +140,21 @@ impl KafkaSerialize for JoinGroupRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.group_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupId".into(),
-            })?;
-        self.session_timeout_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode SessionTimeoutMs".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.group_id.encode(buf, version, is_flexible)?;
+        self.session_timeout_ms.encode(buf, version, is_flexible)?;
         if (1) <= version.0 {
             self.rebalance_timeout_ms
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode RebalanceTimeoutMs".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
-        self.member_id
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MemberId".into(),
-            })?;
+        self.member_id.encode(buf, version, is_flexible)?;
         if (5) <= version.0 {
-            self.group_instance_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode GroupInstanceId".into(),
-                })?;
+            self.group_instance_id.encode(buf, version, is_flexible)?;
         }
-        self.protocol_type
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ProtocolType".into(),
-            })?;
-        self.protocols
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Protocols".into(),
-            })?;
+        self.protocol_type.encode(buf, version, is_flexible)?;
+        self.protocols.encode(buf, version, is_flexible)?;
         if (8) <= version.0 {
-            self.reason.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Reason".into(),
-                }
-            })?;
+            self.reason.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -223,56 +169,25 @@ impl KafkaDeserialize for JoinGroupRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let group_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode GroupId".into(),
-                }
-            })?;
-        let session_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode SessionTimeoutMs".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let group_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let session_timeout_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = if (1) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode RebalanceTimeoutMs".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MemberId".into(),
-                }
-            })?;
+        let member_id = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let group_instance_id = if (5) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode GroupInstanceId".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ProtocolType".into(),
-            })?;
+        let protocol_type = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let protocols =
-            <Vec<JoinGroupRequestProtocol> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| DecodeError::Protocol {
-                    message: "failed to decode Protocols".into(),
-                })?;
+            <Vec<JoinGroupRequestProtocol> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let reason = if (8) <= version.0 {
-            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Reason".into(),
-                },
-            )?
+            <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -299,17 +214,9 @@ impl KafkaSerialize for JoinGroupRequestProtocol {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.name
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Name".into(),
-            })?;
-        self.metadata
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Metadata".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.name.encode(buf, version, is_flexible)?;
+        self.metadata.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -323,19 +230,9 @@ impl KafkaDeserialize for JoinGroupRequestProtocol {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let name =
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Name".into(),
-                }
-            })?;
-        let metadata =
-            <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Metadata".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let name = <String as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let metadata = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -40,12 +40,8 @@ impl ApiRequest for RenewDelegationTokenRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.hmac
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Hmac"))?;
-        self.renew_period_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RenewPeriodMs"))?;
+        self.hmac.encode(buf, version, is_flexible)?;
+        self.renew_period_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -57,10 +53,8 @@ impl ApiRequest for RenewDelegationTokenRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Hmac"))?;
-        let renew_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RenewPeriodMs"))?;
+        let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let renew_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             hmac,
             renew_period_ms,
@@ -73,17 +67,9 @@ impl KafkaSerialize for RenewDelegationTokenRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.hmac
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Hmac".into(),
-            })?;
-        self.renew_period_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RenewPeriodMs".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.hmac.encode(buf, version, is_flexible)?;
+        self.renew_period_ms.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -97,17 +83,9 @@ impl KafkaDeserialize for RenewDelegationTokenRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let hmac =
-            <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Hmac".into(),
-                }
-            })?;
-        let renew_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RenewPeriodMs".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let hmac = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let renew_period_ms = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

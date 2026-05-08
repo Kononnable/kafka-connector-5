@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -40,14 +40,9 @@ impl ApiRequest for ConsumerGroupDescribeRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.group_ids
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode GroupIds"))?;
+        self.group_ids.encode(buf, version, is_flexible)?;
         self.include_authorized_operations
-            .encode(buf, version, is_flexible)
-            .map_err(|_| {
-                SerializationError::Encode("failed to encode IncludeAuthorizedOperations")
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -59,12 +54,9 @@ impl ApiRequest for ConsumerGroupDescribeRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_ids = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode GroupIds"))?;
+        let group_ids = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let include_authorized_operations =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                SerializationError::Decode("failed to decode IncludeAuthorizedOperations")
-            })?;
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             group_ids,
             include_authorized_operations,
@@ -77,17 +69,10 @@ impl KafkaSerialize for ConsumerGroupDescribeRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.group_ids
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode GroupIds".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.group_ids.encode(buf, version, is_flexible)?;
         self.include_authorized_operations
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode IncludeAuthorizedOperations".into(),
-            })?;
+            .encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -101,17 +86,10 @@ impl KafkaDeserialize for ConsumerGroupDescribeRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let group_ids = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode GroupIds".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let group_ids = <Vec<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let include_authorized_operations =
-            <bool as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode IncludeAuthorizedOperations".into(),
-                }
-            })?;
+            <bool as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;

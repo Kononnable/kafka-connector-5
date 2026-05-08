@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -130,90 +130,67 @@ impl ApiRequest for FetchRequest {
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if (12) <= version.0 {
-            self.cluster_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
+            self.cluster_id.encode(buf, version, is_flexible)?;
         } else if self.cluster_id.is_some() {
             return Err(SerializationError::Encode(
                 "field 'ClusterId' is not available in this version",
             ));
         }
         if (0) <= version.0 && version.0 <= (14) {
-            self.replica_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ReplicaId"))?;
+            self.replica_id.encode(buf, version, is_flexible)?;
         } else if self.replica_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'ReplicaId' is not available in this version",
             ));
         }
         if (15) <= version.0 {
-            self.replica_state
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ReplicaState"))?;
+            self.replica_state.encode(buf, version, is_flexible)?;
         } else if self.replica_state != Default::default() {
             return Err(SerializationError::Encode(
                 "field 'ReplicaState' is not available in this version",
             ));
         }
-        self.max_wait_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MaxWaitMs"))?;
-        self.min_bytes
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode MinBytes"))?;
+        self.max_wait_ms.encode(buf, version, is_flexible)?;
+        self.min_bytes.encode(buf, version, is_flexible)?;
         if (3) <= version.0 {
-            self.max_bytes
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode MaxBytes"))?;
+            self.max_bytes.encode(buf, version, is_flexible)?;
         } else if self.max_bytes != 0 {
             return Err(SerializationError::Encode(
                 "field 'MaxBytes' is not available in this version",
             ));
         }
         if (4) <= version.0 {
-            self.isolation_level
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode IsolationLevel"))?;
+            self.isolation_level.encode(buf, version, is_flexible)?;
         } else if self.isolation_level != 0 {
             return Err(SerializationError::Encode(
                 "field 'IsolationLevel' is not available in this version",
             ));
         }
         if (7) <= version.0 {
-            self.session_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode SessionId"))?;
+            self.session_id.encode(buf, version, is_flexible)?;
         } else if self.session_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'SessionId' is not available in this version",
             ));
         }
         if (7) <= version.0 {
-            self.session_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode SessionEpoch"))?;
+            self.session_epoch.encode(buf, version, is_flexible)?;
         } else if self.session_epoch != 0 {
             return Err(SerializationError::Encode(
                 "field 'SessionEpoch' is not available in this version",
             ));
         }
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        self.topics.encode(buf, version, is_flexible)?;
         if (7) <= version.0 {
             self.forgotten_topics_data
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode ForgottenTopicsData"))?;
+                .encode(buf, version, is_flexible)?;
         } else if !self.forgotten_topics_data.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'ForgottenTopicsData' is not available in this version",
             ));
         }
         if (11) <= version.0 {
-            self.rack_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
+            self.rack_id.encode(buf, version, is_flexible)?;
         } else if !self.rack_id.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'RackId' is not available in this version",
@@ -234,15 +211,13 @@ impl ApiRequest for FetchRequest {
             if is_flexible {
                 Default::default()
             } else {
-                <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                    .map_err(|_| SerializationError::Decode("failed to decode ClusterId"))?
+                <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
         let replica_id = if (0) <= version.0 && version.0 <= (14) {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ReplicaId"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -250,51 +225,41 @@ impl ApiRequest for FetchRequest {
             if is_flexible {
                 Default::default()
             } else {
-                <ReplicaState as KafkaDeserialize>::decode(buf, version, is_flexible)
-                    .map_err(|_| SerializationError::Decode("failed to decode ReplicaState"))?
+                <ReplicaState as KafkaDeserialize>::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
-        let max_wait_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MaxWaitMs"))?;
-        let min_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode MinBytes"))?;
+        let max_wait_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let min_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let max_bytes = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode MaxBytes"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let isolation_level = if (4) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode IsolationLevel"))?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_id = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode SessionId"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_epoch = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode SessionEpoch"))?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode Topics"))?;
+        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = if (7) <= version.0 {
-            <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode ForgottenTopicsData"))?
+            <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let rack_id = if (11) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode RackId"))?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -320,84 +285,37 @@ impl KafkaSerialize for FetchRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (12) <= version.0 {
-            self.cluster_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ClusterId".into(),
-                })?;
+            self.cluster_id.encode(buf, version, is_flexible)?;
         }
         if (0) <= version.0 && version.0 <= (14) {
-            self.replica_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ReplicaId".into(),
-                })?;
+            self.replica_id.encode(buf, version, is_flexible)?;
         }
         if (15) <= version.0 {
-            self.replica_state
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ReplicaState".into(),
-                })?;
+            self.replica_state.encode(buf, version, is_flexible)?;
         }
-        self.max_wait_ms
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MaxWaitMs".into(),
-            })?;
-        self.min_bytes
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode MinBytes".into(),
-            })?;
+        self.max_wait_ms.encode(buf, version, is_flexible)?;
+        self.min_bytes.encode(buf, version, is_flexible)?;
         if (3) <= version.0 {
-            self.max_bytes
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode MaxBytes".into(),
-                })?;
+            self.max_bytes.encode(buf, version, is_flexible)?;
         }
         if (4) <= version.0 {
-            self.isolation_level
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode IsolationLevel".into(),
-                })?;
+            self.isolation_level.encode(buf, version, is_flexible)?;
         }
         if (7) <= version.0 {
-            self.session_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode SessionId".into(),
-                })?;
+            self.session_id.encode(buf, version, is_flexible)?;
         }
         if (7) <= version.0 {
-            self.session_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode SessionEpoch".into(),
-                })?;
+            self.session_epoch.encode(buf, version, is_flexible)?;
         }
-        self.topics
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Topics".into(),
-            })?;
+        self.topics.encode(buf, version, is_flexible)?;
         if (7) <= version.0 {
             self.forgotten_topics_data
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ForgottenTopicsData".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if (11) <= version.0 {
-            self.rack_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode RackId".into(),
-                })?;
+            self.rack_id.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -412,26 +330,18 @@ impl KafkaDeserialize for FetchRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let cluster_id = if (12) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                    |_| DecodeError::Protocol {
-                        message: "failed to decode ClusterId".into(),
-                    },
-                )?
+                <Option<String> as KafkaDeserialize>::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
         let replica_id = if (0) <= version.0 && version.0 <= (14) {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ReplicaId".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -439,82 +349,41 @@ impl KafkaDeserialize for FetchRequest {
             if is_flexible {
                 Default::default()
             } else {
-                <ReplicaState as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                    |_| DecodeError::Protocol {
-                        message: "failed to decode ReplicaState".into(),
-                    },
-                )?
+                <ReplicaState as KafkaDeserialize>::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
-        let max_wait_ms =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MaxWaitMs".into(),
-                }
-            })?;
-        let min_bytes =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MinBytes".into(),
-                }
-            })?;
+        let max_wait_ms = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let min_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let max_bytes = if (3) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode MaxBytes".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let isolation_level = if (4) <= version.0 {
-            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode IsolationLevel".into(),
-                }
-            })?
+            <i8 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_id = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode SessionId".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_epoch = if (7) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode SessionEpoch".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode Topics".into(),
-            })?;
+        let topics = <Vec<FetchTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = if (7) <= version.0 {
-            <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode ForgottenTopicsData".into(),
-                },
-            )?
+            <Vec<ForgottenTopic> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let rack_id = if (11) <= version.0 {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode RackId".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -545,56 +414,26 @@ impl KafkaSerialize for FetchPartition {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.partition
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partition".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.partition.encode(buf, version, is_flexible)?;
         if (9) <= version.0 {
             self.current_leader_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode CurrentLeaderEpoch".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
-        self.fetch_offset
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode FetchOffset".into(),
-            })?;
+        self.fetch_offset.encode(buf, version, is_flexible)?;
         if (12) <= version.0 {
-            self.last_fetched_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode LastFetchedEpoch".into(),
-                })?;
+            self.last_fetched_epoch.encode(buf, version, is_flexible)?;
         }
         if (5) <= version.0 {
-            self.log_start_offset
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode LogStartOffset".into(),
-                })?;
+            self.log_start_offset.encode(buf, version, is_flexible)?;
         }
-        self.partition_max_bytes
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode PartitionMaxBytes".into(),
-            })?;
+        self.partition_max_bytes.encode(buf, version, is_flexible)?;
         if (17) <= version.0 {
             self.replica_directory_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ReplicaDirectoryId".into(),
-                })?;
+                .encode(buf, version, is_flexible)?;
         }
         if (18) <= version.0 {
-            self.high_watermark
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode HighWatermark".into(),
-                })?;
+            self.high_watermark.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -609,59 +448,30 @@ impl KafkaDeserialize for FetchPartition {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let partition =
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partition".into(),
-                }
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let partition = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let current_leader_epoch = if (9) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode CurrentLeaderEpoch".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let fetch_offset =
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode FetchOffset".into(),
-                }
-            })?;
+        let fetch_offset = <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let last_fetched_epoch = if (12) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode LastFetchedEpoch".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let log_start_offset = if (5) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode LogStartOffset".into(),
-                }
-            })?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partition_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode PartitionMaxBytes".into(),
-            })?;
+        let partition_max_bytes = <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let replica_directory_id = if (17) <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                    DecodeError::Protocol {
-                        message: "failed to decode ReplicaDirectoryId".into(),
-                    }
-                })?
+                <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -670,11 +480,7 @@ impl KafkaDeserialize for FetchPartition {
             if is_flexible {
                 Default::default()
             } else {
-                <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                    DecodeError::Protocol {
-                        message: "failed to decode HighWatermark".into(),
-                    }
-                })?
+                <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -702,26 +508,14 @@ impl KafkaSerialize for FetchTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (0) <= version.0 && version.0 <= (12) {
-            self.topic.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Topic".into(),
-                }
-            })?;
+            self.topic.encode(buf, version, is_flexible)?;
         }
         if (13) <= version.0 {
-            self.topic_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TopicId".into(),
-                })?;
+            self.topic_id.encode(buf, version, is_flexible)?;
         }
-        self.partitions
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode Partitions".into(),
-            })?;
+        self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -735,31 +529,19 @@ impl KafkaDeserialize for FetchTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let topic = if (0) <= version.0 && version.0 <= (12) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Topic".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (13) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?
+            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partitions =
-            <Vec<FetchPartition> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                },
-            )?;
+            <Vec<FetchPartition> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
@@ -778,27 +560,15 @@ impl KafkaSerialize for ForgottenTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (7) <= version.0 && version.0 <= (12) {
-            self.topic.encode(buf, version, is_flexible).map_err(|_| {
-                EncodeError::ValueTooLarge {
-                    message: "failed to encode Topic".into(),
-                }
-            })?;
+            self.topic.encode(buf, version, is_flexible)?;
         }
         if (13) <= version.0 {
-            self.topic_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode TopicId".into(),
-                })?;
+            self.topic_id.encode(buf, version, is_flexible)?;
         }
         if (7) <= version.0 {
-            self.partitions
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode Partitions".into(),
-                })?;
+            self.partitions.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -813,31 +583,19 @@ impl KafkaDeserialize for ForgottenTopic {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let topic = if (7) <= version.0 && version.0 <= (12) {
-            <String as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Topic".into(),
-                }
-            })?
+            <String as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if (13) <= version.0 {
-            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode TopicId".into(),
-                }
-            })?
+            <[u8; 16] as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partitions = if (7) <= version.0 {
-            <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode Partitions".into(),
-                }
-            })?
+            <Vec<i32> as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -859,20 +617,12 @@ impl KafkaSerialize for ReplicaState {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
+    ) -> Result<(), crate::traits::SerializationError> {
         if (15) <= version.0 {
-            self.replica_id
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ReplicaId".into(),
-                })?;
+            self.replica_id.encode(buf, version, is_flexible)?;
         }
         if (15) <= version.0 {
-            self.replica_epoch
-                .encode(buf, version, is_flexible)
-                .map_err(|_| EncodeError::ValueTooLarge {
-                    message: "failed to encode ReplicaEpoch".into(),
-                })?;
+            self.replica_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
             // Tagged fields (none yet)
@@ -887,22 +637,14 @@ impl KafkaDeserialize for ReplicaState {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
+    ) -> Result<Self, crate::traits::SerializationError> {
         let replica_id = if (15) <= version.0 {
-            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ReplicaId".into(),
-                }
-            })?
+            <i32 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let replica_epoch = if (15) <= version.0 {
-            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(|_| {
-                DecodeError::Protocol {
-                    message: "failed to decode ReplicaEpoch".into(),
-                }
-            })?
+            <i64 as KafkaDeserialize>::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{DecodeError, EncodeError, KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -42,15 +42,9 @@ impl ApiRequest for EnvelopeRequest {
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        self.request_data
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RequestData"))?;
-        self.request_principal
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode RequestPrincipal"))?;
-        self.client_host_address
-            .encode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Encode("failed to encode ClientHostAddress"))?;
+        self.request_data.encode(buf, version, is_flexible)?;
+        self.request_principal.encode(buf, version, is_flexible)?;
+        self.client_host_address.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -62,13 +56,10 @@ impl ApiRequest for EnvelopeRequest {
         buf: &mut Bytes,
     ) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let request_data = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode RequestData"))?;
+        let request_data = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let request_principal =
-            <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)
-                .map_err(|_| SerializationError::Decode("failed to decode RequestPrincipal"))?;
-        let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| SerializationError::Decode("failed to decode ClientHostAddress"))?;
+            <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         Ok(Self {
             request_data,
             request_principal,
@@ -82,22 +73,10 @@ impl KafkaSerialize for EnvelopeRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<(), EncodeError> {
-        self.request_data
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RequestData".into(),
-            })?;
-        self.request_principal
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode RequestPrincipal".into(),
-            })?;
-        self.client_host_address
-            .encode(buf, version, is_flexible)
-            .map_err(|_| EncodeError::ValueTooLarge {
-                message: "failed to encode ClientHostAddress".into(),
-            })?;
+    ) -> Result<(), crate::traits::SerializationError> {
+        self.request_data.encode(buf, version, is_flexible)?;
+        self.request_principal.encode(buf, version, is_flexible)?;
+        self.client_host_address.encode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (none yet)
             crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
@@ -111,21 +90,11 @@ impl KafkaDeserialize for EnvelopeRequest {
         buf: &mut B,
         version: crate::traits::ApiVersion,
         is_flexible: bool,
-    ) -> Result<Self, DecodeError> {
-        let request_data = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode RequestData".into(),
-            })?;
+    ) -> Result<Self, crate::traits::SerializationError> {
+        let request_data = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         let request_principal =
-            <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible).map_err(
-                |_| DecodeError::Protocol {
-                    message: "failed to decode RequestPrincipal".into(),
-                },
-            )?;
-        let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)
-            .map_err(|_| DecodeError::Protocol {
-                message: "failed to decode ClientHostAddress".into(),
-            })?;
+            <Option<Vec<u8>> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
+        let client_host_address = <Vec<u8> as KafkaDeserialize>::decode(buf, version, is_flexible)?;
         if is_flexible {
             // Tagged fields (skip)
             let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
