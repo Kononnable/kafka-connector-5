@@ -114,11 +114,19 @@ impl ApiRequest for ShareFetchRequest {
             self.max_records
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode MaxRecords"))?;
+        } else if self.max_records != 0 {
+            return Err(SerializationError::Encode(
+                "field 'MaxRecords' is not available in this version",
+            ));
         }
         if (1) <= version.0 {
             self.batch_size
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode BatchSize"))?;
+        } else if self.batch_size != 0 {
+            return Err(SerializationError::Encode(
+                "field 'BatchSize' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)

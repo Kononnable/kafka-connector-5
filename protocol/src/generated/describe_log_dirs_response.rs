@@ -83,6 +83,10 @@ impl ApiResponse for DescribeLogDirsResponse {
             self.error_code
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        } else if self.error_code != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ErrorCode' is not available in this version",
+            ));
         }
         self.results
             .encode_flexible(buf, is_flexible)

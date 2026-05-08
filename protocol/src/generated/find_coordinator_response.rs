@@ -80,36 +80,64 @@ impl ApiResponse for FindCoordinatorResponse {
             self.throttle_time_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        } else if self.throttle_time_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ThrottleTimeMs' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.error_code
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        } else if self.error_code != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ErrorCode' is not available in this version",
+            ));
         }
         if (1) <= version.0 && version.0 <= (3) {
             self.error_message
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorMessage"))?;
+        } else if self.error_message.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'ErrorMessage' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.node_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode NodeId"))?;
+        } else if self.node_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'NodeId' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.host
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Host"))?;
+        } else if !self.host.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Host' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.port
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Port"))?;
+        } else if self.port != 0 {
+            return Err(SerializationError::Encode(
+                "field 'Port' is not available in this version",
+            ));
         }
         if (4) <= version.0 {
             self.coordinators
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Coordinators"))?;
+        } else if !self.coordinators.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Coordinators' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

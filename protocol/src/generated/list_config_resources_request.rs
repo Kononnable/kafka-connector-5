@@ -40,6 +40,10 @@ impl ApiRequest for ListConfigResourcesRequest {
             self.resource_types
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ResourceTypes"))?;
+        } else if !self.resource_types.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'ResourceTypes' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

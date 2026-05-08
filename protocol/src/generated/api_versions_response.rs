@@ -98,11 +98,19 @@ impl ApiResponse for ApiVersionsResponse {
             self.throttle_time_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        } else if self.throttle_time_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ThrottleTimeMs' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.supported_features
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SupportedFeatures"))?;
+        } else if !self.supported_features.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'SupportedFeatures' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.finalized_features_epoch
@@ -110,16 +118,28 @@ impl ApiResponse for ApiVersionsResponse {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode FinalizedFeaturesEpoch")
                 })?;
+        } else if self.finalized_features_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'FinalizedFeaturesEpoch' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.finalized_features
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode FinalizedFeatures"))?;
+        } else if !self.finalized_features.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'FinalizedFeatures' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.zk_migration_ready
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ZkMigrationReady"))?;
+        } else if self.zk_migration_ready {
+            return Err(SerializationError::Encode(
+                "field 'ZkMigrationReady' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

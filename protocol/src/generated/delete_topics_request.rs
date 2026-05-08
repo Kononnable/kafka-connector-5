@@ -55,11 +55,19 @@ impl ApiRequest for DeleteTopicsRequest {
             self.topics
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        } else if !self.topics.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Topics' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (5) {
             self.topic_names
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode TopicNames"))?;
+        } else if !self.topic_names.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'TopicNames' is not available in this version",
+            ));
         }
         self.timeout_ms
             .encode_flexible(buf, is_flexible)

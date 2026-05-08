@@ -88,21 +88,37 @@ impl ApiRequest for OffsetFetchRequest {
             self.group_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupId"))?;
+        } else if !self.group_id.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'GroupId' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (7) {
             self.topics
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        } else if self.topics.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'Topics' is not available in this version",
+            ));
         }
         if (8) <= version.0 {
             self.groups
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Groups"))?;
+        } else if !self.groups.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Groups' is not available in this version",
+            ));
         }
         if (7) <= version.0 {
             self.require_stable
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode RequireStable"))?;
+        } else if self.require_stable {
+            return Err(SerializationError::Encode(
+                "field 'RequireStable' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

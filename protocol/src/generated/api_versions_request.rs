@@ -43,6 +43,10 @@ impl ApiRequest for ApiVersionsRequest {
             self.client_software_name
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ClientSoftwareName"))?;
+        } else if !self.client_software_name.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'ClientSoftwareName' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.client_software_version
@@ -50,6 +54,10 @@ impl ApiRequest for ApiVersionsRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode ClientSoftwareVersion")
                 })?;
+        } else if !self.client_software_version.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'ClientSoftwareVersion' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

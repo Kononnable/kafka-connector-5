@@ -98,16 +98,28 @@ impl ApiRequest for BrokerRegistrationRequest {
             self.is_migrating_zk_broker
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IsMigratingZkBroker"))?;
+        } else if self.is_migrating_zk_broker {
+            return Err(SerializationError::Encode(
+                "field 'IsMigratingZkBroker' is not available in this version",
+            ));
         }
         if (2) <= version.0 {
             self.log_dirs
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode LogDirs"))?;
+        } else if !self.log_dirs.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'LogDirs' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.previous_broker_epoch
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode PreviousBrokerEpoch"))?;
+        } else if self.previous_broker_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'PreviousBrokerEpoch' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

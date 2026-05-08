@@ -130,16 +130,28 @@ impl ApiRequest for FetchRequest {
             self.cluster_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
+        } else if self.cluster_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'ClusterId' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (14) {
             self.replica_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ReplicaId"))?;
+        } else if self.replica_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ReplicaId' is not available in this version",
+            ));
         }
         if (15) <= version.0 {
             self.replica_state
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ReplicaState"))?;
+        } else if self.replica_state != Default::default() {
+            return Err(SerializationError::Encode(
+                "field 'ReplicaState' is not available in this version",
+            ));
         }
         self.max_wait_ms
             .encode_flexible(buf, is_flexible)
@@ -151,21 +163,37 @@ impl ApiRequest for FetchRequest {
             self.max_bytes
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode MaxBytes"))?;
+        } else if self.max_bytes != 0 {
+            return Err(SerializationError::Encode(
+                "field 'MaxBytes' is not available in this version",
+            ));
         }
         if (4) <= version.0 {
             self.isolation_level
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IsolationLevel"))?;
+        } else if self.isolation_level != 0 {
+            return Err(SerializationError::Encode(
+                "field 'IsolationLevel' is not available in this version",
+            ));
         }
         if (7) <= version.0 {
             self.session_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SessionId"))?;
+        } else if self.session_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'SessionId' is not available in this version",
+            ));
         }
         if (7) <= version.0 {
             self.session_epoch
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SessionEpoch"))?;
+        } else if self.session_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'SessionEpoch' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)
@@ -174,11 +202,19 @@ impl ApiRequest for FetchRequest {
             self.forgotten_topics_data
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ForgottenTopicsData"))?;
+        } else if !self.forgotten_topics_data.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'ForgottenTopicsData' is not available in this version",
+            ));
         }
         if (11) <= version.0 {
             self.rack_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode RackId"))?;
+        } else if !self.rack_id.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'RackId' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

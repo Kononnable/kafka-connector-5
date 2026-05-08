@@ -83,21 +83,37 @@ impl ApiRequest for OffsetCommitRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode GenerationIdOrMemberEpoch")
                 })?;
+        } else if self.generation_id_or_member_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'GenerationIdOrMemberEpoch' is not available in this version",
+            ));
         }
         if (1) <= version.0 {
             self.member_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        } else if !self.member_id.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'MemberId' is not available in this version",
+            ));
         }
         if (7) <= version.0 {
             self.group_instance_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        } else if self.group_instance_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'GroupInstanceId' is not available in this version",
+            ));
         }
         if (2) <= version.0 && version.0 <= (4) {
             self.retention_time_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode RetentionTimeMs"))?;
+        } else if self.retention_time_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'RetentionTimeMs' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)

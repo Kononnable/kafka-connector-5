@@ -65,6 +65,10 @@ impl ApiRequest for BrokerHeartbeatRequest {
             self.offline_log_dirs
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode OfflineLogDirs"))?;
+        } else if !self.offline_log_dirs.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'OfflineLogDirs' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

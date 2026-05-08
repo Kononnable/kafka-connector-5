@@ -65,6 +65,10 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode AllowReplicationFactorChange")
                 })?;
+        } else if self.allow_replication_factor_change {
+            return Err(SerializationError::Encode(
+                "field 'AllowReplicationFactorChange' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)

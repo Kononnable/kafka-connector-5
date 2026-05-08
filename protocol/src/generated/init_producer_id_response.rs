@@ -63,6 +63,10 @@ impl ApiResponse for InitProducerIdResponse {
             self.ongoing_txn_producer_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode OngoingTxnProducerId"))?;
+        } else if self.ongoing_txn_producer_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'OngoingTxnProducerId' is not available in this version",
+            ));
         }
         if (6) <= version.0 {
             self.ongoing_txn_producer_epoch
@@ -70,6 +74,10 @@ impl ApiResponse for InitProducerIdResponse {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode OngoingTxnProducerEpoch")
                 })?;
+        } else if self.ongoing_txn_producer_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'OngoingTxnProducerEpoch' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

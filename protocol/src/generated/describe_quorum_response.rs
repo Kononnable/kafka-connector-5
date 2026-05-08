@@ -119,6 +119,10 @@ impl ApiResponse for DescribeQuorumResponse {
             self.error_message
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorMessage"))?;
+        } else if self.error_message.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'ErrorMessage' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)
@@ -127,6 +131,10 @@ impl ApiResponse for DescribeQuorumResponse {
             self.nodes
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Nodes"))?;
+        } else if !self.nodes.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Nodes' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

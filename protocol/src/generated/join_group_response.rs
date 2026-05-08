@@ -69,6 +69,10 @@ impl ApiResponse for JoinGroupResponse {
             self.throttle_time_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        } else if self.throttle_time_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ThrottleTimeMs' is not available in this version",
+            ));
         }
         self.error_code
             .encode_flexible(buf, is_flexible)
@@ -80,6 +84,10 @@ impl ApiResponse for JoinGroupResponse {
             self.protocol_type
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
+        } else if self.protocol_type.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'ProtocolType' is not available in this version",
+            ));
         }
         self.protocol_name
             .encode_flexible(buf, is_flexible)
@@ -91,6 +99,10 @@ impl ApiResponse for JoinGroupResponse {
             self.skip_assignment
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SkipAssignment"))?;
+        } else if self.skip_assignment {
+            return Err(SerializationError::Encode(
+                "field 'SkipAssignment' is not available in this version",
+            ));
         }
         self.member_id
             .encode_flexible(buf, is_flexible)

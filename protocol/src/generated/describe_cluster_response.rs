@@ -78,6 +78,10 @@ impl ApiResponse for DescribeClusterResponse {
             self.endpoint_type
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode EndpointType"))?;
+        } else if self.endpoint_type != 0 {
+            return Err(SerializationError::Encode(
+                "field 'EndpointType' is not available in this version",
+            ));
         }
         self.cluster_id
             .encode_flexible(buf, is_flexible)

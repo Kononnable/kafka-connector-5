@@ -61,11 +61,19 @@ impl ApiRequest for LeaveGroupRequest {
             self.member_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        } else if !self.member_id.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'MemberId' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.members
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Members"))?;
+        } else if !self.members.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Members' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

@@ -59,21 +59,37 @@ impl ApiRequest for InitProducerIdRequest {
             self.producer_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProducerId"))?;
+        } else if self.producer_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ProducerId' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.producer_epoch
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProducerEpoch"))?;
+        } else if self.producer_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ProducerEpoch' is not available in this version",
+            ));
         }
         if (6) <= version.0 {
             self.enable2_pc
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Enable2Pc"))?;
+        } else if self.enable2_pc {
+            return Err(SerializationError::Encode(
+                "field 'Enable2Pc' is not available in this version",
+            ));
         }
         if (6) <= version.0 {
             self.keep_prepared_txn
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode KeepPreparedTxn"))?;
+        } else if self.keep_prepared_txn {
+            return Err(SerializationError::Encode(
+                "field 'KeepPreparedTxn' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

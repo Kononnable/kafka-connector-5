@@ -123,21 +123,37 @@ impl ApiResponse for OffsetFetchResponse {
             self.throttle_time_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        } else if self.throttle_time_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ThrottleTimeMs' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (7) {
             self.topics
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Topics"))?;
+        } else if !self.topics.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Topics' is not available in this version",
+            ));
         }
         if (2) <= version.0 && version.0 <= (7) {
             self.error_code
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        } else if self.error_code != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ErrorCode' is not available in this version",
+            ));
         }
         if (8) <= version.0 {
             self.groups
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Groups"))?;
+        } else if !self.groups.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Groups' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

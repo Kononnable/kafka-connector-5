@@ -55,11 +55,19 @@ impl ApiRequest for CreateDelegationTokenRequest {
             self.owner_principal_type
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode OwnerPrincipalType"))?;
+        } else if self.owner_principal_type.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'OwnerPrincipalType' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.owner_principal_name
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode OwnerPrincipalName"))?;
+        } else if self.owner_principal_name.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'OwnerPrincipalName' is not available in this version",
+            ));
         }
         self.renewers
             .encode_flexible(buf, is_flexible)

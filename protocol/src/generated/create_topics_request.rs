@@ -80,6 +80,10 @@ impl ApiRequest for CreateTopicsRequest {
             self.validate_only
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode validateOnly"))?;
+        } else if self.validate_only {
+            return Err(SerializationError::Encode(
+                "field 'validateOnly' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

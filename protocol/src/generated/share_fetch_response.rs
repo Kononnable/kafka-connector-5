@@ -119,6 +119,10 @@ impl ApiResponse for ShareFetchResponse {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode AcquisitionLockTimeoutMs")
                 })?;
+        } else if self.acquisition_lock_timeout_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'AcquisitionLockTimeoutMs' is not available in this version",
+            ));
         }
         self.responses
             .encode_flexible(buf, is_flexible)

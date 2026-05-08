@@ -55,6 +55,10 @@ impl ApiResponse for SaslAuthenticateResponse {
             self.session_lifetime_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SessionLifetimeMs"))?;
+        } else if self.session_lifetime_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'SessionLifetimeMs' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

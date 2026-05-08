@@ -433,6 +433,31 @@ fn nullable_has_builtin_flex(field: &Field) -> bool {
     ft == "string" || ft == "bytes" || ft == "records" || ft.starts_with("[]")
 }
 
+/// Return a boolean expression that tests whether a field has a non-default value.
+fn non_default_check(rust_name: &str, field: &Field) -> Option<String> {
+    let ft = &field.field_type;
+    if field.nullable_versions.is_some() {
+        // All nullable fields become Option<T> — check Some
+        Some(format!("self.{}.is_some()", rust_name))
+    } else if ft == "string" {
+        Some(format!("!self.{}.is_empty()", rust_name))
+    } else if ft == "bytes" || ft == "records" || ft.starts_with("[]") {
+        // Vec<T> — is_empty works for any T without type inference issues
+        Some(format!("!self.{}.is_empty()", rust_name))
+    } else if ft == "bool" {
+        Some(format!("self.{}", rust_name))
+    } else if ft == "uuid" {
+        // [u8; 16] — compare to zeroed array
+        Some(format!("self.{} != [0u8; 16]", rust_name))
+    } else if ["int8", "int16", "int32", "int64", "uint16", "float64"].contains(&ft.as_str()) {
+        // Numeric types: != 0 works with type inference
+        Some(format!("self.{} != 0", rust_name))
+    } else {
+        // Custom struct type — struct derives Default + PartialEq
+        Some(format!("self.{} != Default::default()", rust_name))
+    }
+}
+
 /// Generate one field's serialization code.
 fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
     let rust_name = escape_field_name(&camel_to_snake(&field.name));
@@ -473,7 +498,17 @@ fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
     if let Some(c) = cond {
         code.push_str(&format!("        if {} {{\n", c));
         body(&mut code, "            ");
-        code.push_str("        }\n");
+        // When the field exists in a subset of versions, error if it has a non-default
+        // value in a version where it doesn't belong.
+        let check = non_default_check(&rust_name, field);
+        if let Some(check_expr) = check {
+            code.push_str(&format!(
+                "        }} else if {} {{\n            return Err(SerializationError::Encode(\"field '{}' is not available in this version\"));\n        }}\n",
+                check_expr, field.name
+            ));
+        } else {
+            code.push_str("        }\n");
+        }
     } else {
         body(&mut code, "        ");
     }

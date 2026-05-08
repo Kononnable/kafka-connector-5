@@ -108,6 +108,10 @@ impl ApiResponse for MetadataResponse {
             self.throttle_time_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        } else if self.throttle_time_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ThrottleTimeMs' is not available in this version",
+            ));
         }
         self.brokers
             .encode_flexible(buf, is_flexible)
@@ -116,11 +120,19 @@ impl ApiResponse for MetadataResponse {
             self.cluster_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ClusterId"))?;
+        } else if self.cluster_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'ClusterId' is not available in this version",
+            ));
         }
         if (1) <= version.0 {
             self.controller_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ControllerId"))?;
+        } else if self.controller_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ControllerId' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)
@@ -131,11 +143,19 @@ impl ApiResponse for MetadataResponse {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode ClusterAuthorizedOperations")
                 })?;
+        } else if self.cluster_authorized_operations != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ClusterAuthorizedOperations' is not available in this version",
+            ));
         }
         if (13) <= version.0 {
             self.error_code
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        } else if self.error_code != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ErrorCode' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

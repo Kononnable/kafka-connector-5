@@ -87,6 +87,10 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
             self.subscribed_topic_regex
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SubscribedTopicRegex"))?;
+        } else if self.subscribed_topic_regex.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'SubscribedTopicRegex' is not available in this version",
+            ));
         }
         self.server_assignor
             .encode_flexible(buf, is_flexible)

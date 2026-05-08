@@ -77,11 +77,19 @@ impl ApiResponse for AddPartitionsToTxnResponse {
             self.error_code
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        } else if self.error_code != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ErrorCode' is not available in this version",
+            ));
         }
         if (4) <= version.0 {
             self.results_by_transaction
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ResultsByTransaction"))?;
+        } else if !self.results_by_transaction.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'ResultsByTransaction' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.results_by_topic_v3_and_below
@@ -89,6 +97,10 @@ impl ApiResponse for AddPartitionsToTxnResponse {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode ResultsByTopicV3AndBelow")
                 })?;
+        } else if !self.results_by_topic_v3_and_below.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'ResultsByTopicV3AndBelow' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

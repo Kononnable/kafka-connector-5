@@ -69,6 +69,10 @@ impl ApiRequest for ListOffsetsRequest {
             self.isolation_level
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IsolationLevel"))?;
+        } else if self.isolation_level != 0 {
+            return Err(SerializationError::Encode(
+                "field 'IsolationLevel' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)
@@ -77,6 +81,10 @@ impl ApiRequest for ListOffsetsRequest {
             self.timeout_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode TimeoutMs"))?;
+        } else if self.timeout_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'TimeoutMs' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

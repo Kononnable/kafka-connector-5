@@ -46,16 +46,28 @@ impl ApiRequest for FindCoordinatorRequest {
             self.key
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Key"))?;
+        } else if !self.key.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Key' is not available in this version",
+            ));
         }
         if (1) <= version.0 {
             self.key_type
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode KeyType"))?;
+        } else if self.key_type != 0 {
+            return Err(SerializationError::Encode(
+                "field 'KeyType' is not available in this version",
+            ));
         }
         if (4) <= version.0 {
             self.coordinator_keys
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode CoordinatorKeys"))?;
+        } else if !self.coordinator_keys.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'CoordinatorKeys' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

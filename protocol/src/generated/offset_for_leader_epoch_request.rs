@@ -61,6 +61,10 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
             self.replica_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ReplicaId"))?;
+        } else if self.replica_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ReplicaId' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)

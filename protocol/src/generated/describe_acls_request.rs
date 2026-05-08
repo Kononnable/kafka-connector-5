@@ -58,6 +58,10 @@ impl ApiRequest for DescribeAclsRequest {
             self.pattern_type_filter
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode PatternTypeFilter"))?;
+        } else if self.pattern_type_filter != 0 {
+            return Err(SerializationError::Encode(
+                "field 'PatternTypeFilter' is not available in this version",
+            ));
         }
         self.principal_filter
             .encode_flexible(buf, is_flexible)

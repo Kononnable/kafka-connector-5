@@ -66,6 +66,10 @@ impl ApiRequest for ProduceRequest {
             self.transactional_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode TransactionalId"))?;
+        } else if self.transactional_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'TransactionalId' is not available in this version",
+            ));
         }
         self.acks
             .encode_flexible(buf, is_flexible)

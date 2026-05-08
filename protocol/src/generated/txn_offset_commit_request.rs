@@ -89,16 +89,28 @@ impl ApiRequest for TxnOffsetCommitRequest {
             self.generation_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GenerationId"))?;
+        } else if self.generation_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'GenerationId' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.member_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode MemberId"))?;
+        } else if !self.member_id.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'MemberId' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.group_instance_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        } else if self.group_instance_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'GroupInstanceId' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)

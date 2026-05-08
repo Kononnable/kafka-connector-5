@@ -58,11 +58,19 @@ impl ApiRequest for DescribeConfigsRequest {
             self.include_synonyms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IncludeSynonyms"))?;
+        } else if self.include_synonyms {
+            return Err(SerializationError::Encode(
+                "field 'IncludeSynonyms' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.include_documentation
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IncludeDocumentation"))?;
+        } else if self.include_documentation {
+            return Err(SerializationError::Encode(
+                "field 'IncludeDocumentation' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

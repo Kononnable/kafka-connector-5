@@ -71,16 +71,28 @@ impl ApiRequest for SyncGroupRequest {
             self.group_instance_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        } else if self.group_instance_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'GroupInstanceId' is not available in this version",
+            ));
         }
         if (5) <= version.0 {
             self.protocol_type
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProtocolType"))?;
+        } else if self.protocol_type.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'ProtocolType' is not available in this version",
+            ));
         }
         if (5) <= version.0 {
             self.protocol_name
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProtocolName"))?;
+        } else if self.protocol_name.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'ProtocolName' is not available in this version",
+            ));
         }
         self.assignments
             .encode_flexible(buf, is_flexible)

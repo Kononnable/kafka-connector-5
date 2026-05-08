@@ -52,6 +52,10 @@ impl ApiRequest for ElectLeadersRequest {
             self.election_type
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ElectionType"))?;
+        } else if self.election_type != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ElectionType' is not available in this version",
+            ));
         }
         self.topic_partitions
             .encode_flexible(buf, is_flexible)

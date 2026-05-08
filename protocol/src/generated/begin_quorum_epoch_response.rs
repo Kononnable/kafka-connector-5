@@ -83,6 +83,10 @@ impl ApiResponse for BeginQuorumEpochResponse {
             self.node_endpoints
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode NodeEndpoints"))?;
+        } else if !self.node_endpoints.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'NodeEndpoints' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

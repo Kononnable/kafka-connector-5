@@ -72,6 +72,10 @@ impl ApiResponse for CreateDelegationTokenResponse {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode TokenRequesterPrincipalType")
                 })?;
+        } else if !self.token_requester_principal_type.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'TokenRequesterPrincipalType' is not available in this version",
+            ));
         }
         if (3) <= version.0 {
             self.token_requester_principal_name
@@ -79,6 +83,10 @@ impl ApiResponse for CreateDelegationTokenResponse {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode TokenRequesterPrincipalName")
                 })?;
+        } else if !self.token_requester_principal_name.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'TokenRequesterPrincipalName' is not available in this version",
+            ));
         }
         self.issue_timestamp_ms
             .encode_flexible(buf, is_flexible)

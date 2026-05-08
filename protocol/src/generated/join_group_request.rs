@@ -70,6 +70,10 @@ impl ApiRequest for JoinGroupRequest {
             self.rebalance_timeout_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode RebalanceTimeoutMs"))?;
+        } else if self.rebalance_timeout_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'RebalanceTimeoutMs' is not available in this version",
+            ));
         }
         self.member_id
             .encode_flexible(buf, is_flexible)
@@ -78,6 +82,10 @@ impl ApiRequest for JoinGroupRequest {
             self.group_instance_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        } else if self.group_instance_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'GroupInstanceId' is not available in this version",
+            ));
         }
         self.protocol_type
             .encode_flexible(buf, is_flexible)
@@ -89,6 +97,10 @@ impl ApiRequest for JoinGroupRequest {
             self.reason
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Reason"))?;
+        } else if self.reason.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'Reason' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

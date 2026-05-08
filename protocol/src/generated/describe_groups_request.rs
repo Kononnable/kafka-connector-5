@@ -47,6 +47,10 @@ impl ApiRequest for DescribeGroupsRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode IncludeAuthorizedOperations")
                 })?;
+        } else if self.include_authorized_operations {
+            return Err(SerializationError::Encode(
+                "field 'IncludeAuthorizedOperations' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

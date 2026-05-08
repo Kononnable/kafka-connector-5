@@ -53,6 +53,10 @@ impl ApiRequest for ListTransactionsRequest {
             self.duration_filter
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode DurationFilter"))?;
+        } else if self.duration_filter != 0 {
+            return Err(SerializationError::Encode(
+                "field 'DurationFilter' is not available in this version",
+            ));
         }
         if (2) <= version.0 {
             self.transactional_id_pattern
@@ -60,6 +64,10 @@ impl ApiRequest for ListTransactionsRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode TransactionalIdPattern")
                 })?;
+        } else if self.transactional_id_pattern.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'TransactionalIdPattern' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

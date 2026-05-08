@@ -79,6 +79,10 @@ impl ApiRequest for AddPartitionsToTxnRequest {
             self.transactions
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode Transactions"))?;
+        } else if !self.transactions.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'Transactions' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.v3_and_below_transactional_id
@@ -86,11 +90,19 @@ impl ApiRequest for AddPartitionsToTxnRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode V3AndBelowTransactionalId")
                 })?;
+        } else if !self.v3_and_below_transactional_id.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'V3AndBelowTransactionalId' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.v3_and_below_producer_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode V3AndBelowProducerId"))?;
+        } else if self.v3_and_below_producer_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'V3AndBelowProducerId' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.v3_and_below_producer_epoch
@@ -98,11 +110,19 @@ impl ApiRequest for AddPartitionsToTxnRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode V3AndBelowProducerEpoch")
                 })?;
+        } else if self.v3_and_below_producer_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'V3AndBelowProducerEpoch' is not available in this version",
+            ));
         }
         if (0) <= version.0 && version.0 <= (3) {
             self.v3_and_below_topics
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode V3AndBelowTopics"))?;
+        } else if !self.v3_and_below_topics.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'V3AndBelowTopics' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

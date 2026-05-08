@@ -55,6 +55,10 @@ impl ApiRequest for HeartbeatRequest {
             self.group_instance_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode GroupInstanceId"))?;
+        } else if self.group_instance_id.is_some() {
+            return Err(SerializationError::Encode(
+                "field 'GroupInstanceId' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

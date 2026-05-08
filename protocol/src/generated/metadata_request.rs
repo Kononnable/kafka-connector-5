@@ -62,6 +62,10 @@ impl ApiRequest for MetadataRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode AllowAutoTopicCreation")
                 })?;
+        } else if self.allow_auto_topic_creation {
+            return Err(SerializationError::Encode(
+                "field 'AllowAutoTopicCreation' is not available in this version",
+            ));
         }
         if (8) <= version.0 && version.0 <= (10) {
             self.include_cluster_authorized_operations
@@ -71,6 +75,10 @@ impl ApiRequest for MetadataRequest {
                         "failed to encode IncludeClusterAuthorizedOperations",
                     )
                 })?;
+        } else if self.include_cluster_authorized_operations {
+            return Err(SerializationError::Encode(
+                "field 'IncludeClusterAuthorizedOperations' is not available in this version",
+            ));
         }
         if (8) <= version.0 {
             self.include_topic_authorized_operations
@@ -78,6 +86,10 @@ impl ApiRequest for MetadataRequest {
                 .map_err(|_| {
                     SerializationError::Encode("failed to encode IncludeTopicAuthorizedOperations")
                 })?;
+        } else if self.include_topic_authorized_operations {
+            return Err(SerializationError::Encode(
+                "field 'IncludeTopicAuthorizedOperations' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

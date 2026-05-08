@@ -84,6 +84,10 @@ impl ApiRequest for BeginQuorumEpochRequest {
             self.voter_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode VoterId"))?;
+        } else if self.voter_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'VoterId' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)
@@ -92,6 +96,10 @@ impl ApiRequest for BeginQuorumEpochRequest {
             self.leader_endpoints
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode LeaderEndpoints"))?;
+        } else if !self.leader_endpoints.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'LeaderEndpoints' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

@@ -53,11 +53,19 @@ impl ApiResponse for EndTxnResponse {
             self.producer_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProducerId"))?;
+        } else if self.producer_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ProducerId' is not available in this version",
+            ));
         }
         if (5) <= version.0 {
             self.producer_epoch
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ProducerEpoch"))?;
+        } else if self.producer_epoch != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ProducerEpoch' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

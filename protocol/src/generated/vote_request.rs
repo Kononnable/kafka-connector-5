@@ -78,6 +78,10 @@ impl ApiRequest for VoteRequest {
             self.voter_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode VoterId"))?;
+        } else if self.voter_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'VoterId' is not available in this version",
+            ));
         }
         self.topics
             .encode_flexible(buf, is_flexible)

@@ -50,11 +50,19 @@ impl ApiRequest for DescribeClusterRequest {
             self.endpoint_type
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode EndpointType"))?;
+        } else if self.endpoint_type != 0 {
+            return Err(SerializationError::Encode(
+                "field 'EndpointType' is not available in this version",
+            ));
         }
         if (2) <= version.0 {
             self.include_fenced_brokers
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode IncludeFencedBrokers"))?;
+        } else if self.include_fenced_brokers {
+            return Err(SerializationError::Encode(
+                "field 'IncludeFencedBrokers' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

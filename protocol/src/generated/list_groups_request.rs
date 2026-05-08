@@ -43,11 +43,19 @@ impl ApiRequest for ListGroupsRequest {
             self.states_filter
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode StatesFilter"))?;
+        } else if !self.states_filter.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'StatesFilter' is not available in this version",
+            ));
         }
         if (5) <= version.0 {
             self.types_filter
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode TypesFilter"))?;
+        } else if !self.types_filter.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'TypesFilter' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)

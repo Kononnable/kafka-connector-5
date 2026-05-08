@@ -150,16 +150,28 @@ impl ApiResponse for FetchResponse {
             self.throttle_time_ms
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ThrottleTimeMs"))?;
+        } else if self.throttle_time_ms != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ThrottleTimeMs' is not available in this version",
+            ));
         }
         if (7) <= version.0 {
             self.error_code
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode ErrorCode"))?;
+        } else if self.error_code != 0 {
+            return Err(SerializationError::Encode(
+                "field 'ErrorCode' is not available in this version",
+            ));
         }
         if (7) <= version.0 {
             self.session_id
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode SessionId"))?;
+        } else if self.session_id != 0 {
+            return Err(SerializationError::Encode(
+                "field 'SessionId' is not available in this version",
+            ));
         }
         self.responses
             .encode_flexible(buf, is_flexible)
@@ -168,6 +180,10 @@ impl ApiResponse for FetchResponse {
             self.node_endpoints
                 .encode_flexible(buf, is_flexible)
                 .map_err(|_| SerializationError::Encode("failed to encode NodeEndpoints"))?;
+        } else if !self.node_endpoints.is_empty() {
+            return Err(SerializationError::Encode(
+                "field 'NodeEndpoints' is not available in this version",
+            ));
         }
         if is_flexible {
             // Tagged fields (none yet)
