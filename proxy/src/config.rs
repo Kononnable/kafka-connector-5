@@ -24,16 +24,11 @@ impl ProxyConfig {
     pub fn new(
         listen_addr: SocketAddr,
         broker_addr: SocketAddr,
-        port_map: HashMap<u16, u16>,
+        mut port_map: HashMap<u16, u16>,
     ) -> Self {
-        let port_map = if port_map.is_empty() {
-            // Default: single mapping broker → proxy
-            let mut m = HashMap::new();
-            m.insert(broker_addr.port(), listen_addr.port());
-            m
-        } else {
-            port_map
-        };
+        if port_map.is_empty() {
+            port_map.insert(broker_addr.port(), listen_addr.port());
+        }
         Self {
             listen_addr,
             broker_addr,
@@ -47,8 +42,10 @@ impl ProxyConfig {
     }
 
     /// Map a broker port to its proxy port. Returns `None` if no mapping.
+    /// Accepts `i32` (Kafka wire format) and returns `i32` for byte patching.
     pub fn proxy_port_for(&self, broker_port: i32) -> Option<i32> {
-        self.port_map.get(&(broker_port as u16)).copied().map(|p| p as i32)
+        let bp = u16::try_from(broker_port).ok()?;
+        self.port_map.get(&bp).copied().map(i32::from)
     }
 
     /// Parse a port map string like "9092:9192,9093:9193,9094:9194".
