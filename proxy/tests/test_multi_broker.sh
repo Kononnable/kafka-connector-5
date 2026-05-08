@@ -6,9 +6,10 @@
 # undecoded messages (except ApiVersions), and port rewrites.
 #
 # Usage:
-#   ./test_multi_broker.sh                     # 3 proxies (3-broker cluster)
-#   ./test_multi_broker.sh single              # 1 proxy (single-broker cluster)
-#   ./test_multi_broker.sh --debug             # show proxy output
+#   ./test_multi_broker.sh                          # 3 proxies (3-broker cluster)
+#   ./test_multi_broker.sh single                   # 1 proxy (single-broker cluster)
+#   ./test_multi_broker.sh --debug                  # show proxy output (truncated)
+#   ./test_multi_broker.sh --debug-long             # show full proxy output
 #   ./test_multi_broker.sh single --debug
 #
 # Exit code: 0 = all checks passed, 1 = something failed
@@ -21,10 +22,15 @@ PASS=0
 FAIL=0
 DEBUG=false
 
-# Parse args: extract --debug flag from any position
+# Parse args: extract --debug / --debug-long flags from any position
 ARGS=()
+DEBUG=false
+DEBUG_LONG=false
 for arg in "$@"; do
-    if [ "$arg" = "--debug" ]; then
+    if [ "$arg" = "--debug-long" ]; then
+        DEBUG_LONG=true
+        DEBUG=true
+    elif [ "$arg" = "--debug" ]; then
         DEBUG=true
     else
         ARGS+=("$arg")
@@ -45,8 +51,10 @@ cleanup
 
 MODE="${ARGS[0]:-}"
 
-if $DEBUG; then
+if $DEBUG_LONG; then
     export PROXY_DECODE_MAX=0
+elif $DEBUG; then
+    export PROXY_DECODE_MAX=100
 fi
 
 if [ "$MODE" = "single" ]; then
@@ -146,7 +154,7 @@ if $DEBUG; then
     echo "=== Proxy request/response log ==="
     grep -E '→ REQ|← RES' < "$LOG" 2>/dev/null | head -40
 else
-    echo "  (use --debug to show proxy log)"
+    echo "  (use --debug or --debug-long to show proxy log)"
 fi
 
 echo ""
