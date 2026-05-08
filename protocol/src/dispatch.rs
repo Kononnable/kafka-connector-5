@@ -9,11 +9,14 @@ use crate::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
 
 /// Format a debug string, truncating to a reasonable max length for logging.
 fn fmt_compact(s: String) -> String {
-    const MAX: usize = 450;
-    if s.len() > MAX {
-        format!("{} ... ({} chars total)", &s[..MAX], s.len())
-    } else {
+    let max = match std::env::var("PROXY_DECODE_MAX") {
+        Ok(v) => v.parse::<usize>().unwrap_or(450),
+        Err(_) => 450,
+    };
+    if max == 0 || s.len() <= max {
         s
+    } else {
+        format!("{} ... ({} chars total)", &s[..max], s.len())
     }
 }
 

@@ -45,6 +45,10 @@ cleanup
 
 MODE="${ARGS[0]:-}"
 
+if $DEBUG; then
+    export PROXY_DECODE_MAX=0
+fi
+
 if [ "$MODE" = "single" ]; then
     PORT_MAP="9092:9192"
     LOGDIR=$(mktemp -d /tmp/proxy_test_XXXX)
