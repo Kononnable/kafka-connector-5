@@ -139,28 +139,23 @@ where
 
 use protocol::generated::MetadataResponse;
 
-/// Try to deserialize and debug-log a request body.
-/// Delegates to the protocol crate's dispatch module.
-fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
+/// Try to deserialize a request body, returning a description string.
+fn describe_request_body(api_key: i16, version: i16, body: &[u8]) -> String {
     match protocol::dispatch::decode_request_body(api_key, version, body) {
-        Ok(s) => tracing::info!("→ REQ body: {s}"),
-        Err(e) => {
-            tracing::warn!("  deser err: {e}");
-            tracing::info!("→ REQ body: {} bytes (undecoded)", body.len());
-        }
+        Ok(s) => s,
+        Err(e) => format!("{} bytes (undecoded: {e})", body.len()),
     }
 }
 
-/// Try to deserialize and debug-log a response body.
-/// Delegates to the protocol crate's dispatch module.
-fn log_response_body(api_key: i16, version: i16, body: &[u8]) {
+/// Try to deserialize a response body, returning a description string.
+fn describe_response_body(api_key: i16, version: i16, body: &[u8]) -> String {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         protocol::dispatch::decode_response_body(api_key, version, body)
     }));
     match result {
-        Ok(Ok(s)) => tracing::info!("← RES body: {s}"),
-        Ok(Err(e)) => tracing::info!("← RES body: {} bytes (undecoded: {e})", body.len()),
-        Err(_) => tracing::warn!("← RES body: {} bytes (panic)", body.len()),
+        Ok(Ok(s)) => s,
+        Ok(Err(e)) => format!("{} bytes (undecoded: {e})", body.len()),
+        Err(_) => format!("{} bytes (panic)", body.len()),
     }
 }
 
@@ -173,21 +168,22 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
         };
 
         if let Some(ref hdr) = parsed.request {
+            let frame_body = &remaining[4..consumed];
+            let is_flex = frame::is_flexible_api(hdr.api_key, hdr.api_version);
+            let body_off = frame::request_body_offset(frame_body, is_flex);
+            let body_desc = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                describe_request_body(hdr.api_key, hdr.api_version, &frame_body[body_off..])
+            })).unwrap_or_else(|_| format!("{} bytes (panic)", frame_body.len() - body_off));
             tracing::info!(
-                "→ REQ  corr={} api={}({}) v={} client={} | {} bytes",
+                "→ REQ  corr={} api={}({}) v={} client={} | {} bytes | {}",
                 hdr.correlation_id,
                 frame::api_key_name(hdr.api_key),
                 hdr.api_key,
                 hdr.api_version,
                 hdr.client_id,
                 parsed.size,
+                body_desc,
             );
-            let frame_body = &remaining[4..consumed];
-            let is_flex = frame::is_flexible_api(hdr.api_key, hdr.api_version);
-            let body_off = frame::request_body_offset(frame_body, is_flex);
-            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-                || log_request_body(hdr.api_key, hdr.api_version, &frame_body[body_off..]),
-            ));
             let mut t = tracker.lock().await;
             let inflight = t.track_request(hdr);
             tracing::trace!(
@@ -218,46 +214,39 @@ async fn inspect_and_rewrite_responses(
         };
 
         if let Some(ref res) = parsed.response {
-            tracing::info!(
-                "← RES  corr={} | {} bytes",
-                res.correlation_id,
-                parsed.size,
-            );
-
             // Look up the matching request
-            let (meta_version, _, _) = {
+            let (meta_version, _body_desc) = {
                 let mut t = tracker.lock().await;
                 if let Some(completion) = t.complete_response(res.correlation_id) {
+                    let frame_body = &remaining[4..consumed];
+                    let is_flex = completion.api_key != 18
+                        && frame::is_flexible_api(completion.api_key, completion.api_version);
+                    let body_off = frame::response_body_offset(frame_body, is_flex);
+                    let body_desc = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        describe_response_body(completion.api_key, completion.api_version, &frame_body[body_off..])
+                    })).unwrap_or_else(|_| format!("{} bytes (panic)", frame_body.len() - body_off));
                     tracing::info!(
-                        "latency  corr={} api={}({}) v={} client={} | {:?}",
-                        completion.correlation_id,
+                        "← RES  corr={} api={}({}) v={} client={} | {} bytes | {:?} | {}",
+                        res.correlation_id,
                         frame::api_key_name(completion.api_key),
                         completion.api_key,
                         completion.api_version,
                         completion.client_id,
+                        parsed.size,
                         completion.latency,
+                        body_desc,
                     );
-                    // Log the deserialized response body
-                    let frame_body = &remaining[4..consumed];
-                    // ApiVersionsResponse (api_key=18) always uses v0 header (KIP-511)
-                    let is_flex = completion.api_key != 18
-                        && frame::is_flexible_api(completion.api_key, completion.api_version);
-                    let body_off = frame::response_body_offset(frame_body, is_flex);
-                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-                        || log_response_body(completion.api_key, completion.api_version, &frame_body[body_off..]),
-                    ));
-                    // Return metadata info for rewrite
-                    if completion.api_key == 3 {
-                        (Some(completion.api_version), completion.api_key, completion.api_version)
-                    } else {
-                        (None, completion.api_key, completion.api_version)
-                    }
+                    let meta = if completion.api_key == 3 { Some(completion.api_version) } else { None };
+                    (meta, body_desc)
                 } else {
-                    tracing::warn!(
-                        "orphan response corr={} (no matching request)",
+                    let desc = format!("orphan corr={}", res.correlation_id);
+                    tracing::info!(
+                        "← RES  corr={} | {} bytes | {}",
                         res.correlation_id,
+                        parsed.size,
+                        desc,
                     );
-                    (None, 0, 0)
+                    (None, desc)
                 }
             };
 
