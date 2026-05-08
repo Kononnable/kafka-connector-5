@@ -1069,13 +1069,13 @@ fn camel_to_snake(name: &str) -> String {
 
 /// Escape a field name if it is a Rust keyword.
 fn escape_field_name(name: &str) -> String {
-    // Rust 2021 edition keywords that could plausibly appear as Kafka field names.
+    // Rust 2024 edition keywords that could plausibly appear as Kafka field names.
     match name {
         "type" | "ref" | "mut" | "move" | "abstract" | "async" | "await" | "become" | "box"
         | "do" | "dyn" | "enum" | "extern" | "final" | "for" | "impl" | "in" | "let" | "loop"
         | "macro" | "match" | "override" | "priv" | "pub" | "return" | "self" | "static"
         | "struct" | "super" | "trait" | "try" | "typeof" | "unsafe" | "unsized" | "use"
-        | "virtual" | "where" | "while" | "yield" => format!("r#{}", name),
+        | "virtual" | "where" | "while" | "yield" | "crate" | "union" => format!("r#{}", name),
         _ => name.to_string(),
     }
 }
