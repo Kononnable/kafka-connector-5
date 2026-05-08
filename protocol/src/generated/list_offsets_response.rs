@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -71,7 +73,7 @@ impl ApiResponse for ListOffsetsResponse {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -84,7 +86,7 @@ impl ApiResponse for ListOffsetsResponse {
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -104,7 +106,7 @@ impl KafkaSerialize for ListOffsetsResponse {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -123,7 +125,7 @@ impl KafkaDeserialize for ListOffsetsResponse {
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -151,7 +153,7 @@ impl KafkaSerialize for ListOffsetsPartitionResponse {
             self.leader_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -181,7 +183,7 @@ impl KafkaDeserialize for ListOffsetsPartitionResponse {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             partition_index,
@@ -203,7 +205,7 @@ impl KafkaSerialize for ListOffsetsTopicResponse {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -218,7 +220,7 @@ impl KafkaDeserialize for ListOffsetsTopicResponse {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })
     }

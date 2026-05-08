@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -44,7 +46,7 @@ impl ApiRequest for DescribeDelegationTokenRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.owners.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -52,7 +54,7 @@ impl ApiRequest for DescribeDelegationTokenRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let owners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { owners })
     }
@@ -66,7 +68,7 @@ impl KafkaSerialize for DescribeDelegationTokenRequest {
     ) -> Result<(), SerializationError> {
         self.owners.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -80,7 +82,7 @@ impl KafkaDeserialize for DescribeDelegationTokenRequest {
     ) -> Result<Self, SerializationError> {
         let owners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { owners })
     }
@@ -96,7 +98,7 @@ impl KafkaSerialize for DescribeDelegationTokenOwner {
         self.principal_type.encode(buf, version, is_flexible)?;
         self.principal_name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -111,7 +113,7 @@ impl KafkaDeserialize for DescribeDelegationTokenOwner {
         let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             principal_type,

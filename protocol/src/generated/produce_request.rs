@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -72,7 +74,7 @@ impl ApiRequest for ProduceRequest {
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.topic_data.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -87,7 +89,7 @@ impl ApiRequest for ProduceRequest {
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topic_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             transactional_id,
@@ -111,7 +113,7 @@ impl KafkaSerialize for ProduceRequest {
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.topic_data.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -132,7 +134,7 @@ impl KafkaDeserialize for ProduceRequest {
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let topic_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             transactional_id,
@@ -153,7 +155,7 @@ impl KafkaSerialize for PartitionProduceData {
         self.index.encode(buf, version, is_flexible)?;
         self.records.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -168,7 +170,7 @@ impl KafkaDeserialize for PartitionProduceData {
         let index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let records = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { index, records })
     }
@@ -189,7 +191,7 @@ impl KafkaSerialize for TopicProduceData {
         }
         self.partition_data.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -213,7 +215,7 @@ impl KafkaDeserialize for TopicProduceData {
         };
         let partition_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             name,

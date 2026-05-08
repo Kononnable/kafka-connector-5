@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -85,7 +87,7 @@ impl ApiResponse for DescribeLogDirsResponse {
         }
         self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -99,7 +101,7 @@ impl ApiResponse for DescribeLogDirsResponse {
         };
         let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -121,7 +123,7 @@ impl KafkaSerialize for DescribeLogDirsResponse {
         }
         self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -141,7 +143,7 @@ impl KafkaDeserialize for DescribeLogDirsResponse {
         };
         let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -163,7 +165,7 @@ impl KafkaSerialize for DescribeLogDirsPartition {
         self.offset_lag.encode(buf, version, is_flexible)?;
         self.is_future_key.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -180,7 +182,7 @@ impl KafkaDeserialize for DescribeLogDirsPartition {
         let offset_lag = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let is_future_key = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             partition_index,
@@ -208,7 +210,7 @@ impl KafkaSerialize for DescribeLogDirsResult {
             self.usable_bytes.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -234,7 +236,7 @@ impl KafkaDeserialize for DescribeLogDirsResult {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             error_code,
@@ -256,7 +258,7 @@ impl KafkaSerialize for DescribeLogDirsTopic {
         self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -271,7 +273,7 @@ impl KafkaDeserialize for DescribeLogDirsTopic {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, partitions })
     }

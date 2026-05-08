@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -133,12 +135,12 @@ impl ApiResponse for ProduceResponse {
             if !self.node_endpoints.is_empty() {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if !self.node_endpoints.is_empty() {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.node_endpoints.encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -162,10 +164,10 @@ impl ApiResponse for ProduceResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
@@ -202,12 +204,12 @@ impl KafkaSerialize for ProduceResponse {
             if !self.node_endpoints.is_empty() {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if !self.node_endpoints.is_empty() {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.node_endpoints.encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -237,10 +239,10 @@ impl KafkaDeserialize for ProduceResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
@@ -274,7 +276,7 @@ impl KafkaSerialize for BatchIndexAndErrorMessage {
                 .encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -297,7 +299,7 @@ impl KafkaDeserialize for BatchIndexAndErrorMessage {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             batch_index,
@@ -320,7 +322,7 @@ impl KafkaSerialize for LeaderIdAndEpoch {
             self.leader_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -343,7 +345,7 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             leader_id,
@@ -372,7 +374,7 @@ impl KafkaSerialize for NodeEndpoint {
             self.rack.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -405,7 +407,7 @@ impl KafkaDeserialize for NodeEndpoint {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             node_id,
@@ -446,12 +448,12 @@ impl KafkaSerialize for PartitionProduceResponse {
             if self.current_leader != Default::default() {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if self.current_leader != Default::default() {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.current_leader.encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -498,10 +500,10 @@ impl KafkaDeserialize for PartitionProduceResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         current_leader = KafkaDeserialize::decode(buf, version, true)?;
@@ -540,7 +542,7 @@ impl KafkaSerialize for TopicProduceResponse {
         }
         self.partition_responses.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -564,7 +566,7 @@ impl KafkaDeserialize for TopicProduceResponse {
         };
         let partition_responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             name,

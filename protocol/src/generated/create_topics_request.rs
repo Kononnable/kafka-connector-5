@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -79,7 +81,7 @@ impl ApiRequest for CreateTopicsRequest {
             ));
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -93,7 +95,7 @@ impl ApiRequest for CreateTopicsRequest {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topics,
@@ -115,7 +117,7 @@ impl KafkaSerialize for CreateTopicsRequest {
             self.validate_only.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -135,7 +137,7 @@ impl KafkaDeserialize for CreateTopicsRequest {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topics,
@@ -155,7 +157,7 @@ impl KafkaSerialize for CreatableReplicaAssignment {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.broker_ids.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -170,7 +172,7 @@ impl KafkaDeserialize for CreatableReplicaAssignment {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let broker_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             partition_index,
@@ -192,7 +194,7 @@ impl KafkaSerialize for CreatableTopic {
         self.assignments.encode(buf, version, is_flexible)?;
         self.configs.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -210,7 +212,7 @@ impl KafkaDeserialize for CreatableTopic {
         let assignments = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let configs = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             name,
@@ -232,7 +234,7 @@ impl KafkaSerialize for CreatableTopicConfig {
         self.name.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -247,7 +249,7 @@ impl KafkaDeserialize for CreatableTopicConfig {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let value = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, value })
     }

@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -91,7 +93,7 @@ impl ApiResponse for CreateTopicsResponse {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -104,7 +106,7 @@ impl ApiResponse for CreateTopicsResponse {
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -124,7 +126,7 @@ impl KafkaSerialize for CreateTopicsResponse {
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -143,7 +145,7 @@ impl KafkaDeserialize for CreateTopicsResponse {
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -175,7 +177,7 @@ impl KafkaSerialize for CreatableTopicConfigs {
             self.is_sensitive.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -213,7 +215,7 @@ impl KafkaDeserialize for CreatableTopicConfigs {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             name,
@@ -258,13 +260,13 @@ impl KafkaSerialize for CreatableTopicResult {
             if self.topic_config_error_code != 0 {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if self.topic_config_error_code != 0 {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.topic_config_error_code
                     .encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -315,10 +317,10 @@ impl KafkaDeserialize for CreatableTopicResult {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         topic_config_error_code = KafkaDeserialize::decode(buf, version, true)?;

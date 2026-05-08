@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -86,12 +88,12 @@ impl ApiResponse for EndQuorumEpochResponse {
             if !self.node_endpoints.is_empty() {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if !self.node_endpoints.is_empty() {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.node_endpoints.encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -111,10 +113,10 @@ impl ApiResponse for EndQuorumEpochResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
@@ -149,12 +151,12 @@ impl KafkaSerialize for EndQuorumEpochResponse {
             if !self.node_endpoints.is_empty() {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if !self.node_endpoints.is_empty() {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.node_endpoints.encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -180,10 +182,10 @@ impl KafkaDeserialize for EndQuorumEpochResponse {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
@@ -219,7 +221,7 @@ impl KafkaSerialize for NodeEndpoint {
             self.port.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -247,7 +249,7 @@ impl KafkaDeserialize for NodeEndpoint {
             Default::default()
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             node_id,
@@ -269,7 +271,7 @@ impl KafkaSerialize for PartitionData {
         self.leader_id.encode(buf, version, is_flexible)?;
         self.leader_epoch.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -286,7 +288,7 @@ impl KafkaDeserialize for PartitionData {
         let leader_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             partition_index,
@@ -307,7 +309,7 @@ impl KafkaSerialize for TopicData {
         self.topic_name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -322,7 +324,7 @@ impl KafkaDeserialize for TopicData {
         let topic_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topic_name,

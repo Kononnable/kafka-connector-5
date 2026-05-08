@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -71,7 +73,7 @@ impl ApiRequest for UpdateRaftVoterRequest {
         self.kraft_version_feature
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -84,7 +86,7 @@ impl ApiRequest for UpdateRaftVoterRequest {
         let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let kraft_version_feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             cluster_id,
@@ -112,7 +114,7 @@ impl KafkaSerialize for UpdateRaftVoterRequest {
         self.kraft_version_feature
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -131,7 +133,7 @@ impl KafkaDeserialize for UpdateRaftVoterRequest {
         let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let kraft_version_feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             cluster_id,
@@ -156,7 +158,7 @@ impl KafkaSerialize for KRaftVersionFeature {
         self.max_supported_version
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -171,7 +173,7 @@ impl KafkaDeserialize for KRaftVersionFeature {
         let min_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             min_supported_version,
@@ -191,7 +193,7 @@ impl KafkaSerialize for Listener {
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -207,7 +209,7 @@ impl KafkaDeserialize for Listener {
         let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { name, host, port })
     }

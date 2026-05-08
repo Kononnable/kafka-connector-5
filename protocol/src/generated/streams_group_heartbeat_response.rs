@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -122,7 +124,7 @@ impl ApiResponse for StreamsGroupHeartbeatResponse {
         self.partitions_by_user_endpoint
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -143,7 +145,7 @@ impl ApiResponse for StreamsGroupHeartbeatResponse {
         let endpoint_information_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions_by_user_endpoint = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -190,7 +192,7 @@ impl KafkaSerialize for StreamsGroupHeartbeatResponse {
         self.partitions_by_user_endpoint
             .encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -217,7 +219,7 @@ impl KafkaDeserialize for StreamsGroupHeartbeatResponse {
         let endpoint_information_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions_by_user_endpoint = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -248,7 +250,7 @@ impl KafkaSerialize for Endpoint {
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -263,7 +265,7 @@ impl KafkaDeserialize for Endpoint {
         let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { host, port })
     }
@@ -280,7 +282,7 @@ impl KafkaSerialize for EndpointToPartitions {
         self.active_partitions.encode(buf, version, is_flexible)?;
         self.standby_partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -296,7 +298,7 @@ impl KafkaDeserialize for EndpointToPartitions {
         let active_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let standby_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             user_endpoint,
@@ -316,7 +318,7 @@ impl KafkaSerialize for Status {
         self.status_code.encode(buf, version, is_flexible)?;
         self.status_detail.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -331,7 +333,7 @@ impl KafkaDeserialize for Status {
         let status_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let status_detail = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             status_code,
@@ -350,7 +352,7 @@ impl KafkaSerialize for TaskIds {
         self.subtopology_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -365,7 +367,7 @@ impl KafkaDeserialize for TaskIds {
         let subtopology_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             subtopology_id,
@@ -384,7 +386,7 @@ impl KafkaSerialize for TopicPartition {
         self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -399,7 +401,7 @@ impl KafkaDeserialize for TopicPartition {
         let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { topic, partitions })
     }

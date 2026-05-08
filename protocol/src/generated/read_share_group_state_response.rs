@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -72,7 +74,7 @@ impl ApiResponse for ReadShareGroupStateResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -80,7 +82,7 @@ impl ApiResponse for ReadShareGroupStateResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { results })
     }
@@ -94,7 +96,7 @@ impl KafkaSerialize for ReadShareGroupStateResponse {
     ) -> Result<(), SerializationError> {
         self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -108,7 +110,7 @@ impl KafkaDeserialize for ReadShareGroupStateResponse {
     ) -> Result<Self, SerializationError> {
         let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { results })
     }
@@ -128,7 +130,7 @@ impl KafkaSerialize for PartitionResult {
         self.start_offset.encode(buf, version, is_flexible)?;
         self.state_batches.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -147,7 +149,7 @@ impl KafkaDeserialize for PartitionResult {
         let start_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let state_batches = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             partition,
@@ -170,7 +172,7 @@ impl KafkaSerialize for ReadStateResult {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -185,7 +187,7 @@ impl KafkaDeserialize for ReadStateResult {
         let topic_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topic_id,
@@ -206,7 +208,7 @@ impl KafkaSerialize for StateBatch {
         self.delivery_state.encode(buf, version, is_flexible)?;
         self.delivery_count.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -223,7 +225,7 @@ impl KafkaDeserialize for StateBatch {
         let delivery_state = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let delivery_count = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             first_offset,

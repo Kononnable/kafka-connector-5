@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -65,7 +67,7 @@ impl ApiResponse for DescribeUserScramCredentialsResponse {
         self.error_message.encode(buf, version, is_flexible)?;
         self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -76,7 +78,7 @@ impl ApiResponse for DescribeUserScramCredentialsResponse {
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -98,7 +100,7 @@ impl KafkaSerialize for DescribeUserScramCredentialsResponse {
         self.error_message.encode(buf, version, is_flexible)?;
         self.results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -115,7 +117,7 @@ impl KafkaDeserialize for DescribeUserScramCredentialsResponse {
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -136,7 +138,7 @@ impl KafkaSerialize for CredentialInfo {
         self.mechanism.encode(buf, version, is_flexible)?;
         self.iterations.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -151,7 +153,7 @@ impl KafkaDeserialize for CredentialInfo {
         let mechanism = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let iterations = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             mechanism,
@@ -172,7 +174,7 @@ impl KafkaSerialize for DescribeUserScramCredentialsResult {
         self.error_message.encode(buf, version, is_flexible)?;
         self.credential_infos.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -189,7 +191,7 @@ impl KafkaDeserialize for DescribeUserScramCredentialsResult {
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let credential_infos = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             user,

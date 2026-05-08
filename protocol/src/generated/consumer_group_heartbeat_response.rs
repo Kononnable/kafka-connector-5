@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -69,10 +71,10 @@ impl ApiResponse for ConsumerGroupHeartbeatResponse {
             .encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.assignment {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
+                encode_unsigned_varint(1u64, buf);
                 __val.encode(buf, version, true)?;
             } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.assignment {
@@ -80,7 +82,7 @@ impl ApiResponse for ConsumerGroupHeartbeatResponse {
             }
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -93,7 +95,7 @@ impl ApiResponse for ConsumerGroupHeartbeatResponse {
         let member_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let heartbeat_interval_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let assignment = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__present, _) = decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
@@ -103,7 +105,7 @@ impl ApiResponse for ConsumerGroupHeartbeatResponse {
             Some(KafkaDeserialize::decode(buf, version, false)?)
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -132,10 +134,10 @@ impl KafkaSerialize for ConsumerGroupHeartbeatResponse {
             .encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.assignment {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
+                encode_unsigned_varint(1u64, buf);
                 __val.encode(buf, version, true)?;
             } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.assignment {
@@ -143,7 +145,7 @@ impl KafkaSerialize for ConsumerGroupHeartbeatResponse {
             }
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -162,7 +164,7 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatResponse {
         let member_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let heartbeat_interval_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let assignment = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__present, _) = decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
@@ -172,7 +174,7 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatResponse {
             Some(KafkaDeserialize::decode(buf, version, false)?)
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -195,7 +197,7 @@ impl KafkaSerialize for Assignment {
     ) -> Result<(), SerializationError> {
         self.topic_partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -209,7 +211,7 @@ impl KafkaDeserialize for Assignment {
     ) -> Result<Self, SerializationError> {
         let topic_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { topic_partitions })
     }
@@ -225,7 +227,7 @@ impl KafkaSerialize for TopicPartitions {
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -240,7 +242,7 @@ impl KafkaDeserialize for TopicPartitions {
         let topic_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topic_id,

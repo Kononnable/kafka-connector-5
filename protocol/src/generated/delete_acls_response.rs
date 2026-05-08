@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -72,7 +74,7 @@ impl ApiResponse for DeleteAclsResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.filter_results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -81,7 +83,7 @@ impl ApiResponse for DeleteAclsResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let filter_results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -99,7 +101,7 @@ impl KafkaSerialize for DeleteAclsResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.filter_results.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -114,7 +116,7 @@ impl KafkaDeserialize for DeleteAclsResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let filter_results = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -134,7 +136,7 @@ impl KafkaSerialize for DeleteAclsFilterResult {
         self.error_message.encode(buf, version, is_flexible)?;
         self.matching_acls.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -150,7 +152,7 @@ impl KafkaDeserialize for DeleteAclsFilterResult {
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let matching_acls = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             error_code,
@@ -179,7 +181,7 @@ impl KafkaSerialize for DeleteAclsMatchingAcl {
         self.operation.encode(buf, version, is_flexible)?;
         self.permission_type.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -205,7 +207,7 @@ impl KafkaDeserialize for DeleteAclsMatchingAcl {
         let operation = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let permission_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             error_code,

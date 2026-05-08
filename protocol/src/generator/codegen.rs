@@ -213,7 +213,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
     // Module-level allow for unused imports (not all traits are used in every file).
     code.push_str("#![allow(unused_imports, unused_variables)]\n");
-    code.push_str("use crate::protocol::serialization::{KafkaSerialize, KafkaDeserialize};\n");
+    code.push_str("use crate::protocol::serialization::{KafkaSerialize, KafkaDeserialize, decode_unsigned_varint, encode_unsigned_varint};\n");
     code.push_str(
         "use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};\n",
     );
@@ -545,9 +545,7 @@ fn generate_tagged_encode_body(fields: &[Field]) -> String {
     let mut code = String::new();
     let tagged: Vec<&Field> = fields.iter().filter(|f| f.tag.is_some()).collect();
     if tagged.is_empty() {
-        code.push_str(
-            "            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
-        );
+        code.push_str("            encode_unsigned_varint(0u64, buf);\n");
         return code;
     }
     code.push_str("            let mut __tag_count = 0u64;\n");
@@ -560,9 +558,7 @@ fn generate_tagged_encode_body(fields: &[Field]) -> String {
             ));
         }
     }
-    code.push_str(
-        "            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);\n",
-    );
+    code.push_str("            encode_unsigned_varint(__tag_count, buf);\n");
     for f in &tagged {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
         let _inner_type = map_field_type(f);
@@ -570,7 +566,10 @@ fn generate_tagged_encode_body(fields: &[Field]) -> String {
         let tag_id = f.tag.unwrap();
         if let Some(check) = non_default_check(&rust_name, f) {
             code.push_str(&format!("            if {} {{\n", check));
-            code.push_str(&format!("                crate::protocol::serialization::encode_unsigned_varint({}u64, buf);\n", tag_id));
+            code.push_str(&format!(
+                "                encode_unsigned_varint({}u64, buf);\n",
+                tag_id
+            ));
             code.push_str("                let mut __tmp = bytes::BytesMut::new();\n");
             if needs_presence {
                 code.push_str(&format!(
@@ -585,7 +584,7 @@ fn generate_tagged_encode_body(fields: &[Field]) -> String {
                     rust_name
                 ));
             }
-            code.push_str("                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);\n");
+            code.push_str("                encode_unsigned_varint(__tmp.len() as u64, buf);\n");
             code.push_str("                buf.put_slice(&__tmp);\n");
             code.push_str("            }\n");
         }
@@ -599,13 +598,13 @@ fn generate_tagged_decode_body(fields: &[Field]) -> String {
     let mut code = String::new();
     let tagged: Vec<&Field> = fields.iter().filter(|f| f.tag.is_some()).collect();
     if tagged.is_empty() {
-        code.push_str("            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+        code.push_str("            let (_tag_count, _) = decode_unsigned_varint(buf)?;\n");
         return code;
     }
-    code.push_str("            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+    code.push_str("            let (__tag_count, _) = decode_unsigned_varint(buf)?;\n");
     code.push_str("            for _ in 0..__tag_count {\n");
-    code.push_str("                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
-    code.push_str("                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+    code.push_str("                let (__tag_id, _) = decode_unsigned_varint(buf)?;\n");
+    code.push_str("                let (__tag_len, _) = decode_unsigned_varint(buf)?;\n");
     code.push_str("                match __tag_id {\n");
     for f in &tagged {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
@@ -670,16 +669,10 @@ fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
                 "{}if let Some(ref __val) = self.{} {{\n",
                 guard, rust_name
             ));
-            code.push_str(&format!(
-                "{}crate::protocol::serialization::encode_unsigned_varint(1u64, buf);\n",
-                guard
-            ));
+            code.push_str(&format!("{}encode_unsigned_varint(1u64, buf);\n", guard));
             code.push_str(&format!("{}__val.encode(buf, version, true)?;\n", guard));
             code.push_str(&format!("{}}} else {{\n", guard));
-            code.push_str(&format!(
-                "{}crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n",
-                guard
-            ));
+            code.push_str(&format!("{}encode_unsigned_varint(0u64, buf);\n", guard));
             code.push_str(&format!("{}}}\n", guard));
             code.push_str(&format!("{}}} else {{\n", guard));
             code.push_str(&format!(
@@ -728,7 +721,10 @@ fn generate_deserialize_field(field: &Field) -> String {
         let decode_expr = |guard: &str| -> String {
             let mut c = String::new();
             c.push_str(&format!("{}if is_flexible {{\n", guard));
-            c.push_str(&format!("{}let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n", guard));
+            c.push_str(&format!(
+                "{}let (__present, _) = decode_unsigned_varint(buf)?;\n",
+                guard
+            ));
             c.push_str(&format!("{}if __present == 0 {{\n", guard));
             c.push_str(&format!("{}None\n", guard));
             c.push_str(&format!("{}}} else {{\n", guard));
@@ -817,10 +813,10 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
                 "                if let Some(ref __val) = self.{} {{\n",
                 rust_name
             ));
-            code.push_str("                    crate::protocol::serialization::encode_unsigned_varint(1u64, buf);\n");
+            code.push_str("                    encode_unsigned_varint(1u64, buf);\n");
             code.push_str("                    __val.encode(buf, version, true)?;\n");
             code.push_str("                } else {\n");
-            code.push_str("                    crate::protocol::serialization::encode_unsigned_varint(0u64, buf);\n");
+            code.push_str("                    encode_unsigned_varint(0u64, buf);\n");
             code.push_str("                }\n");
             code.push_str("            } else {\n");
             code.push_str(&format!(
@@ -876,7 +872,7 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
                 code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
             }
             code.push_str(&format!("        let {} = if is_flexible {{\n", rust_name));
-            code.push_str("            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;\n");
+            code.push_str("            let (__present, _) = decode_unsigned_varint(buf)?;\n");
             code.push_str("            if __present == 0 {\n");
             code.push_str("                None\n");
             code.push_str("            } else {\n");

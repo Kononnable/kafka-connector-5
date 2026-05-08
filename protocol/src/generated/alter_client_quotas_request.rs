@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -65,7 +67,7 @@ impl ApiRequest for AlterClientQuotasRequest {
         self.entries.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -74,7 +76,7 @@ impl ApiRequest for AlterClientQuotasRequest {
         let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             entries,
@@ -92,7 +94,7 @@ impl KafkaSerialize for AlterClientQuotasRequest {
         self.entries.encode(buf, version, is_flexible)?;
         self.validate_only.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -107,7 +109,7 @@ impl KafkaDeserialize for AlterClientQuotasRequest {
         let entries = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let validate_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             entries,
@@ -126,7 +128,7 @@ impl KafkaSerialize for EntityData {
         self.entity_type.encode(buf, version, is_flexible)?;
         self.entity_name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -141,7 +143,7 @@ impl KafkaDeserialize for EntityData {
         let entity_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let entity_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             entity_type,
@@ -160,7 +162,7 @@ impl KafkaSerialize for EntryData {
         self.entity.encode(buf, version, is_flexible)?;
         self.ops.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -175,7 +177,7 @@ impl KafkaDeserialize for EntryData {
         let entity = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let ops = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { entity, ops })
     }
@@ -192,7 +194,7 @@ impl KafkaSerialize for OpData {
         self.value.encode(buf, version, is_flexible)?;
         self.remove.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -208,7 +210,7 @@ impl KafkaDeserialize for OpData {
         let value = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let remove = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { key, value, remove })
     }

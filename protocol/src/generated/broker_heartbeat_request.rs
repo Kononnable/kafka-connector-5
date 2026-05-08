@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -63,12 +65,12 @@ impl ApiRequest for BrokerHeartbeatRequest {
             if !self.offline_log_dirs.is_empty() {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if !self.offline_log_dirs.is_empty() {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.offline_log_dirs.encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -91,10 +93,10 @@ impl ApiRequest for BrokerHeartbeatRequest {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         offline_log_dirs = KafkaDeserialize::decode(buf, version, true)?;
@@ -136,12 +138,12 @@ impl KafkaSerialize for BrokerHeartbeatRequest {
             if !self.offline_log_dirs.is_empty() {
                 __tag_count += 1;
             }
-            crate::protocol::serialization::encode_unsigned_varint(__tag_count, buf);
+            encode_unsigned_varint(__tag_count, buf);
             if !self.offline_log_dirs.is_empty() {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
                 let mut __tmp = bytes::BytesMut::new();
                 self.offline_log_dirs.encode(&mut __tmp, version, true)?;
-                crate::protocol::serialization::encode_unsigned_varint(__tmp.len() as u64, buf);
+                encode_unsigned_varint(__tmp.len() as u64, buf);
                 buf.put_slice(&__tmp);
             }
         }
@@ -170,10 +172,10 @@ impl KafkaDeserialize for BrokerHeartbeatRequest {
             Default::default()
         };
         if is_flexible {
-            let (__tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..__tag_count {
-                let (__tag_id, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
-                let (__tag_len, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+                let (__tag_id, _) = decode_unsigned_varint(buf)?;
+                let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
                         offline_log_dirs = KafkaDeserialize::decode(buf, version, true)?;

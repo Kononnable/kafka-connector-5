@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -51,7 +53,7 @@ impl ApiResponse for AlterConfigsResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.responses.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -60,7 +62,7 @@ impl ApiResponse for AlterConfigsResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -78,7 +80,7 @@ impl KafkaSerialize for AlterConfigsResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.responses.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -93,7 +95,7 @@ impl KafkaDeserialize for AlterConfigsResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             throttle_time_ms,
@@ -114,7 +116,7 @@ impl KafkaSerialize for AlterConfigsResourceResponse {
         self.resource_type.encode(buf, version, is_flexible)?;
         self.resource_name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -131,7 +133,7 @@ impl KafkaDeserialize for AlterConfigsResourceResponse {
         let resource_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let resource_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             error_code,

@@ -1,5 +1,7 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaDeserialize, KafkaSerialize};
+use crate::protocol::serialization::{
+    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
+};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -57,10 +59,10 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
             .encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.cursor {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
+                encode_unsigned_varint(1u64, buf);
                 __val.encode(buf, version, true)?;
             } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.cursor {
@@ -68,7 +70,7 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
             }
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -77,7 +79,7 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let response_partition_limit = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let cursor = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__present, _) = decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
@@ -87,7 +89,7 @@ impl ApiRequest for DescribeTopicPartitionsRequest {
             Some(KafkaDeserialize::decode(buf, version, false)?)
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topics,
@@ -108,10 +110,10 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
             .encode(buf, version, is_flexible)?;
         if is_flexible {
             if let Some(ref __val) = self.cursor {
-                crate::protocol::serialization::encode_unsigned_varint(1u64, buf);
+                encode_unsigned_varint(1u64, buf);
                 __val.encode(buf, version, true)?;
             } else {
-                crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+                encode_unsigned_varint(0u64, buf);
             }
         } else {
             if let Some(ref __val) = self.cursor {
@@ -119,7 +121,7 @@ impl KafkaSerialize for DescribeTopicPartitionsRequest {
             }
         }
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -134,7 +136,7 @@ impl KafkaDeserialize for DescribeTopicPartitionsRequest {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let response_partition_limit = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let cursor = if is_flexible {
-            let (__present, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (__present, _) = decode_unsigned_varint(buf)?;
             if __present == 0 {
                 None
             } else {
@@ -144,7 +146,7 @@ impl KafkaDeserialize for DescribeTopicPartitionsRequest {
             Some(KafkaDeserialize::decode(buf, version, false)?)
         };
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topics,
@@ -164,7 +166,7 @@ impl KafkaSerialize for Cursor {
         self.topic_name.encode(buf, version, is_flexible)?;
         self.partition_index.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -179,7 +181,7 @@ impl KafkaDeserialize for Cursor {
         let topic_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             topic_name,
@@ -197,7 +199,7 @@ impl KafkaSerialize for TopicRequest {
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         if is_flexible {
-            crate::protocol::serialization::encode_unsigned_varint(0u64, buf);
+            encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
@@ -211,7 +213,7 @@ impl KafkaDeserialize for TopicRequest {
     ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         if is_flexible {
-            let (_tag_count, _) = crate::protocol::serialization::decode_unsigned_varint(buf)?;
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { name })
     }
