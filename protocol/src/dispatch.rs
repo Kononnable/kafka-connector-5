@@ -61,12 +61,12 @@ pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<St
 /// Deserialize a response body for the given API key and version.
 ///
 /// Returns `Ok(debug_string)` on success, `Err(error_msg)` on failure.
-/// Only MetadataResponse is safe to decode — others may OOM from misaligned varints.
 pub fn decode_response_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {
     let ver = ApiVersion::new(version);
     let mut buf = Bytes::copy_from_slice(body);
     let result = match api_key {
         3  => MetadataResponse::deserialize(ver, &mut buf).map(|v| format!("{v:?}")),
+        18 => ApiVersionsResponse::deserialize(ver, &mut buf).map(|v| format!("{v:?}")),
         _  => return Err(format!("no decode path for response api key {api_key}")),
     };
     result.map_err(|e| format!("{e}"))

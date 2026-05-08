@@ -153,18 +153,13 @@ fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
 
 /// Try to deserialize and debug-log a response body.
 /// Delegates to the protocol crate's dispatch module.
-/// Only MetadataResponse is safe to decode — others may OOM.
 fn log_response_body(api_key: i16, version: i16, body: &[u8]) {
-    if api_key != 3 {
-        tracing::debug!("← RES body: {} bytes (undecoded)", body.len());
-        return;
-    }
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         protocol::dispatch::decode_response_body(api_key, version, body)
     }));
     match result {
         Ok(Ok(s)) => tracing::info!("← RES body: {s}"),
-        Ok(Err(e)) => tracing::debug!("← RES body: {} bytes ({e})", body.len()),
+        Ok(Err(e)) => tracing::info!("← RES body: {} bytes (undecoded: {e})", body.len()),
         Err(_) => tracing::warn!("← RES body: {} bytes (panic)", body.len()),
     }
 }

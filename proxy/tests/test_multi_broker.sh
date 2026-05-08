@@ -95,8 +95,8 @@ echo ""
 echo "=== Proxy log checks ==="
 
 DESER_ERR=$(grep -c 'deser err' < "$LOG" 2>/dev/null; true)
-UNDECODED=$(grep -c 'undecoded' < "$LOG" 2>/dev/null; true)
-NON_API=$(grep 'undecoded' < "$LOG" 2>/dev/null | grep -v '20 bytes' | wc -l; true)
+UNDECODED=$(grep -c '→ REQ body.*undecoded' < "$LOG" 2>/dev/null; true)
+NON_API=$(grep '→ REQ body.*undecoded' < "$LOG" 2>/dev/null | grep -v '20 bytes' | wc -l; true)
 REWRITES=$(grep -c 'rewriting broker' < "$LOG" 2>/dev/null; true)
 PANICS=$(grep -c 'panicked' < "$LOG" 2>/dev/null; true)
 
@@ -110,8 +110,8 @@ echo "  panics:                  $PANICS (expect 0)"
 if [ "$UNDECODED" -gt 0 ]; then
     echo ""
     echo "  --- Missed (undecoded) ---"
-    # Show the REQ header line followed by its undecoded body line
-    grep -B1 'undecoded' < "$LOG" 2>/dev/null | grep -E '(→ REQ  corr|undecoded)' | while IFS= read -r line; do
+    # Show the REQ header line for undecoded requests
+    grep '→ REQ body.*undecoded' < "$LOG" 2>/dev/null | while IFS= read -r line; do
         if echo "$line" | grep -q '→ REQ  corr'; then
             CORR=$(echo "$line" | sed 's/.*corr=//' | sed 's/ .*//')
             API=$(echo "$line" | sed 's/.*api=//' | sed 's/ .*//')
