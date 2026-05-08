@@ -107,14 +107,14 @@ impl ApiResponse for DescribeQuorumResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.error_code.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         } else if self.error_message.is_some() {
             return Err(SerializationError::Encode(
@@ -122,7 +122,7 @@ impl ApiResponse for DescribeQuorumResponse {
             ));
         }
         self.topics.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.nodes.encode(buf, version, is_flexible)?;
         } else if !self.nodes.is_empty() {
             return Err(SerializationError::Encode(
@@ -137,13 +137,13 @@ impl ApiResponse for DescribeQuorumResponse {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = if (2) <= version.0 {
+        let error_message = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let nodes = if (2) <= version.0 {
+        let nodes = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -167,11 +167,11 @@ impl KafkaSerialize for DescribeQuorumResponse {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
         self.topics.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.nodes.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -188,13 +188,13 @@ impl KafkaDeserialize for DescribeQuorumResponse {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = if (2) <= version.0 {
+        let error_message = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let nodes = if (2) <= version.0 {
+        let nodes = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -218,13 +218,13 @@ impl KafkaSerialize for Listener {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.name.encode(buf, version, is_flexible)?;
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.host.encode(buf, version, is_flexible)?;
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.port.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -240,17 +240,17 @@ impl KafkaDeserialize for Listener {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if (2) <= version.0 {
+        let name = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let host = if (2) <= version.0 {
+        let host = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let port = if (2) <= version.0 {
+        let port = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -269,10 +269,10 @@ impl KafkaSerialize for Node {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.node_id.encode(buf, version, is_flexible)?;
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.listeners.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -288,12 +288,12 @@ impl KafkaDeserialize for Node {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let node_id = if (2) <= version.0 {
+        let node_id = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let listeners = if (2) <= version.0 {
+        let listeners = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -314,7 +314,7 @@ impl KafkaSerialize for PartitionData {
     ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
         self.leader_id.encode(buf, version, is_flexible)?;
@@ -337,7 +337,7 @@ impl KafkaDeserialize for PartitionData {
     ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = if (2) <= version.0 {
+        let error_message = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -371,16 +371,16 @@ impl KafkaSerialize for ReplicaState {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.replica_id.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.replica_directory_id
                 .encode(buf, version, is_flexible)?;
         }
         self.log_end_offset.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.last_fetch_timestamp
                 .encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.last_caught_up_timestamp
                 .encode(buf, version, is_flexible)?;
         }
@@ -398,18 +398,18 @@ impl KafkaDeserialize for ReplicaState {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let replica_directory_id = if (2) <= version.0 {
+        let replica_directory_id = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let log_end_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let last_fetch_timestamp = if (1) <= version.0 {
+        let last_fetch_timestamp = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let last_caught_up_timestamp = if (1) <= version.0 {
+        let last_caught_up_timestamp = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

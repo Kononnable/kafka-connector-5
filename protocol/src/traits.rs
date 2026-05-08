@@ -119,6 +119,16 @@ pub enum SerializationError {
     /// A value is too large for its wire representation.
     #[error("value too large: {message}")]
     ValueTooLarge { message: String },
+    /// A field has a non-default value but is not supported in the requested version.
+    #[error("field '{field}' is not available in version {version} of {api_name}")]
+    FieldNotAvailable {
+        /// The name of the field.
+        field: &'static str,
+        /// The requested API version.
+        version: ApiVersion,
+        /// The name of the API message.
+        api_name: &'static str,
+    },
     /// A generic protocol error.
     #[error("protocol error: {message}")]
     Protocol { message: String },

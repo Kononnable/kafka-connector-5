@@ -43,7 +43,7 @@ impl ApiRequest for DescribeAclsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (3),
+            1 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 1-3)",
             version.0,
             stringify!(Self)
@@ -53,7 +53,7 @@ impl ApiRequest for DescribeAclsRequest {
             .encode(buf, version, is_flexible)?;
         self.resource_name_filter
             .encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.pattern_type_filter.encode(buf, version, is_flexible)?;
         } else if self.pattern_type_filter != 0 {
             return Err(SerializationError::Encode(
@@ -73,7 +73,7 @@ impl ApiRequest for DescribeAclsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let resource_type_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let resource_name_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let pattern_type_filter = if (1) <= version.0 {
+        let pattern_type_filter = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -107,7 +107,7 @@ impl KafkaSerialize for DescribeAclsRequest {
             .encode(buf, version, is_flexible)?;
         self.resource_name_filter
             .encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.pattern_type_filter.encode(buf, version, is_flexible)?;
         }
         self.principal_filter.encode(buf, version, is_flexible)?;
@@ -129,7 +129,7 @@ impl KafkaDeserialize for DescribeAclsRequest {
     ) -> Result<Self, SerializationError> {
         let resource_type_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let resource_name_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let pattern_type_filter = if (1) <= version.0 {
+        let pattern_type_filter = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

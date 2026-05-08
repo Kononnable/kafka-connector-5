@@ -52,13 +52,13 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (2) <= version.0 && version.0 <= (4),
+            2 <= version.0 && version.0 <= 4,
             "version {} is not supported by {} (supported: 2-4)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.replica_id.encode(buf, version, is_flexible)?;
         } else if self.replica_id != 0 {
             return Err(SerializationError::Encode(
@@ -73,7 +73,7 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let replica_id = if (3) <= version.0 {
+        let replica_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -92,7 +92,7 @@ impl KafkaSerialize for OffsetForLeaderEpochRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.replica_id.encode(buf, version, is_flexible)?;
         }
         self.topics.encode(buf, version, is_flexible)?;
@@ -109,7 +109,7 @@ impl KafkaDeserialize for OffsetForLeaderEpochRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let replica_id = if (3) <= version.0 {
+        let replica_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -130,7 +130,7 @@ impl KafkaSerialize for OffsetForLeaderPartition {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.current_leader_epoch
                 .encode(buf, version, is_flexible)?;
         }
@@ -149,7 +149,7 @@ impl KafkaDeserialize for OffsetForLeaderPartition {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let current_leader_epoch = if (2) <= version.0 {
+        let current_leader_epoch = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

@@ -37,27 +37,27 @@ impl ApiRequest for FindCoordinatorRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
+            0 <= version.0 && version.0 <= 6,
             "version {} is not supported by {} (supported: 0-6)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.key.encode(buf, version, is_flexible)?;
         } else if !self.key.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'Key' is not available in this version",
             ));
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.key_type.encode(buf, version, is_flexible)?;
         } else if self.key_type != 0 {
             return Err(SerializationError::Encode(
                 "field 'KeyType' is not available in this version",
             ));
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.coordinator_keys.encode(buf, version, is_flexible)?;
         } else if !self.coordinator_keys.is_empty() {
             return Err(SerializationError::Encode(
@@ -71,17 +71,17 @@ impl ApiRequest for FindCoordinatorRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let key = if (0) <= version.0 && version.0 <= (3) {
+        let key = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let key_type = if (1) <= version.0 {
+        let key_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let coordinator_keys = if (4) <= version.0 {
+        let coordinator_keys = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -103,13 +103,13 @@ impl KafkaSerialize for FindCoordinatorRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.key.encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.key_type.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.coordinator_keys.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -125,17 +125,17 @@ impl KafkaDeserialize for FindCoordinatorRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let key = if (0) <= version.0 && version.0 <= (3) {
+        let key = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let key_type = if (1) <= version.0 {
+        let key_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let coordinator_keys = if (4) <= version.0 {
+        let coordinator_keys = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

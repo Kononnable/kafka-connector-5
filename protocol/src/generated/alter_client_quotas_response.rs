@@ -50,7 +50,7 @@ impl ApiResponse for AlterClientQuotasResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
+            0 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)

@@ -43,13 +43,13 @@ impl ApiRequest for ElectLeadersRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.election_type.encode(buf, version, is_flexible)?;
         } else if self.election_type != 0 {
             return Err(SerializationError::Encode(
@@ -65,7 +65,7 @@ impl ApiRequest for ElectLeadersRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let election_type = if (1) <= version.0 {
+        let election_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -89,7 +89,7 @@ impl KafkaSerialize for ElectLeadersRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.election_type.encode(buf, version, is_flexible)?;
         }
         self.topic_partitions.encode(buf, version, is_flexible)?;
@@ -107,7 +107,7 @@ impl KafkaDeserialize for ElectLeadersRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let election_type = if (1) <= version.0 {
+        let election_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

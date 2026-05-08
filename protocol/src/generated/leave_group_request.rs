@@ -49,21 +49,21 @@ impl ApiRequest for LeaveGroupRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
+            0 <= version.0 && version.0 <= 5,
             "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.group_id.encode(buf, version, is_flexible)?;
-        if (0) <= version.0 && version.0 <= (2) {
+        if 0 <= version.0 && version.0 <= 2 {
             self.member_id.encode(buf, version, is_flexible)?;
         } else if !self.member_id.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'MemberId' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.members.encode(buf, version, is_flexible)?;
         } else if !self.members.is_empty() {
             return Err(SerializationError::Encode(
@@ -78,12 +78,12 @@ impl ApiRequest for LeaveGroupRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let member_id = if (0) <= version.0 && version.0 <= (2) {
+        let member_id = if 0 <= version.0 && version.0 <= 2 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let members = if (3) <= version.0 {
+        let members = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -106,10 +106,10 @@ impl KafkaSerialize for LeaveGroupRequest {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.group_id.encode(buf, version, is_flexible)?;
-        if (0) <= version.0 && version.0 <= (2) {
+        if 0 <= version.0 && version.0 <= 2 {
             self.member_id.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.members.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -126,12 +126,12 @@ impl KafkaDeserialize for LeaveGroupRequest {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let member_id = if (0) <= version.0 && version.0 <= (2) {
+        let member_id = if 0 <= version.0 && version.0 <= 2 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let members = if (3) <= version.0 {
+        let members = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -154,13 +154,13 @@ impl KafkaSerialize for MemberIdentity {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.member_id.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.reason.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -176,17 +176,17 @@ impl KafkaDeserialize for MemberIdentity {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let member_id = if (3) <= version.0 {
+        let member_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let group_instance_id = if (3) <= version.0 {
+        let group_instance_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let reason = if (5) <= version.0 {
+        let reason = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

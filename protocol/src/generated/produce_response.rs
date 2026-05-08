@@ -109,21 +109,21 @@ impl ApiResponse for ProduceResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (3) <= version.0 && version.0 <= (13),
+            3 <= version.0 && version.0 <= 13,
             "version {} is not supported by {} (supported: 3-13)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.responses.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
                 "field 'ThrottleTimeMs' is not available in this version",
             ));
         }
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         } else if !self.node_endpoints.is_empty() {
             return Err(SerializationError::Encode(
@@ -149,12 +149,12 @@ impl ApiResponse for ProduceResponse {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let mut node_endpoints = if (10) <= version.0 {
+        let mut node_endpoints = if 10 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -193,10 +193,10 @@ impl KafkaSerialize for ProduceResponse {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.responses.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 && !is_flexible {
+        if 10 <= version.0 && !is_flexible {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -224,12 +224,12 @@ impl KafkaDeserialize for ProduceResponse {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let mut node_endpoints = if (10) <= version.0 {
+        let mut node_endpoints = if 10 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -268,10 +268,10 @@ impl KafkaSerialize for BatchIndexAndErrorMessage {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.batch_index.encode(buf, version, is_flexible)?;
         }
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.batch_index_error_message
                 .encode(buf, version, is_flexible)?;
         }
@@ -288,12 +288,12 @@ impl KafkaDeserialize for BatchIndexAndErrorMessage {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let batch_index = if (8) <= version.0 {
+        let batch_index = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let batch_index_error_message = if (8) <= version.0 {
+        let batch_index_error_message = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -315,10 +315,10 @@ impl KafkaSerialize for LeaderIdAndEpoch {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.leader_id.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.leader_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -334,12 +334,12 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let leader_id = if (10) <= version.0 {
+        let leader_id = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let leader_epoch = if (10) <= version.0 {
+        let leader_epoch = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -361,16 +361,16 @@ impl KafkaSerialize for NodeEndpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.node_id.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.host.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.port.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.rack.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -386,22 +386,22 @@ impl KafkaDeserialize for NodeEndpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let node_id = if (10) <= version.0 {
+        let node_id = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let host = if (10) <= version.0 {
+        let host = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let port = if (10) <= version.0 {
+        let port = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let rack = if (10) <= version.0 {
+        let rack = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -428,19 +428,19 @@ impl KafkaSerialize for PartitionProduceResponse {
         self.index.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.base_offset.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.log_append_time_ms.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.log_start_offset.encode(buf, version, is_flexible)?;
         }
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.record_errors.encode(buf, version, is_flexible)?;
         }
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
-        if (10) <= version.0 && !is_flexible {
+        if 10 <= version.0 && !is_flexible {
             self.current_leader.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -470,27 +470,27 @@ impl KafkaDeserialize for PartitionProduceResponse {
         let index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let base_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let log_append_time_ms = if (2) <= version.0 {
+        let log_append_time_ms = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let log_start_offset = if (5) <= version.0 {
+        let log_start_offset = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let record_errors = if (8) <= version.0 {
+        let record_errors = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_message = if (8) <= version.0 {
+        let error_message = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let mut current_leader = if (10) <= version.0 {
+        let mut current_leader = if 10 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -534,10 +534,10 @@ impl KafkaSerialize for TopicProduceResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (0) <= version.0 && version.0 <= (12) {
+        if 0 <= version.0 && version.0 <= 12 {
             self.name.encode(buf, version, is_flexible)?;
         }
-        if (13) <= version.0 {
+        if 13 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
         self.partition_responses.encode(buf, version, is_flexible)?;
@@ -554,12 +554,12 @@ impl KafkaDeserialize for TopicProduceResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if (0) <= version.0 && version.0 <= (12) {
+        let name = if 0 <= version.0 && version.0 <= 12 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_id = if (13) <= version.0 {
+        let topic_id = if 13 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

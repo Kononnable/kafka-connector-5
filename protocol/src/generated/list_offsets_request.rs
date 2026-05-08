@@ -57,14 +57,14 @@ impl ApiRequest for ListOffsetsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (10),
+            1 <= version.0 && version.0 <= 10,
             "version {} is not supported by {} (supported: 1-10)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.replica_id.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.isolation_level.encode(buf, version, is_flexible)?;
         } else if self.isolation_level != 0 {
             return Err(SerializationError::Encode(
@@ -72,7 +72,7 @@ impl ApiRequest for ListOffsetsRequest {
             ));
         }
         self.topics.encode(buf, version, is_flexible)?;
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.timeout_ms.encode(buf, version, is_flexible)?;
         } else if self.timeout_ms != 0 {
             return Err(SerializationError::Encode(
@@ -87,13 +87,13 @@ impl ApiRequest for ListOffsetsRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let isolation_level = if (2) <= version.0 {
+        let isolation_level = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let timeout_ms = if (10) <= version.0 {
+        let timeout_ms = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -117,11 +117,11 @@ impl KafkaSerialize for ListOffsetsRequest {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.replica_id.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.isolation_level.encode(buf, version, is_flexible)?;
         }
         self.topics.encode(buf, version, is_flexible)?;
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.timeout_ms.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -138,13 +138,13 @@ impl KafkaDeserialize for ListOffsetsRequest {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let isolation_level = if (2) <= version.0 {
+        let isolation_level = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let timeout_ms = if (10) <= version.0 {
+        let timeout_ms = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -169,7 +169,7 @@ impl KafkaSerialize for ListOffsetsPartition {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.current_leader_epoch
                 .encode(buf, version, is_flexible)?;
         }
@@ -188,7 +188,7 @@ impl KafkaDeserialize for ListOffsetsPartition {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let current_leader_epoch = if (4) <= version.0 {
+        let current_leader_epoch = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

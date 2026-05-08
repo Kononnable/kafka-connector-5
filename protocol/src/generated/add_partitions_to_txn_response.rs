@@ -65,21 +65,21 @@ impl ApiResponse for AddPartitionsToTxnResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
+            0 <= version.0 && version.0 <= 5,
             "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
             return Err(SerializationError::Encode(
                 "field 'ErrorCode' is not available in this version",
             ));
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.results_by_transaction
                 .encode(buf, version, is_flexible)?;
         } else if !self.results_by_transaction.is_empty() {
@@ -87,7 +87,7 @@ impl ApiResponse for AddPartitionsToTxnResponse {
                 "field 'ResultsByTransaction' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.results_by_topic_v3_and_below
                 .encode(buf, version, is_flexible)?;
         } else if !self.results_by_topic_v3_and_below.is_empty() {
@@ -103,17 +103,17 @@ impl ApiResponse for AddPartitionsToTxnResponse {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = if (4) <= version.0 {
+        let error_code = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let results_by_transaction = if (4) <= version.0 {
+        let results_by_transaction = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let results_by_topic_v3_and_below = if (0) <= version.0 && version.0 <= (3) {
+        let results_by_topic_v3_and_below = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -137,14 +137,14 @@ impl KafkaSerialize for AddPartitionsToTxnResponse {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.results_by_transaction
                 .encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.results_by_topic_v3_and_below
                 .encode(buf, version, is_flexible)?;
         }
@@ -162,17 +162,17 @@ impl KafkaDeserialize for AddPartitionsToTxnResponse {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = if (4) <= version.0 {
+        let error_code = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let results_by_transaction = if (4) <= version.0 {
+        let results_by_transaction = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let results_by_topic_v3_and_below = if (0) <= version.0 && version.0 <= (3) {
+        let results_by_topic_v3_and_below = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -231,10 +231,10 @@ impl KafkaSerialize for AddPartitionsToTxnResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.transactional_id.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.topic_results.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -250,12 +250,12 @@ impl KafkaDeserialize for AddPartitionsToTxnResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let transactional_id = if (4) <= version.0 {
+        let transactional_id = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_results = if (4) <= version.0 {
+        let topic_results = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

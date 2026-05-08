@@ -72,13 +72,13 @@ impl ApiResponse for DescribeGroupsResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
+            0 <= version.0 && version.0 <= 6,
             "version {} is not supported by {} (supported: 0-6)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
@@ -93,7 +93,7 @@ impl ApiResponse for DescribeGroupsResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -115,7 +115,7 @@ impl KafkaSerialize for DescribeGroupsResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
         self.groups.encode(buf, version, is_flexible)?;
@@ -132,7 +132,7 @@ impl KafkaDeserialize for DescribeGroupsResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -156,7 +156,7 @@ impl KafkaSerialize for DescribedGroup {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
         self.group_id.encode(buf, version, is_flexible)?;
@@ -164,7 +164,7 @@ impl KafkaSerialize for DescribedGroup {
         self.protocol_type.encode(buf, version, is_flexible)?;
         self.protocol_data.encode(buf, version, is_flexible)?;
         self.members.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.authorized_operations
                 .encode(buf, version, is_flexible)?;
         }
@@ -182,7 +182,7 @@ impl KafkaDeserialize for DescribedGroup {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = if (6) <= version.0 {
+        let error_message = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -192,7 +192,7 @@ impl KafkaDeserialize for DescribedGroup {
         let protocol_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let protocol_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let members = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let authorized_operations = if (3) <= version.0 {
+        let authorized_operations = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -221,7 +221,7 @@ impl KafkaSerialize for DescribedGroupMember {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.member_id.encode(buf, version, is_flexible)?;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         self.client_id.encode(buf, version, is_flexible)?;
@@ -242,7 +242,7 @@ impl KafkaDeserialize for DescribedGroupMember {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (4) <= version.0 {
+        let group_instance_id = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

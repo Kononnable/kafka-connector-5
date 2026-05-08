@@ -121,27 +121,27 @@ impl ApiRequest for FetchRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (4) <= version.0 && version.0 <= (18),
+            4 <= version.0 && version.0 <= 18,
             "version {} is not supported by {} (supported: 4-18)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (12) <= version.0 {
+        if 12 <= version.0 {
             self.cluster_id.encode(buf, version, is_flexible)?;
         } else if self.cluster_id.is_some() {
             return Err(SerializationError::Encode(
                 "field 'ClusterId' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (14) {
+        if 0 <= version.0 && version.0 <= 14 {
             self.replica_id.encode(buf, version, is_flexible)?;
         } else if self.replica_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'ReplicaId' is not available in this version",
             ));
         }
-        if (15) <= version.0 {
+        if 15 <= version.0 {
             self.replica_state.encode(buf, version, is_flexible)?;
         } else if self.replica_state != Default::default() {
             return Err(SerializationError::Encode(
@@ -150,28 +150,28 @@ impl ApiRequest for FetchRequest {
         }
         self.max_wait_ms.encode(buf, version, is_flexible)?;
         self.min_bytes.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.max_bytes.encode(buf, version, is_flexible)?;
         } else if self.max_bytes != 0 {
             return Err(SerializationError::Encode(
                 "field 'MaxBytes' is not available in this version",
             ));
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.isolation_level.encode(buf, version, is_flexible)?;
         } else if self.isolation_level != 0 {
             return Err(SerializationError::Encode(
                 "field 'IsolationLevel' is not available in this version",
             ));
         }
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.session_id.encode(buf, version, is_flexible)?;
         } else if self.session_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'SessionId' is not available in this version",
             ));
         }
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.session_epoch.encode(buf, version, is_flexible)?;
         } else if self.session_epoch != 0 {
             return Err(SerializationError::Encode(
@@ -179,7 +179,7 @@ impl ApiRequest for FetchRequest {
             ));
         }
         self.topics.encode(buf, version, is_flexible)?;
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.forgotten_topics_data
                 .encode(buf, version, is_flexible)?;
         } else if !self.forgotten_topics_data.is_empty() {
@@ -187,7 +187,7 @@ impl ApiRequest for FetchRequest {
                 "field 'ForgottenTopicsData' is not available in this version",
             ));
         }
-        if (11) <= version.0 {
+        if 11 <= version.0 {
             self.rack_id.encode(buf, version, is_flexible)?;
         } else if !self.rack_id.is_empty() {
             return Err(SerializationError::Encode(
@@ -222,7 +222,7 @@ impl ApiRequest for FetchRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let mut cluster_id = if (12) <= version.0 {
+        let mut cluster_id = if 12 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -231,12 +231,12 @@ impl ApiRequest for FetchRequest {
         } else {
             Default::default()
         };
-        let replica_id = if (0) <= version.0 && version.0 <= (14) {
+        let replica_id = if 0 <= version.0 && version.0 <= 14 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let mut replica_state = if (15) <= version.0 {
+        let mut replica_state = if 15 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -247,33 +247,33 @@ impl ApiRequest for FetchRequest {
         };
         let max_wait_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let min_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_bytes = if (3) <= version.0 {
+        let max_bytes = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let isolation_level = if (4) <= version.0 {
+        let isolation_level = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let session_id = if (7) <= version.0 {
+        let session_id = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let session_epoch = if (7) <= version.0 {
+        let session_epoch = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let forgotten_topics_data = if (7) <= version.0 {
+        let forgotten_topics_data = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let rack_id = if (11) <= version.0 {
+        let rack_id = if 11 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -319,35 +319,35 @@ impl KafkaSerialize for FetchRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (12) <= version.0 && !is_flexible {
+        if 12 <= version.0 && !is_flexible {
             self.cluster_id.encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (14) {
+        if 0 <= version.0 && version.0 <= 14 {
             self.replica_id.encode(buf, version, is_flexible)?;
         }
-        if (15) <= version.0 && !is_flexible {
+        if 15 <= version.0 && !is_flexible {
             self.replica_state.encode(buf, version, is_flexible)?;
         }
         self.max_wait_ms.encode(buf, version, is_flexible)?;
         self.min_bytes.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.max_bytes.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.isolation_level.encode(buf, version, is_flexible)?;
         }
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.session_id.encode(buf, version, is_flexible)?;
         }
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.session_epoch.encode(buf, version, is_flexible)?;
         }
         self.topics.encode(buf, version, is_flexible)?;
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.forgotten_topics_data
                 .encode(buf, version, is_flexible)?;
         }
-        if (11) <= version.0 {
+        if 11 <= version.0 {
             self.rack_id.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -384,7 +384,7 @@ impl KafkaDeserialize for FetchRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let mut cluster_id = if (12) <= version.0 {
+        let mut cluster_id = if 12 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -393,12 +393,12 @@ impl KafkaDeserialize for FetchRequest {
         } else {
             Default::default()
         };
-        let replica_id = if (0) <= version.0 && version.0 <= (14) {
+        let replica_id = if 0 <= version.0 && version.0 <= 14 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let mut replica_state = if (15) <= version.0 {
+        let mut replica_state = if 15 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -409,33 +409,33 @@ impl KafkaDeserialize for FetchRequest {
         };
         let max_wait_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let min_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_bytes = if (3) <= version.0 {
+        let max_bytes = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let isolation_level = if (4) <= version.0 {
+        let isolation_level = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let session_id = if (7) <= version.0 {
+        let session_id = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let session_epoch = if (7) <= version.0 {
+        let session_epoch = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let forgotten_topics_data = if (7) <= version.0 {
+        let forgotten_topics_data = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let rack_id = if (11) <= version.0 {
+        let rack_id = if 11 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -483,23 +483,23 @@ impl KafkaSerialize for FetchPartition {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition.encode(buf, version, is_flexible)?;
-        if (9) <= version.0 {
+        if 9 <= version.0 {
             self.current_leader_epoch
                 .encode(buf, version, is_flexible)?;
         }
         self.fetch_offset.encode(buf, version, is_flexible)?;
-        if (12) <= version.0 {
+        if 12 <= version.0 {
             self.last_fetched_epoch.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.log_start_offset.encode(buf, version, is_flexible)?;
         }
         self.partition_max_bytes.encode(buf, version, is_flexible)?;
-        if (17) <= version.0 && !is_flexible {
+        if 17 <= version.0 && !is_flexible {
             self.replica_directory_id
                 .encode(buf, version, is_flexible)?;
         }
-        if (18) <= version.0 && !is_flexible {
+        if 18 <= version.0 && !is_flexible {
             self.high_watermark.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -538,24 +538,24 @@ impl KafkaDeserialize for FetchPartition {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let current_leader_epoch = if (9) <= version.0 {
+        let current_leader_epoch = if 9 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let fetch_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let last_fetched_epoch = if (12) <= version.0 {
+        let last_fetched_epoch = if 12 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let log_start_offset = if (5) <= version.0 {
+        let log_start_offset = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partition_max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let mut replica_directory_id = if (17) <= version.0 {
+        let mut replica_directory_id = if 17 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -564,7 +564,7 @@ impl KafkaDeserialize for FetchPartition {
         } else {
             Default::default()
         };
-        let mut high_watermark = if (18) <= version.0 {
+        let mut high_watermark = if 18 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -611,10 +611,10 @@ impl KafkaSerialize for FetchTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (0) <= version.0 && version.0 <= (12) {
+        if 0 <= version.0 && version.0 <= 12 {
             self.topic.encode(buf, version, is_flexible)?;
         }
-        if (13) <= version.0 {
+        if 13 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
         self.partitions.encode(buf, version, is_flexible)?;
@@ -631,12 +631,12 @@ impl KafkaDeserialize for FetchTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = if (0) <= version.0 && version.0 <= (12) {
+        let topic = if 0 <= version.0 && version.0 <= 12 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_id = if (13) <= version.0 {
+        let topic_id = if 13 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -660,13 +660,13 @@ impl KafkaSerialize for ForgottenTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (7) <= version.0 && version.0 <= (12) {
+        if 7 <= version.0 && version.0 <= 12 {
             self.topic.encode(buf, version, is_flexible)?;
         }
-        if (13) <= version.0 {
+        if 13 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.partitions.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -682,17 +682,17 @@ impl KafkaDeserialize for ForgottenTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = if (7) <= version.0 && version.0 <= (12) {
+        let topic = if 7 <= version.0 && version.0 <= 12 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_id = if (13) <= version.0 {
+        let topic_id = if 13 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partitions = if (7) <= version.0 {
+        let partitions = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -715,10 +715,10 @@ impl KafkaSerialize for ReplicaState {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (15) <= version.0 {
+        if 15 <= version.0 {
             self.replica_id.encode(buf, version, is_flexible)?;
         }
-        if (15) <= version.0 {
+        if 15 <= version.0 {
             self.replica_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -734,12 +734,12 @@ impl KafkaDeserialize for ReplicaState {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let replica_id = if (15) <= version.0 {
+        let replica_id = if 15 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let replica_epoch = if (15) <= version.0 {
+        let replica_epoch = if 15 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

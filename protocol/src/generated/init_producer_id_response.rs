@@ -42,7 +42,7 @@ impl ApiResponse for InitProducerIdResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
+            0 <= version.0 && version.0 <= 6,
             "version {} is not supported by {} (supported: 0-6)",
             version.0,
             stringify!(Self)
@@ -52,7 +52,7 @@ impl ApiResponse for InitProducerIdResponse {
         self.error_code.encode(buf, version, is_flexible)?;
         self.producer_id.encode(buf, version, is_flexible)?;
         self.producer_epoch.encode(buf, version, is_flexible)?;
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.ongoing_txn_producer_id
                 .encode(buf, version, is_flexible)?;
         } else if self.ongoing_txn_producer_id != 0 {
@@ -60,7 +60,7 @@ impl ApiResponse for InitProducerIdResponse {
                 "field 'OngoingTxnProducerId' is not available in this version",
             ));
         }
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.ongoing_txn_producer_epoch
                 .encode(buf, version, is_flexible)?;
         } else if self.ongoing_txn_producer_epoch != 0 {
@@ -79,12 +79,12 @@ impl ApiResponse for InitProducerIdResponse {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let ongoing_txn_producer_id = if (6) <= version.0 {
+        let ongoing_txn_producer_id = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let ongoing_txn_producer_epoch = if (6) <= version.0 {
+        let ongoing_txn_producer_epoch = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -113,11 +113,11 @@ impl KafkaSerialize for InitProducerIdResponse {
         self.error_code.encode(buf, version, is_flexible)?;
         self.producer_id.encode(buf, version, is_flexible)?;
         self.producer_epoch.encode(buf, version, is_flexible)?;
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.ongoing_txn_producer_id
                 .encode(buf, version, is_flexible)?;
         }
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.ongoing_txn_producer_epoch
                 .encode(buf, version, is_flexible)?;
         }
@@ -138,12 +138,12 @@ impl KafkaDeserialize for InitProducerIdResponse {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let ongoing_txn_producer_id = if (6) <= version.0 {
+        let ongoing_txn_producer_id = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let ongoing_txn_producer_epoch = if (6) <= version.0 {
+        let ongoing_txn_producer_epoch = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

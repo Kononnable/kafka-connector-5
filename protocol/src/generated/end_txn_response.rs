@@ -38,7 +38,7 @@ impl ApiResponse for EndTxnResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
+            0 <= version.0 && version.0 <= 5,
             "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
@@ -46,14 +46,14 @@ impl ApiResponse for EndTxnResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         } else if self.producer_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'ProducerId' is not available in this version",
             ));
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
         } else if self.producer_epoch != 0 {
             return Err(SerializationError::Encode(
@@ -69,12 +69,12 @@ impl ApiResponse for EndTxnResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_id = if (5) <= version.0 {
+        let producer_id = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let producer_epoch = if (5) <= version.0 {
+        let producer_epoch = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -99,10 +99,10 @@ impl KafkaSerialize for EndTxnResponse {
     ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -120,12 +120,12 @@ impl KafkaDeserialize for EndTxnResponse {
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_id = if (5) <= version.0 {
+        let producer_id = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let producer_epoch = if (5) <= version.0 {
+        let producer_epoch = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

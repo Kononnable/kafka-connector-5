@@ -68,7 +68,7 @@ impl ApiRequest for TxnOffsetCommitRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
+            0 <= version.0 && version.0 <= 5,
             "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
@@ -78,21 +78,21 @@ impl ApiRequest for TxnOffsetCommitRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.producer_id.encode(buf, version, is_flexible)?;
         self.producer_epoch.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.generation_id.encode(buf, version, is_flexible)?;
         } else if self.generation_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'GenerationId' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.member_id.encode(buf, version, is_flexible)?;
         } else if !self.member_id.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'MemberId' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
             return Err(SerializationError::Encode(
@@ -111,17 +111,17 @@ impl ApiRequest for TxnOffsetCommitRequest {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let generation_id = if (3) <= version.0 {
+        let generation_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id = if (3) <= version.0 {
+        let member_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let group_instance_id = if (3) <= version.0 {
+        let group_instance_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -153,13 +153,13 @@ impl KafkaSerialize for TxnOffsetCommitRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.producer_id.encode(buf, version, is_flexible)?;
         self.producer_epoch.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.generation_id.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.member_id.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         self.topics.encode(buf, version, is_flexible)?;
@@ -180,17 +180,17 @@ impl KafkaDeserialize for TxnOffsetCommitRequest {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let generation_id = if (3) <= version.0 {
+        let generation_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let member_id = if (3) <= version.0 {
+        let member_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let group_instance_id = if (3) <= version.0 {
+        let group_instance_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -221,7 +221,7 @@ impl KafkaSerialize for TxnOffsetCommitRequestPartition {
     ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.committed_offset.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.committed_leader_epoch
                 .encode(buf, version, is_flexible)?;
         }
@@ -241,7 +241,7 @@ impl KafkaDeserialize for TxnOffsetCommitRequestPartition {
     ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let committed_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let committed_leader_epoch = if (2) <= version.0 {
+        let committed_leader_epoch = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

@@ -51,14 +51,14 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
+            0 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.timeout_ms.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.allow_replication_factor_change
                 .encode(buf, version, is_flexible)?;
         } else if self.allow_replication_factor_change {
@@ -75,7 +75,7 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let allow_replication_factor_change = if (1) <= version.0 {
+        let allow_replication_factor_change = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -99,7 +99,7 @@ impl KafkaSerialize for AlterPartitionReassignmentsRequest {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.timeout_ms.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.allow_replication_factor_change
                 .encode(buf, version, is_flexible)?;
         }
@@ -118,7 +118,7 @@ impl KafkaDeserialize for AlterPartitionReassignmentsRequest {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let allow_replication_factor_change = if (1) <= version.0 {
+        let allow_replication_factor_change = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

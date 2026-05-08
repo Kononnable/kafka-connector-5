@@ -46,21 +46,21 @@ impl ApiRequest for DescribeConfigsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (4),
+            1 <= version.0 && version.0 <= 4,
             "version {} is not supported by {} (supported: 1-4)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.resources.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.include_synonyms.encode(buf, version, is_flexible)?;
         } else if self.include_synonyms {
             return Err(SerializationError::Encode(
                 "field 'IncludeSynonyms' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.include_documentation
                 .encode(buf, version, is_flexible)?;
         } else if self.include_documentation {
@@ -76,12 +76,12 @@ impl ApiRequest for DescribeConfigsRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let resources = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let include_synonyms = if (1) <= version.0 {
+        let include_synonyms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_documentation = if (3) <= version.0 {
+        let include_documentation = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -104,10 +104,10 @@ impl KafkaSerialize for DescribeConfigsRequest {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.resources.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.include_synonyms.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.include_documentation
                 .encode(buf, version, is_flexible)?;
         }
@@ -125,12 +125,12 @@ impl KafkaDeserialize for DescribeConfigsRequest {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let resources = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let include_synonyms = if (1) <= version.0 {
+        let include_synonyms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_documentation = if (3) <= version.0 {
+        let include_documentation = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

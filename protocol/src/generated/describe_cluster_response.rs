@@ -60,7 +60,7 @@ impl ApiResponse for DescribeClusterResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
@@ -69,7 +69,7 @@ impl ApiResponse for DescribeClusterResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
         } else if self.endpoint_type != 0 {
             return Err(SerializationError::Encode(
@@ -91,7 +91,7 @@ impl ApiResponse for DescribeClusterResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let endpoint_type = if (1) <= version.0 {
+        let endpoint_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -125,7 +125,7 @@ impl KafkaSerialize for DescribeClusterResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
         }
         self.cluster_id.encode(buf, version, is_flexible)?;
@@ -149,7 +149,7 @@ impl KafkaDeserialize for DescribeClusterResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let endpoint_type = if (1) <= version.0 {
+        let endpoint_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -185,7 +185,7 @@ impl KafkaSerialize for DescribeClusterBroker {
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         self.rack.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.is_fenced.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -205,7 +205,7 @@ impl KafkaDeserialize for DescribeClusterBroker {
         let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rack = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let is_fenced = if (2) <= version.0 {
+        let is_fenced = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

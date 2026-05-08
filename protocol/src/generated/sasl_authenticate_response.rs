@@ -37,7 +37,7 @@ impl ApiResponse for SaslAuthenticateResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
@@ -46,7 +46,7 @@ impl ApiResponse for SaslAuthenticateResponse {
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
         self.auth_bytes.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.session_lifetime_ms.encode(buf, version, is_flexible)?;
         } else if self.session_lifetime_ms != 0 {
             return Err(SerializationError::Encode(
@@ -63,7 +63,7 @@ impl ApiResponse for SaslAuthenticateResponse {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let auth_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let session_lifetime_ms = if (1) <= version.0 {
+        let session_lifetime_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -89,7 +89,7 @@ impl KafkaSerialize for SaslAuthenticateResponse {
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
         self.auth_bytes.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.session_lifetime_ms.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -108,7 +108,7 @@ impl KafkaDeserialize for SaslAuthenticateResponse {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let auth_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let session_lifetime_ms = if (1) <= version.0 {
+        let session_lifetime_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

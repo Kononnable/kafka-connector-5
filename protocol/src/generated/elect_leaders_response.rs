@@ -53,14 +53,14 @@ impl ApiResponse for ElectLeadersResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
             return Err(SerializationError::Encode(
@@ -77,7 +77,7 @@ impl ApiResponse for ElectLeadersResponse {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = if (1) <= version.0 {
+        let error_code = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -101,7 +101,7 @@ impl KafkaSerialize for ElectLeadersResponse {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         }
         self.replica_election_results
@@ -120,7 +120,7 @@ impl KafkaDeserialize for ElectLeadersResponse {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = if (1) <= version.0 {
+        let error_code = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

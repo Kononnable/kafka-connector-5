@@ -46,13 +46,13 @@ impl ApiRequest for CreateDelegationTokenRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (3),
+            1 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 1-3)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.owner_principal_type
                 .encode(buf, version, is_flexible)?;
         } else if self.owner_principal_type.is_some() {
@@ -60,7 +60,7 @@ impl ApiRequest for CreateDelegationTokenRequest {
                 "field 'OwnerPrincipalType' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.owner_principal_name
                 .encode(buf, version, is_flexible)?;
         } else if self.owner_principal_name.is_some() {
@@ -77,12 +77,12 @@ impl ApiRequest for CreateDelegationTokenRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let owner_principal_type = if (3) <= version.0 {
+        let owner_principal_type = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let owner_principal_name = if (3) <= version.0 {
+        let owner_principal_name = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -107,11 +107,11 @@ impl KafkaSerialize for CreateDelegationTokenRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.owner_principal_type
                 .encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.owner_principal_name
                 .encode(buf, version, is_flexible)?;
         }
@@ -130,12 +130,12 @@ impl KafkaDeserialize for CreateDelegationTokenRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let owner_principal_type = if (3) <= version.0 {
+        let owner_principal_type = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let owner_principal_name = if (3) <= version.0 {
+        let owner_principal_name = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

@@ -67,7 +67,7 @@ impl ApiRequest for FetchSnapshotRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
+            0 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)
@@ -207,7 +207,7 @@ impl KafkaSerialize for PartitionSnapshot {
             .encode(buf, version, is_flexible)?;
         self.snapshot_id.encode(buf, version, is_flexible)?;
         self.position.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 && !is_flexible {
+        if 1 <= version.0 && !is_flexible {
             self.replica_directory_id
                 .encode(buf, version, is_flexible)?;
         }
@@ -240,7 +240,7 @@ impl KafkaDeserialize for PartitionSnapshot {
         let current_leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let snapshot_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let position = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let mut replica_directory_id = if (1) <= version.0 {
+        let mut replica_directory_id = if 1 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {

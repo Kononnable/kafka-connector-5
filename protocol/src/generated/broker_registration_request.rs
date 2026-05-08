@@ -71,7 +71,7 @@ impl ApiRequest for BrokerRegistrationRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
+            0 <= version.0 && version.0 <= 4,
             "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
@@ -83,7 +83,7 @@ impl ApiRequest for BrokerRegistrationRequest {
         self.listeners.encode(buf, version, is_flexible)?;
         self.features.encode(buf, version, is_flexible)?;
         self.rack.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.is_migrating_zk_broker
                 .encode(buf, version, is_flexible)?;
         } else if self.is_migrating_zk_broker {
@@ -91,14 +91,14 @@ impl ApiRequest for BrokerRegistrationRequest {
                 "field 'IsMigratingZkBroker' is not available in this version",
             ));
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.log_dirs.encode(buf, version, is_flexible)?;
         } else if !self.log_dirs.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'LogDirs' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.previous_broker_epoch
                 .encode(buf, version, is_flexible)?;
         } else if self.previous_broker_epoch != 0 {
@@ -119,17 +119,17 @@ impl ApiRequest for BrokerRegistrationRequest {
         let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let features = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rack = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let is_migrating_zk_broker = if (1) <= version.0 {
+        let is_migrating_zk_broker = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let log_dirs = if (2) <= version.0 {
+        let log_dirs = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let previous_broker_epoch = if (3) <= version.0 {
+        let previous_broker_epoch = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -163,14 +163,14 @@ impl KafkaSerialize for BrokerRegistrationRequest {
         self.listeners.encode(buf, version, is_flexible)?;
         self.features.encode(buf, version, is_flexible)?;
         self.rack.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.is_migrating_zk_broker
                 .encode(buf, version, is_flexible)?;
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.log_dirs.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.previous_broker_epoch
                 .encode(buf, version, is_flexible)?;
         }
@@ -193,17 +193,17 @@ impl KafkaDeserialize for BrokerRegistrationRequest {
         let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let features = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rack = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let is_migrating_zk_broker = if (1) <= version.0 {
+        let is_migrating_zk_broker = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let log_dirs = if (2) <= version.0 {
+        let log_dirs = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let previous_broker_epoch = if (3) <= version.0 {
+        let previous_broker_epoch = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

@@ -49,7 +49,7 @@ impl ApiRequest for UpdateFeaturesRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
@@ -57,7 +57,7 @@ impl ApiRequest for UpdateFeaturesRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.feature_updates.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.validate_only.encode(buf, version, is_flexible)?;
         } else if self.validate_only {
             return Err(SerializationError::Encode(
@@ -73,7 +73,7 @@ impl ApiRequest for UpdateFeaturesRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let validate_only = if (1) <= version.0 {
+        let validate_only = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -97,7 +97,7 @@ impl KafkaSerialize for UpdateFeaturesRequest {
     ) -> Result<(), SerializationError> {
         self.timeout_ms.encode(buf, version, is_flexible)?;
         self.feature_updates.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.validate_only.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -115,7 +115,7 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
     ) -> Result<Self, SerializationError> {
         let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let validate_only = if (1) <= version.0 {
+        let validate_only = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -140,10 +140,10 @@ impl KafkaSerialize for FeatureUpdateKey {
     ) -> Result<(), SerializationError> {
         self.feature.encode(buf, version, is_flexible)?;
         self.max_version_level.encode(buf, version, is_flexible)?;
-        if version.0 == (0) {
+        if version.0 == 0 {
             self.allow_downgrade.encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.upgrade_type.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -161,12 +161,12 @@ impl KafkaDeserialize for FeatureUpdateKey {
     ) -> Result<Self, SerializationError> {
         let feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_version_level = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let allow_downgrade = if version.0 == (0) {
+        let allow_downgrade = if version.0 == 0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let upgrade_type = if (1) <= version.0 {
+        let upgrade_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

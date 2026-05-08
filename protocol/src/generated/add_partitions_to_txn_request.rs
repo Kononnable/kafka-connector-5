@@ -70,20 +70,20 @@ impl ApiRequest for AddPartitionsToTxnRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
+            0 <= version.0 && version.0 <= 5,
             "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.transactions.encode(buf, version, is_flexible)?;
         } else if !self.transactions.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'Transactions' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_transactional_id
                 .encode(buf, version, is_flexible)?;
         } else if !self.v3_and_below_transactional_id.is_empty() {
@@ -91,7 +91,7 @@ impl ApiRequest for AddPartitionsToTxnRequest {
                 "field 'V3AndBelowTransactionalId' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_producer_id
                 .encode(buf, version, is_flexible)?;
         } else if self.v3_and_below_producer_id != 0 {
@@ -99,7 +99,7 @@ impl ApiRequest for AddPartitionsToTxnRequest {
                 "field 'V3AndBelowProducerId' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_producer_epoch
                 .encode(buf, version, is_flexible)?;
         } else if self.v3_and_below_producer_epoch != 0 {
@@ -107,7 +107,7 @@ impl ApiRequest for AddPartitionsToTxnRequest {
                 "field 'V3AndBelowProducerEpoch' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_topics.encode(buf, version, is_flexible)?;
         } else if !self.v3_and_below_topics.is_empty() {
             return Err(SerializationError::Encode(
@@ -121,27 +121,27 @@ impl ApiRequest for AddPartitionsToTxnRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let transactions = if (4) <= version.0 {
+        let transactions = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_transactional_id = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_transactional_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_producer_id = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_producer_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_producer_epoch = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_producer_epoch = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_topics = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_topics = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -165,22 +165,22 @@ impl KafkaSerialize for AddPartitionsToTxnRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.transactions.encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_transactional_id
                 .encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_producer_id
                 .encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_producer_epoch
                 .encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_topics.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -196,27 +196,27 @@ impl KafkaDeserialize for AddPartitionsToTxnRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let transactions = if (4) <= version.0 {
+        let transactions = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_transactional_id = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_transactional_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_producer_id = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_producer_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_producer_epoch = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_producer_epoch = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let v3_and_below_topics = if (0) <= version.0 && version.0 <= (3) {
+        let v3_and_below_topics = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -272,19 +272,19 @@ impl KafkaSerialize for AddPartitionsToTxnTransaction {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.transactional_id.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.verify_only.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.topics.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -300,27 +300,27 @@ impl KafkaDeserialize for AddPartitionsToTxnTransaction {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let transactional_id = if (4) <= version.0 {
+        let transactional_id = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let producer_id = if (4) <= version.0 {
+        let producer_id = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let producer_epoch = if (4) <= version.0 {
+        let producer_epoch = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let verify_only = if (4) <= version.0 {
+        let verify_only = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = if (4) <= version.0 {
+        let topics = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

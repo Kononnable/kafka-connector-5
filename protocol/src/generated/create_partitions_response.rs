@@ -42,7 +42,7 @@ impl ApiResponse for CreatePartitionsResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (3),
+            0 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 0-3)",
             version.0,
             stringify!(Self)

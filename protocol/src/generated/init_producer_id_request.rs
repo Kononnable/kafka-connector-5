@@ -44,7 +44,7 @@ impl ApiRequest for InitProducerIdRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
+            0 <= version.0 && version.0 <= 6,
             "version {} is not supported by {} (supported: 0-6)",
             version.0,
             stringify!(Self)
@@ -53,28 +53,28 @@ impl ApiRequest for InitProducerIdRequest {
         self.transactional_id.encode(buf, version, is_flexible)?;
         self.transaction_timeout_ms
             .encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         } else if self.producer_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'ProducerId' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
         } else if self.producer_epoch != 0 {
             return Err(SerializationError::Encode(
                 "field 'ProducerEpoch' is not available in this version",
             ));
         }
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.enable2_pc.encode(buf, version, is_flexible)?;
         } else if self.enable2_pc {
             return Err(SerializationError::Encode(
                 "field 'Enable2Pc' is not available in this version",
             ));
         }
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.keep_prepared_txn.encode(buf, version, is_flexible)?;
         } else if self.keep_prepared_txn {
             return Err(SerializationError::Encode(
@@ -90,22 +90,22 @@ impl ApiRequest for InitProducerIdRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let transaction_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_id = if (3) <= version.0 {
+        let producer_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let producer_epoch = if (3) <= version.0 {
+        let producer_epoch = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let enable2_pc = if (6) <= version.0 {
+        let enable2_pc = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let keep_prepared_txn = if (6) <= version.0 {
+        let keep_prepared_txn = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -133,16 +133,16 @@ impl KafkaSerialize for InitProducerIdRequest {
         self.transactional_id.encode(buf, version, is_flexible)?;
         self.transaction_timeout_ms
             .encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
         }
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.enable2_pc.encode(buf, version, is_flexible)?;
         }
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.keep_prepared_txn.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -160,22 +160,22 @@ impl KafkaDeserialize for InitProducerIdRequest {
     ) -> Result<Self, SerializationError> {
         let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let transaction_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_id = if (3) <= version.0 {
+        let producer_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let producer_epoch = if (3) <= version.0 {
+        let producer_epoch = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let enable2_pc = if (6) <= version.0 {
+        let enable2_pc = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let keep_prepared_txn = if (6) <= version.0 {
+        let keep_prepared_txn = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

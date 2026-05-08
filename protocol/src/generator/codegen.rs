@@ -297,11 +297,8 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             // serialize
             code.push_str("    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
             if max_v >= min_v {
-                code.push_str("        assert!((");
-                code.push_str(&format!(
-                    "{}) <= version.0 && version.0 <= ({})",
-                    min_v, max_v
-                ));
+                code.push_str("        assert!(");
+                code.push_str(&format!("{} <= version.0 && version.0 <= {}", min_v, max_v));
                 code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
             }
             code.push_str(
@@ -388,11 +385,8 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
             // serialize
             code.push_str("    fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {\n");
             if max_v >= min_v {
-                code.push_str("        assert!((");
-                code.push_str(&format!(
-                    "{}) <= version.0 && version.0 <= ({})",
-                    min_v, max_v
-                ));
+                code.push_str("        assert!(");
+                code.push_str(&format!("{} <= version.0 && version.0 <= {}", min_v, max_v));
                 code.push_str(&format!(", \"version {{}} is not supported by {{}} (supported: {}-{})\", version.0, stringify!(Self));\n", min_v, max_v));
             }
             code.push_str(
@@ -479,11 +473,11 @@ fn field_version_condition(field: &Field) -> Option<String> {
     if let Some(range) = v.split_once('-') {
         let min = range.0.trim();
         let max = range.1.trim();
-        Some(format!("({}) <= version.0 && version.0 <= ({})", min, max))
+        Some(format!("{} <= version.0 && version.0 <= {}", min, max))
     } else if let Some(base) = v.strip_suffix('+') {
-        Some(format!("({}) <= version.0", base.trim()))
+        Some(format!("{} <= version.0", base.trim()))
     } else if let Ok(single) = v.parse::<i16>() {
-        Some(format!("version.0 == ({})", single))
+        Some(format!("version.0 == {}", single))
     } else {
         None
     }
@@ -518,11 +512,11 @@ fn flexible_condition(flexible_versions: &Option<String>) -> String {
             if let Some(range) = v.split_once('-') {
                 let min = range.0.trim();
                 let max = range.1.trim();
-                format!("({}) <= version.0 && version.0 <= ({})", min, max)
+                format!("{} <= version.0 && version.0 <= {}", min, max)
             } else if let Some(base) = v.strip_suffix('+') {
-                format!("({}) <= version.0", base.trim())
+                format!("{} <= version.0", base.trim())
             } else if v.parse::<i16>().is_ok() {
-                format!("version.0 == ({})", v)
+                format!("version.0 == {}", v)
             } else {
                 "false".to_string()
             }

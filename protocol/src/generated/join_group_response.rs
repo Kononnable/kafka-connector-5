@@ -60,13 +60,13 @@ impl ApiResponse for JoinGroupResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (9),
+            0 <= version.0 && version.0 <= 9,
             "version {} is not supported by {} (supported: 0-9)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
@@ -75,7 +75,7 @@ impl ApiResponse for JoinGroupResponse {
         }
         self.error_code.encode(buf, version, is_flexible)?;
         self.generation_id.encode(buf, version, is_flexible)?;
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.protocol_type.encode(buf, version, is_flexible)?;
         } else if self.protocol_type.is_some() {
             return Err(SerializationError::Encode(
@@ -84,7 +84,7 @@ impl ApiResponse for JoinGroupResponse {
         }
         self.protocol_name.encode(buf, version, is_flexible)?;
         self.leader.encode(buf, version, is_flexible)?;
-        if (9) <= version.0 {
+        if 9 <= version.0 {
             self.skip_assignment.encode(buf, version, is_flexible)?;
         } else if self.skip_assignment {
             return Err(SerializationError::Encode(
@@ -100,21 +100,21 @@ impl ApiResponse for JoinGroupResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = if (2) <= version.0 {
+        let throttle_time_ms = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let protocol_type = if (7) <= version.0 {
+        let protocol_type = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let leader = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let skip_assignment = if (9) <= version.0 {
+        let skip_assignment = if 9 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -144,17 +144,17 @@ impl KafkaSerialize for JoinGroupResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
         self.error_code.encode(buf, version, is_flexible)?;
         self.generation_id.encode(buf, version, is_flexible)?;
-        if (7) <= version.0 {
+        if 7 <= version.0 {
             self.protocol_type.encode(buf, version, is_flexible)?;
         }
         self.protocol_name.encode(buf, version, is_flexible)?;
         self.leader.encode(buf, version, is_flexible)?;
-        if (9) <= version.0 {
+        if 9 <= version.0 {
             self.skip_assignment.encode(buf, version, is_flexible)?;
         }
         self.member_id.encode(buf, version, is_flexible)?;
@@ -172,21 +172,21 @@ impl KafkaDeserialize for JoinGroupResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = if (2) <= version.0 {
+        let throttle_time_ms = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let protocol_type = if (7) <= version.0 {
+        let protocol_type = if 7 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let leader = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let skip_assignment = if (9) <= version.0 {
+        let skip_assignment = if 9 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -218,7 +218,7 @@ impl KafkaSerialize for JoinGroupResponseMember {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.member_id.encode(buf, version, is_flexible)?;
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         self.metadata.encode(buf, version, is_flexible)?;
@@ -236,7 +236,7 @@ impl KafkaDeserialize for JoinGroupResponseMember {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (5) <= version.0 {
+        let group_instance_id = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

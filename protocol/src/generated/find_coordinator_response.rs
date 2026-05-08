@@ -71,55 +71,55 @@ impl ApiResponse for FindCoordinatorResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (6),
+            0 <= version.0 && version.0 <= 6,
             "version {} is not supported by {} (supported: 0-6)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
                 "field 'ThrottleTimeMs' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
             return Err(SerializationError::Encode(
                 "field 'ErrorCode' is not available in this version",
             ));
         }
-        if (1) <= version.0 && version.0 <= (3) {
+        if 1 <= version.0 && version.0 <= 3 {
             self.error_message.encode(buf, version, is_flexible)?;
         } else if self.error_message.is_some() {
             return Err(SerializationError::Encode(
                 "field 'ErrorMessage' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.node_id.encode(buf, version, is_flexible)?;
         } else if self.node_id != 0 {
             return Err(SerializationError::Encode(
                 "field 'NodeId' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.host.encode(buf, version, is_flexible)?;
         } else if !self.host.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'Host' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.port.encode(buf, version, is_flexible)?;
         } else if self.port != 0 {
             return Err(SerializationError::Encode(
                 "field 'Port' is not available in this version",
             ));
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.coordinators.encode(buf, version, is_flexible)?;
         } else if !self.coordinators.is_empty() {
             return Err(SerializationError::Encode(
@@ -133,37 +133,37 @@ impl ApiResponse for FindCoordinatorResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = if (0) <= version.0 && version.0 <= (3) {
+        let error_code = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_message = if (1) <= version.0 && version.0 <= (3) {
+        let error_message = if 1 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let node_id = if (0) <= version.0 && version.0 <= (3) {
+        let node_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let host = if (0) <= version.0 && version.0 <= (3) {
+        let host = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let port = if (0) <= version.0 && version.0 <= (3) {
+        let port = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let coordinators = if (4) <= version.0 {
+        let coordinators = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -189,25 +189,25 @@ impl KafkaSerialize for FindCoordinatorResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.error_code.encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 && version.0 <= (3) {
+        if 1 <= version.0 && version.0 <= 3 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.node_id.encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.host.encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (3) {
+        if 0 <= version.0 && version.0 <= 3 {
             self.port.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.coordinators.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -223,37 +223,37 @@ impl KafkaDeserialize for FindCoordinatorResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = if (0) <= version.0 && version.0 <= (3) {
+        let error_code = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_message = if (1) <= version.0 && version.0 <= (3) {
+        let error_message = if 1 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let node_id = if (0) <= version.0 && version.0 <= (3) {
+        let node_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let host = if (0) <= version.0 && version.0 <= (3) {
+        let host = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let port = if (0) <= version.0 && version.0 <= (3) {
+        let port = if 0 <= version.0 && version.0 <= 3 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let coordinators = if (4) <= version.0 {
+        let coordinators = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -280,22 +280,22 @@ impl KafkaSerialize for Coordinator {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.key.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.node_id.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.host.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.port.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         }
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -311,32 +311,32 @@ impl KafkaDeserialize for Coordinator {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let key = if (4) <= version.0 {
+        let key = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let node_id = if (4) <= version.0 {
+        let node_id = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let host = if (4) <= version.0 {
+        let host = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let port = if (4) <= version.0 {
+        let port = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_code = if (4) <= version.0 {
+        let error_code = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let error_message = if (4) <= version.0 {
+        let error_message = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

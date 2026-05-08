@@ -47,13 +47,13 @@ impl ApiResponse for DeleteTopicsResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (6),
+            1 <= version.0 && version.0 <= 6,
             "version {} is not supported by {} (supported: 1-6)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
@@ -68,7 +68,7 @@ impl ApiResponse for DeleteTopicsResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -90,7 +90,7 @@ impl KafkaSerialize for DeleteTopicsResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
         self.responses.encode(buf, version, is_flexible)?;
@@ -107,7 +107,7 @@ impl KafkaDeserialize for DeleteTopicsResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -131,11 +131,11 @@ impl KafkaSerialize for DeletableTopicResult {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
         self.error_code.encode(buf, version, is_flexible)?;
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -152,13 +152,13 @@ impl KafkaDeserialize for DeletableTopicResult {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topic_id = if (6) <= version.0 {
+        let topic_id = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = if (5) <= version.0 {
+        let error_message = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

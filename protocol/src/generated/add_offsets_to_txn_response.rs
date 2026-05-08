@@ -32,7 +32,7 @@ impl ApiResponse for AddOffsetsToTxnResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
+            0 <= version.0 && version.0 <= 4,
             "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)

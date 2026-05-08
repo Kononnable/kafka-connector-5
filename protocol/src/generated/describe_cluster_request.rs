@@ -36,7 +36,7 @@ impl ApiRequest for DescribeClusterRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
@@ -44,14 +44,14 @@ impl ApiRequest for DescribeClusterRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.include_cluster_authorized_operations
             .encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
         } else if self.endpoint_type != 0 {
             return Err(SerializationError::Encode(
                 "field 'EndpointType' is not available in this version",
             ));
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.include_fenced_brokers
                 .encode(buf, version, is_flexible)?;
         } else if self.include_fenced_brokers {
@@ -68,12 +68,12 @@ impl ApiRequest for DescribeClusterRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let include_cluster_authorized_operations =
             KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let endpoint_type = if (1) <= version.0 {
+        let endpoint_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_fenced_brokers = if (2) <= version.0 {
+        let include_fenced_brokers = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -97,10 +97,10 @@ impl KafkaSerialize for DescribeClusterRequest {
     ) -> Result<(), SerializationError> {
         self.include_cluster_authorized_operations
             .encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.include_fenced_brokers
                 .encode(buf, version, is_flexible)?;
         }
@@ -119,12 +119,12 @@ impl KafkaDeserialize for DescribeClusterRequest {
     ) -> Result<Self, SerializationError> {
         let include_cluster_authorized_operations =
             KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let endpoint_type = if (1) <= version.0 {
+        let endpoint_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_fenced_brokers = if (2) <= version.0 {
+        let include_fenced_brokers = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

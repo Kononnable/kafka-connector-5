@@ -37,7 +37,7 @@ impl ApiRequest for HeartbeatRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
+            0 <= version.0 && version.0 <= 4,
             "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
@@ -46,7 +46,7 @@ impl ApiRequest for HeartbeatRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.generation_id.encode(buf, version, is_flexible)?;
         self.member_id.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
             return Err(SerializationError::Encode(
@@ -63,7 +63,7 @@ impl ApiRequest for HeartbeatRequest {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (3) <= version.0 {
+        let group_instance_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -89,7 +89,7 @@ impl KafkaSerialize for HeartbeatRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.generation_id.encode(buf, version, is_flexible)?;
         self.member_id.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -108,7 +108,7 @@ impl KafkaDeserialize for HeartbeatRequest {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (3) <= version.0 {
+        let group_instance_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

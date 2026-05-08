@@ -52,7 +52,7 @@ impl ApiResponse for CreateDelegationTokenResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (3),
+            1 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 1-3)",
             version.0,
             stringify!(Self)
@@ -61,7 +61,7 @@ impl ApiResponse for CreateDelegationTokenResponse {
         self.error_code.encode(buf, version, is_flexible)?;
         self.principal_type.encode(buf, version, is_flexible)?;
         self.principal_name.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.token_requester_principal_type
                 .encode(buf, version, is_flexible)?;
         } else if !self.token_requester_principal_type.is_empty() {
@@ -69,7 +69,7 @@ impl ApiResponse for CreateDelegationTokenResponse {
                 "field 'TokenRequesterPrincipalType' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.token_requester_principal_name
                 .encode(buf, version, is_flexible)?;
         } else if !self.token_requester_principal_name.is_empty() {
@@ -93,12 +93,12 @@ impl ApiResponse for CreateDelegationTokenResponse {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let token_requester_principal_type = if (3) <= version.0 {
+        let token_requester_principal_type = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let token_requester_principal_name = if (3) <= version.0 {
+        let token_requester_principal_name = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -137,11 +137,11 @@ impl KafkaSerialize for CreateDelegationTokenResponse {
         self.error_code.encode(buf, version, is_flexible)?;
         self.principal_type.encode(buf, version, is_flexible)?;
         self.principal_name.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.token_requester_principal_type
                 .encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.token_requester_principal_name
                 .encode(buf, version, is_flexible)?;
         }
@@ -167,12 +167,12 @@ impl KafkaDeserialize for CreateDelegationTokenResponse {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let token_requester_principal_type = if (3) <= version.0 {
+        let token_requester_principal_type = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let token_requester_principal_name = if (3) <= version.0 {
+        let token_requester_principal_name = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

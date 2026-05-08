@@ -99,7 +99,7 @@ impl ApiResponse for ShareFetchResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (1),
+            1 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 1-1)",
             version.0,
             stringify!(Self)
@@ -108,7 +108,7 @@ impl ApiResponse for ShareFetchResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.acquisition_lock_timeout_ms
                 .encode(buf, version, is_flexible)?;
         } else if self.acquisition_lock_timeout_ms != 0 {
@@ -128,7 +128,7 @@ impl ApiResponse for ShareFetchResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let acquisition_lock_timeout_ms = if (1) <= version.0 {
+        let acquisition_lock_timeout_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -158,7 +158,7 @@ impl KafkaSerialize for ShareFetchResponse {
         self.throttle_time_ms.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.acquisition_lock_timeout_ms
                 .encode(buf, version, is_flexible)?;
         }
@@ -180,7 +180,7 @@ impl KafkaDeserialize for ShareFetchResponse {
         let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let acquisition_lock_timeout_ms = if (1) <= version.0 {
+        let acquisition_lock_timeout_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

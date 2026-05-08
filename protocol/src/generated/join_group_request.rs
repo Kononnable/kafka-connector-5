@@ -55,7 +55,7 @@ impl ApiRequest for JoinGroupRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (9),
+            0 <= version.0 && version.0 <= 9,
             "version {} is not supported by {} (supported: 0-9)",
             version.0,
             stringify!(Self)
@@ -63,7 +63,7 @@ impl ApiRequest for JoinGroupRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.group_id.encode(buf, version, is_flexible)?;
         self.session_timeout_ms.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.rebalance_timeout_ms
                 .encode(buf, version, is_flexible)?;
         } else if self.rebalance_timeout_ms != 0 {
@@ -72,7 +72,7 @@ impl ApiRequest for JoinGroupRequest {
             ));
         }
         self.member_id.encode(buf, version, is_flexible)?;
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
             return Err(SerializationError::Encode(
@@ -81,7 +81,7 @@ impl ApiRequest for JoinGroupRequest {
         }
         self.protocol_type.encode(buf, version, is_flexible)?;
         self.protocols.encode(buf, version, is_flexible)?;
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.reason.encode(buf, version, is_flexible)?;
         } else if self.reason.is_some() {
             return Err(SerializationError::Encode(
@@ -97,20 +97,20 @@ impl ApiRequest for JoinGroupRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let session_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let rebalance_timeout_ms = if (1) <= version.0 {
+        let rebalance_timeout_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (5) <= version.0 {
+        let group_instance_id = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let protocols = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let reason = if (8) <= version.0 {
+        let reason = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -139,17 +139,17 @@ impl KafkaSerialize for JoinGroupRequest {
     ) -> Result<(), SerializationError> {
         self.group_id.encode(buf, version, is_flexible)?;
         self.session_timeout_ms.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.rebalance_timeout_ms
                 .encode(buf, version, is_flexible)?;
         }
         self.member_id.encode(buf, version, is_flexible)?;
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
         self.protocol_type.encode(buf, version, is_flexible)?;
         self.protocols.encode(buf, version, is_flexible)?;
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.reason.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -167,20 +167,20 @@ impl KafkaDeserialize for JoinGroupRequest {
     ) -> Result<Self, SerializationError> {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let session_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let rebalance_timeout_ms = if (1) <= version.0 {
+        let rebalance_timeout_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (5) <= version.0 {
+        let group_instance_id = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let protocol_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let protocols = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let reason = if (8) <= version.0 {
+        let reason = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

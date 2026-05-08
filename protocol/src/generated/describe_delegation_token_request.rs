@@ -38,7 +38,7 @@ impl ApiRequest for DescribeDelegationTokenRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (3),
+            1 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 1-3)",
             version.0,
             stringify!(Self)

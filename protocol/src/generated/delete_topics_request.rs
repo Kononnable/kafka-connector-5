@@ -46,20 +46,20 @@ impl ApiRequest for DeleteTopicsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (6),
+            1 <= version.0 && version.0 <= 6,
             "version {} is not supported by {} (supported: 1-6)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.topics.encode(buf, version, is_flexible)?;
         } else if !self.topics.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'Topics' is not available in this version",
             ));
         }
-        if (0) <= version.0 && version.0 <= (5) {
+        if 0 <= version.0 && version.0 <= 5 {
             self.topic_names.encode(buf, version, is_flexible)?;
         } else if !self.topic_names.is_empty() {
             return Err(SerializationError::Encode(
@@ -74,12 +74,12 @@ impl ApiRequest for DeleteTopicsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let topics = if (6) <= version.0 {
+        let topics = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_names = if (0) <= version.0 && version.0 <= (5) {
+        let topic_names = if 0 <= version.0 && version.0 <= 5 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -102,10 +102,10 @@ impl KafkaSerialize for DeleteTopicsRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.topics.encode(buf, version, is_flexible)?;
         }
-        if (0) <= version.0 && version.0 <= (5) {
+        if 0 <= version.0 && version.0 <= 5 {
             self.topic_names.encode(buf, version, is_flexible)?;
         }
         self.timeout_ms.encode(buf, version, is_flexible)?;
@@ -122,12 +122,12 @@ impl KafkaDeserialize for DeleteTopicsRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topics = if (6) <= version.0 {
+        let topics = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_names = if (0) <= version.0 && version.0 <= (5) {
+        let topic_names = if 0 <= version.0 && version.0 <= 5 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -151,10 +151,10 @@ impl KafkaSerialize for DeleteTopicState {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.name.encode(buf, version, is_flexible)?;
         }
-        if (6) <= version.0 {
+        if 6 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -170,12 +170,12 @@ impl KafkaDeserialize for DeleteTopicState {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if (6) <= version.0 {
+        let name = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_id = if (6) <= version.0 {
+        let topic_id = if 6 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

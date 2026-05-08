@@ -43,7 +43,7 @@ impl ApiResponse for ListConfigResourcesResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
+            0 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)
@@ -117,7 +117,7 @@ impl KafkaSerialize for ConfigResource {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.resource_name.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.resource_type.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -134,7 +134,7 @@ impl KafkaDeserialize for ConfigResource {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let resource_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let resource_type = if (1) <= version.0 {
+        let resource_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

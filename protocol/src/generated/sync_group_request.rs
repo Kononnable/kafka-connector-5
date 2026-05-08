@@ -53,7 +53,7 @@ impl ApiRequest for SyncGroupRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
+            0 <= version.0 && version.0 <= 5,
             "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
@@ -62,21 +62,21 @@ impl ApiRequest for SyncGroupRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.generation_id.encode(buf, version, is_flexible)?;
         self.member_id.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
             return Err(SerializationError::Encode(
                 "field 'GroupInstanceId' is not available in this version",
             ));
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.protocol_type.encode(buf, version, is_flexible)?;
         } else if self.protocol_type.is_some() {
             return Err(SerializationError::Encode(
                 "field 'ProtocolType' is not available in this version",
             ));
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.protocol_name.encode(buf, version, is_flexible)?;
         } else if self.protocol_name.is_some() {
             return Err(SerializationError::Encode(
@@ -94,17 +94,17 @@ impl ApiRequest for SyncGroupRequest {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (3) <= version.0 {
+        let group_instance_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_type = if (5) <= version.0 {
+        let protocol_type = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_name = if (5) <= version.0 {
+        let protocol_name = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -134,13 +134,13 @@ impl KafkaSerialize for SyncGroupRequest {
         self.group_id.encode(buf, version, is_flexible)?;
         self.generation_id.encode(buf, version, is_flexible)?;
         self.member_id.encode(buf, version, is_flexible)?;
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.protocol_type.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.protocol_name.encode(buf, version, is_flexible)?;
         }
         self.assignments.encode(buf, version, is_flexible)?;
@@ -160,17 +160,17 @@ impl KafkaDeserialize for SyncGroupRequest {
         let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let generation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let group_instance_id = if (3) <= version.0 {
+        let group_instance_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_type = if (5) <= version.0 {
+        let protocol_type = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let protocol_name = if (5) <= version.0 {
+        let protocol_name = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

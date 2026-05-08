@@ -66,14 +66,14 @@ impl ApiRequest for VoteRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.cluster_id.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.voter_id.encode(buf, version, is_flexible)?;
         } else if self.voter_id != 0 {
             return Err(SerializationError::Encode(
@@ -89,7 +89,7 @@ impl ApiRequest for VoteRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voter_id = if (1) <= version.0 {
+        let voter_id = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -113,7 +113,7 @@ impl KafkaSerialize for VoteRequest {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.cluster_id.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.voter_id.encode(buf, version, is_flexible)?;
         }
         self.topics.encode(buf, version, is_flexible)?;
@@ -131,7 +131,7 @@ impl KafkaDeserialize for VoteRequest {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voter_id = if (1) <= version.0 {
+        let voter_id = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -158,16 +158,16 @@ impl KafkaSerialize for PartitionData {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.replica_epoch.encode(buf, version, is_flexible)?;
         self.replica_id.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.replica_directory_id
                 .encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.voter_directory_id.encode(buf, version, is_flexible)?;
         }
         self.last_offset_epoch.encode(buf, version, is_flexible)?;
         self.last_offset.encode(buf, version, is_flexible)?;
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.pre_vote.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -186,19 +186,19 @@ impl KafkaDeserialize for PartitionData {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let replica_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let replica_directory_id = if (1) <= version.0 {
+        let replica_directory_id = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let voter_directory_id = if (1) <= version.0 {
+        let voter_directory_id = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let last_offset_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let last_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let pre_vote = if (2) <= version.0 {
+        let pre_vote = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

@@ -48,14 +48,14 @@ impl ApiRequest for MetadataRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (13),
+            0 <= version.0 && version.0 <= 13,
             "version {} is not supported by {} (supported: 0-13)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.topics.encode(buf, version, is_flexible)?;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.allow_auto_topic_creation
                 .encode(buf, version, is_flexible)?;
         } else if self.allow_auto_topic_creation {
@@ -63,7 +63,7 @@ impl ApiRequest for MetadataRequest {
                 "field 'AllowAutoTopicCreation' is not available in this version",
             ));
         }
-        if (8) <= version.0 && version.0 <= (10) {
+        if 8 <= version.0 && version.0 <= 10 {
             self.include_cluster_authorized_operations
                 .encode(buf, version, is_flexible)?;
         } else if self.include_cluster_authorized_operations {
@@ -71,7 +71,7 @@ impl ApiRequest for MetadataRequest {
                 "field 'IncludeClusterAuthorizedOperations' is not available in this version",
             ));
         }
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.include_topic_authorized_operations
                 .encode(buf, version, is_flexible)?;
         } else if self.include_topic_authorized_operations {
@@ -87,17 +87,17 @@ impl ApiRequest for MetadataRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let allow_auto_topic_creation = if (4) <= version.0 {
+        let allow_auto_topic_creation = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
+        let include_cluster_authorized_operations = if 8 <= version.0 && version.0 <= 10 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_topic_authorized_operations = if (8) <= version.0 {
+        let include_topic_authorized_operations = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -121,15 +121,15 @@ impl KafkaSerialize for MetadataRequest {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.topics.encode(buf, version, is_flexible)?;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.allow_auto_topic_creation
                 .encode(buf, version, is_flexible)?;
         }
-        if (8) <= version.0 && version.0 <= (10) {
+        if 8 <= version.0 && version.0 <= 10 {
             self.include_cluster_authorized_operations
                 .encode(buf, version, is_flexible)?;
         }
-        if (8) <= version.0 {
+        if 8 <= version.0 {
             self.include_topic_authorized_operations
                 .encode(buf, version, is_flexible)?;
         }
@@ -147,17 +147,17 @@ impl KafkaDeserialize for MetadataRequest {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let allow_auto_topic_creation = if (4) <= version.0 {
+        let allow_auto_topic_creation = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_cluster_authorized_operations = if (8) <= version.0 && version.0 <= (10) {
+        let include_cluster_authorized_operations = if 8 <= version.0 && version.0 <= 10 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let include_topic_authorized_operations = if (8) <= version.0 {
+        let include_topic_authorized_operations = if 8 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -181,7 +181,7 @@ impl KafkaSerialize for MetadataRequestTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (10) <= version.0 {
+        if 10 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
         self.name.encode(buf, version, is_flexible)?;
@@ -198,7 +198,7 @@ impl KafkaDeserialize for MetadataRequestTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = if (10) <= version.0 {
+        let topic_id = if 10 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

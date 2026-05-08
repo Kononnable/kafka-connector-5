@@ -49,7 +49,7 @@ impl ApiRequest for DeleteAclsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (3),
+            1 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 1-3)",
             version.0,
             stringify!(Self)
@@ -110,7 +110,7 @@ impl KafkaSerialize for DeleteAclsFilter {
             .encode(buf, version, is_flexible)?;
         self.resource_name_filter
             .encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.pattern_type_filter.encode(buf, version, is_flexible)?;
         }
         self.principal_filter.encode(buf, version, is_flexible)?;
@@ -132,7 +132,7 @@ impl KafkaDeserialize for DeleteAclsFilter {
     ) -> Result<Self, SerializationError> {
         let resource_type_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let resource_name_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let pattern_type_filter = if (1) <= version.0 {
+        let pattern_type_filter = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

@@ -38,7 +38,7 @@ impl ApiRequest for ListTransactionsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (2),
+            0 <= version.0 && version.0 <= 2,
             "version {} is not supported by {} (supported: 0-2)",
             version.0,
             stringify!(Self)
@@ -46,14 +46,14 @@ impl ApiRequest for ListTransactionsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.state_filters.encode(buf, version, is_flexible)?;
         self.producer_id_filters.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.duration_filter.encode(buf, version, is_flexible)?;
         } else if self.duration_filter != 0 {
             return Err(SerializationError::Encode(
                 "field 'DurationFilter' is not available in this version",
             ));
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.transactional_id_pattern
                 .encode(buf, version, is_flexible)?;
         } else if self.transactional_id_pattern.is_some() {
@@ -70,12 +70,12 @@ impl ApiRequest for ListTransactionsRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let state_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_id_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let duration_filter = if (1) <= version.0 {
+        let duration_filter = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let transactional_id_pattern = if (2) <= version.0 {
+        let transactional_id_pattern = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -100,10 +100,10 @@ impl KafkaSerialize for ListTransactionsRequest {
     ) -> Result<(), SerializationError> {
         self.state_filters.encode(buf, version, is_flexible)?;
         self.producer_id_filters.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.duration_filter.encode(buf, version, is_flexible)?;
         }
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.transactional_id_pattern
                 .encode(buf, version, is_flexible)?;
         }
@@ -122,12 +122,12 @@ impl KafkaDeserialize for ListTransactionsRequest {
     ) -> Result<Self, SerializationError> {
         let state_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let producer_id_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let duration_filter = if (1) <= version.0 {
+        let duration_filter = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let transactional_id_pattern = if (2) <= version.0 {
+        let transactional_id_pattern = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

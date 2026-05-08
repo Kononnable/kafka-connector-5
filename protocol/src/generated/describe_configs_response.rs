@@ -83,7 +83,7 @@ impl ApiResponse for DescribeConfigsResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (4),
+            1 <= version.0 && version.0 <= 4,
             "version {} is not supported by {} (supported: 1-4)",
             version.0,
             stringify!(Self)
@@ -153,17 +153,17 @@ impl KafkaSerialize for DescribeConfigsResourceResult {
         self.name.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         self.read_only.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.config_source.encode(buf, version, is_flexible)?;
         }
         self.is_sensitive.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.synonyms.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.config_type.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.documentation.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -182,23 +182,23 @@ impl KafkaDeserialize for DescribeConfigsResourceResult {
         let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let value = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let read_only = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let config_source = if (1) <= version.0 {
+        let config_source = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let is_sensitive = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let synonyms = if (1) <= version.0 {
+        let synonyms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let config_type = if (3) <= version.0 {
+        let config_type = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let documentation = if (3) <= version.0 {
+        let documentation = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -269,13 +269,13 @@ impl KafkaSerialize for DescribeConfigsSynonym {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.name.encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.value.encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.source.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -291,17 +291,17 @@ impl KafkaDeserialize for DescribeConfigsSynonym {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if (1) <= version.0 {
+        let name = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let value = if (1) <= version.0 {
+        let value = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let source = if (1) <= version.0 {
+        let source = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

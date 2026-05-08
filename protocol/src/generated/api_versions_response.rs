@@ -83,7 +83,7 @@ impl ApiResponse for ApiVersionsResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (4),
+            0 <= version.0 && version.0 <= 4,
             "version {} is not supported by {} (supported: 0-4)",
             version.0,
             stringify!(Self)
@@ -91,21 +91,21 @@ impl ApiResponse for ApiVersionsResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         self.error_code.encode(buf, version, is_flexible)?;
         self.api_keys.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
             return Err(SerializationError::Encode(
                 "field 'ThrottleTimeMs' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.supported_features.encode(buf, version, is_flexible)?;
         } else if !self.supported_features.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'SupportedFeatures' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.finalized_features_epoch
                 .encode(buf, version, is_flexible)?;
         } else if self.finalized_features_epoch != 0 {
@@ -113,14 +113,14 @@ impl ApiResponse for ApiVersionsResponse {
                 "field 'FinalizedFeaturesEpoch' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.finalized_features.encode(buf, version, is_flexible)?;
         } else if !self.finalized_features.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'FinalizedFeatures' is not available in this version",
             ));
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.zk_migration_ready.encode(buf, version, is_flexible)?;
         } else if self.zk_migration_ready {
             return Err(SerializationError::Encode(
@@ -178,12 +178,12 @@ impl ApiResponse for ApiVersionsResponse {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let api_keys = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let mut supported_features = if (3) <= version.0 {
+        let mut supported_features = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -192,7 +192,7 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let mut finalized_features_epoch = if (3) <= version.0 {
+        let mut finalized_features_epoch = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -201,7 +201,7 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let mut finalized_features = if (3) <= version.0 {
+        let mut finalized_features = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -210,7 +210,7 @@ impl ApiResponse for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let mut zk_migration_ready = if (3) <= version.0 {
+        let mut zk_migration_ready = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -263,20 +263,20 @@ impl KafkaSerialize for ApiVersionsResponse {
     ) -> Result<(), SerializationError> {
         self.error_code.encode(buf, version, is_flexible)?;
         self.api_keys.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 && !is_flexible {
+        if 3 <= version.0 && !is_flexible {
             self.supported_features.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 && !is_flexible {
+        if 3 <= version.0 && !is_flexible {
             self.finalized_features_epoch
                 .encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 && !is_flexible {
+        if 3 <= version.0 && !is_flexible {
             self.finalized_features.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 && !is_flexible {
+        if 3 <= version.0 && !is_flexible {
             self.zk_migration_ready.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -336,12 +336,12 @@ impl KafkaDeserialize for ApiVersionsResponse {
     ) -> Result<Self, SerializationError> {
         let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let api_keys = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = if (1) <= version.0 {
+        let throttle_time_ms = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let mut supported_features = if (3) <= version.0 {
+        let mut supported_features = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -350,7 +350,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let mut finalized_features_epoch = if (3) <= version.0 {
+        let mut finalized_features_epoch = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -359,7 +359,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let mut finalized_features = if (3) <= version.0 {
+        let mut finalized_features = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -368,7 +368,7 @@ impl KafkaDeserialize for ApiVersionsResponse {
         } else {
             Default::default()
         };
-        let mut zk_migration_ready = if (3) <= version.0 {
+        let mut zk_migration_ready = if 3 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
@@ -457,13 +457,13 @@ impl KafkaSerialize for FinalizedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.name.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.max_version_level.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.min_version_level.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -479,17 +479,17 @@ impl KafkaDeserialize for FinalizedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if (3) <= version.0 {
+        let name = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let max_version_level = if (3) <= version.0 {
+        let max_version_level = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let min_version_level = if (3) <= version.0 {
+        let min_version_level = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -512,13 +512,13 @@ impl KafkaSerialize for SupportedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.name.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.min_version.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.max_version.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -534,17 +534,17 @@ impl KafkaDeserialize for SupportedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if (3) <= version.0 {
+        let name = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let min_version = if (3) <= version.0 {
+        let min_version = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let max_version = if (3) <= version.0 {
+        let max_version = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

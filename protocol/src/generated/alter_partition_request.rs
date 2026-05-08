@@ -72,7 +72,7 @@ impl ApiRequest for AlterPartitionRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (2) <= version.0 && version.0 <= (3),
+            2 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 2-3)",
             version.0,
             stringify!(Self)
@@ -145,10 +145,10 @@ impl KafkaSerialize for BrokerState {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.broker_id.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.broker_epoch.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -164,12 +164,12 @@ impl KafkaDeserialize for BrokerState {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let broker_id = if (3) <= version.0 {
+        let broker_id = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let broker_epoch = if (3) <= version.0 {
+        let broker_epoch = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -193,13 +193,13 @@ impl KafkaSerialize for PartitionData {
     ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
         self.leader_epoch.encode(buf, version, is_flexible)?;
-        if (0) <= version.0 && version.0 <= (2) {
+        if 0 <= version.0 && version.0 <= 2 {
             self.new_isr.encode(buf, version, is_flexible)?;
         }
-        if (3) <= version.0 {
+        if 3 <= version.0 {
             self.new_isr_with_epochs.encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.leader_recovery_state
                 .encode(buf, version, is_flexible)?;
         }
@@ -219,17 +219,17 @@ impl KafkaDeserialize for PartitionData {
     ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let new_isr = if (0) <= version.0 && version.0 <= (2) {
+        let new_isr = if 0 <= version.0 && version.0 <= 2 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let new_isr_with_epochs = if (3) <= version.0 {
+        let new_isr_with_epochs = if 3 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let leader_recovery_state = if (1) <= version.0 {
+        let leader_recovery_state = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -256,7 +256,7 @@ impl KafkaSerialize for TopicData {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (2) <= version.0 {
+        if 2 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
         self.partitions.encode(buf, version, is_flexible)?;
@@ -273,7 +273,7 @@ impl KafkaDeserialize for TopicData {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = if (2) <= version.0 {
+        let topic_id = if 2 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

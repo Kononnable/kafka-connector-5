@@ -34,20 +34,20 @@ impl ApiRequest for ListGroupsRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (5),
+            0 <= version.0 && version.0 <= 5,
             "version {} is not supported by {} (supported: 0-5)",
             version.0,
             stringify!(Self)
         );
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.states_filter.encode(buf, version, is_flexible)?;
         } else if !self.states_filter.is_empty() {
             return Err(SerializationError::Encode(
                 "field 'StatesFilter' is not available in this version",
             ));
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.types_filter.encode(buf, version, is_flexible)?;
         } else if !self.types_filter.is_empty() {
             return Err(SerializationError::Encode(
@@ -61,12 +61,12 @@ impl ApiRequest for ListGroupsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let states_filter = if (4) <= version.0 {
+        let states_filter = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let types_filter = if (5) <= version.0 {
+        let types_filter = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -87,10 +87,10 @@ impl KafkaSerialize for ListGroupsRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if (4) <= version.0 {
+        if 4 <= version.0 {
             self.states_filter.encode(buf, version, is_flexible)?;
         }
-        if (5) <= version.0 {
+        if 5 <= version.0 {
             self.types_filter.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -106,12 +106,12 @@ impl KafkaDeserialize for ListGroupsRequest {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let states_filter = if (4) <= version.0 {
+        let states_filter = if 4 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let types_filter = if (5) <= version.0 {
+        let types_filter = if 5 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

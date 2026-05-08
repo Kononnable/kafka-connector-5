@@ -97,7 +97,7 @@ impl ApiResponse for ConsumerGroupDescribeResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
+            0 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)
@@ -261,7 +261,7 @@ impl KafkaSerialize for Member {
             .encode(buf, version, is_flexible)?;
         self.assignment.encode(buf, version, is_flexible)?;
         self.target_assignment.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.member_type.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -287,7 +287,7 @@ impl KafkaDeserialize for Member {
         let subscribed_topic_regex = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let assignment = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let target_assignment = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let member_type = if (1) <= version.0 {
+        let member_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

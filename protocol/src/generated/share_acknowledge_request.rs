@@ -62,7 +62,7 @@ impl ApiRequest for ShareAcknowledgeRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (1),
+            1 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 1-1)",
             version.0,
             stringify!(Self)

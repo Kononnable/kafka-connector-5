@@ -61,7 +61,7 @@ impl ApiResponse for DescribeAclsResponse {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (3),
+            1 <= version.0 && version.0 <= 3,
             "version {} is not supported by {} (supported: 1-3)",
             version.0,
             stringify!(Self)
@@ -182,7 +182,7 @@ impl KafkaSerialize for DescribeAclsResource {
     ) -> Result<(), SerializationError> {
         self.resource_type.encode(buf, version, is_flexible)?;
         self.resource_name.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.pattern_type.encode(buf, version, is_flexible)?;
         }
         self.acls.encode(buf, version, is_flexible)?;
@@ -201,7 +201,7 @@ impl KafkaDeserialize for DescribeAclsResource {
     ) -> Result<Self, SerializationError> {
         let resource_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let resource_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let pattern_type = if (1) <= version.0 {
+        let pattern_type = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

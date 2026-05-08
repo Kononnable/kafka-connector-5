@@ -87,7 +87,7 @@ impl ApiRequest for ShareFetchRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (1) <= version.0 && version.0 <= (1),
+            1 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 1-1)",
             version.0,
             stringify!(Self)
@@ -99,14 +99,14 @@ impl ApiRequest for ShareFetchRequest {
         self.max_wait_ms.encode(buf, version, is_flexible)?;
         self.min_bytes.encode(buf, version, is_flexible)?;
         self.max_bytes.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.max_records.encode(buf, version, is_flexible)?;
         } else if self.max_records != 0 {
             return Err(SerializationError::Encode(
                 "field 'MaxRecords' is not available in this version",
             ));
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.batch_size.encode(buf, version, is_flexible)?;
         } else if self.batch_size != 0 {
             return Err(SerializationError::Encode(
@@ -129,12 +129,12 @@ impl ApiRequest for ShareFetchRequest {
         let max_wait_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let min_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_records = if (1) <= version.0 {
+        let max_records = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let batch_size = if (1) <= version.0 {
+        let batch_size = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -171,10 +171,10 @@ impl KafkaSerialize for ShareFetchRequest {
         self.max_wait_ms.encode(buf, version, is_flexible)?;
         self.min_bytes.encode(buf, version, is_flexible)?;
         self.max_bytes.encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.max_records.encode(buf, version, is_flexible)?;
         }
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.batch_size.encode(buf, version, is_flexible)?;
         }
         self.topics.encode(buf, version, is_flexible)?;
@@ -199,12 +199,12 @@ impl KafkaDeserialize for ShareFetchRequest {
         let max_wait_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let min_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_records = if (1) <= version.0 {
+        let max_records = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let batch_size = if (1) <= version.0 {
+        let batch_size = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -274,7 +274,7 @@ impl KafkaSerialize for FetchPartition {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         self.partition_index.encode(buf, version, is_flexible)?;
-        if version.0 == (0) {
+        if version.0 == 0 {
             self.partition_max_bytes.encode(buf, version, is_flexible)?;
         }
         self.acknowledgement_batches
@@ -293,7 +293,7 @@ impl KafkaDeserialize for FetchPartition {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partition_max_bytes = if version.0 == (0) {
+        let partition_max_bytes = if version.0 == 0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()

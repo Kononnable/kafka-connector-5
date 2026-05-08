@@ -57,7 +57,7 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
     }
     fn serialize(&self, version: ApiVer, buf: &mut BytesMut) -> Result<(), SerializationError> {
         assert!(
-            (0) <= version.0 && version.0 <= (1),
+            0 <= version.0 && version.0 <= 1,
             "version {} is not supported by {} (supported: 0-1)",
             version.0,
             stringify!(Self)
@@ -72,7 +72,7 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
             .encode(buf, version, is_flexible)?;
         self.subscribed_topic_names
             .encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.subscribed_topic_regex
                 .encode(buf, version, is_flexible)?;
         } else if self.subscribed_topic_regex.is_some() {
@@ -96,7 +96,7 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
         let rack_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let subscribed_topic_names = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let subscribed_topic_regex = if (1) <= version.0 {
+        let subscribed_topic_regex = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
@@ -136,7 +136,7 @@ impl KafkaSerialize for ConsumerGroupHeartbeatRequest {
             .encode(buf, version, is_flexible)?;
         self.subscribed_topic_names
             .encode(buf, version, is_flexible)?;
-        if (1) <= version.0 {
+        if 1 <= version.0 {
             self.subscribed_topic_regex
                 .encode(buf, version, is_flexible)?;
         }
@@ -162,7 +162,7 @@ impl KafkaDeserialize for ConsumerGroupHeartbeatRequest {
         let rack_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let rebalance_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
         let subscribed_topic_names = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let subscribed_topic_regex = if (1) <= version.0 {
+        let subscribed_topic_regex = if 1 <= version.0 {
             KafkaDeserialize::decode(buf, version, is_flexible)?
         } else {
             Default::default()
