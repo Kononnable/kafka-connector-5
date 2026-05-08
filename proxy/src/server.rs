@@ -137,116 +137,34 @@ where
 
 // ── Request inspection (read-only) ────────────────────────────────────
 
-use protocol::generated::{
-    ProduceRequest,
-    FetchRequest,
-    ListOffsetsRequest,
-    MetadataRequest, MetadataResponse,
-    OffsetCommitRequest,
-    OffsetFetchRequest,
-    FindCoordinatorRequest,
-    JoinGroupRequest,
-    HeartbeatRequest,
-    LeaveGroupRequest,
-    SyncGroupRequest,
-    DescribeGroupsRequest,
-    ListGroupsRequest,
-    SaslHandshakeRequest,
-    ApiVersionsRequest,
-    CreateTopicsRequest,
-    DeleteTopicsRequest,
-    DeleteRecordsRequest,
-    InitProducerIdRequest,
-    OffsetForLeaderEpochRequest,
-    AddPartitionsToTxnRequest,
-    AddOffsetsToTxnRequest,
-    EndTxnRequest,
-    WriteTxnMarkersRequest,
-    TxnOffsetCommitRequest,
-    DescribeAclsRequest,
-    CreateAclsRequest,
-    DeleteAclsRequest,
-    DescribeConfigsRequest,
-    AlterConfigsRequest,
-    AlterReplicaLogDirsRequest,
-    DescribeLogDirsRequest,
-    SaslAuthenticateRequest,
-    CreatePartitionsRequest,
-    CreateDelegationTokenRequest,
-    RenewDelegationTokenRequest,
-    ExpireDelegationTokenRequest,
-    DescribeDelegationTokenRequest,
-    ElectLeadersRequest,
-};
+use protocol::generated::MetadataResponse;
 
 /// Try to deserialize and debug-log a request body.
+/// Delegates to the protocol crate's dispatch module.
 fn log_request_body(api_key: i16, version: i16, body: &[u8]) {
-    let ver = ApiVersion::new(version);
-    let mut buf = Bytes::copy_from_slice(body);
-    let result = match api_key {
-        0  => ProduceRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
-        1  => FetchRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
-        2  => ListOffsetsRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
-        3  => MetadataRequest::deserialize(ver, &mut buf).map_err(|e| tracing::warn!("  deser err: {e}")).ok().map(|v| format!("{v:?}")),
-        8  => OffsetCommitRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        9  => OffsetFetchRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        10 => FindCoordinatorRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        11 => JoinGroupRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        12 => HeartbeatRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        13 => LeaveGroupRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        14 => SyncGroupRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        15 => DescribeGroupsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        16 => ListGroupsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        17 => SaslHandshakeRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        18 => ApiVersionsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        19 => CreateTopicsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        20 => DeleteTopicsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        21 => DeleteRecordsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        22 => InitProducerIdRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        23 => OffsetForLeaderEpochRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        24 => AddPartitionsToTxnRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        25 => AddOffsetsToTxnRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        26 => EndTxnRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        27 => WriteTxnMarkersRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        28 => TxnOffsetCommitRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        29 => DescribeAclsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        30 => CreateAclsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        31 => DeleteAclsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        32 => DescribeConfigsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        33 => AlterConfigsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        34 => AlterReplicaLogDirsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        35 => DescribeLogDirsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        36 => SaslAuthenticateRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        37 => CreatePartitionsRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        38 => CreateDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        39 => RenewDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        40 => ExpireDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        41 => DescribeDelegationTokenRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        42 => ElectLeadersRequest::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}")),
-        _  => None,
-    };
-    match result {
-        Some(s) => tracing::info!("→ REQ body: {s}"),
-        None => tracing::info!("→ REQ body: {} bytes (undecoded)", body.len()),
+    match protocol::dispatch::decode_request_body(api_key, version, body) {
+        Ok(s) => tracing::info!("→ REQ body: {s}"),
+        Err(e) => {
+            tracing::warn!("  deser err: {e}");
+            tracing::info!("→ REQ body: {} bytes (undecoded)", body.len());
+        }
     }
 }
 
 /// Try to deserialize and debug-log a response body.
+/// Delegates to the protocol crate's dispatch module.
+/// Only MetadataResponse is safe to decode — others may OOM.
 fn log_response_body(api_key: i16, version: i16, body: &[u8]) {
-    let ver = ApiVersion::new(version);
-    let mut buf = Bytes::copy_from_slice(body);
-    // Only MetadataResponse is safe to decode — other response types have
-    // misaligned body offsets that lead to OOM from huge varint values.
     if api_key != 3 {
         tracing::debug!("← RES body: {} bytes (undecoded)", body.len());
         return;
     }
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        MetadataResponse::deserialize(ver, &mut buf).ok().map(|v| format!("{v:?}"))
+        protocol::dispatch::decode_response_body(api_key, version, body)
     }));
     match result {
-        Ok(Some(s)) => tracing::info!("← RES body: {s}"),
-        Ok(None) => tracing::debug!("← RES body: {} bytes (decode err)", body.len()),
+        Ok(Ok(s)) => tracing::info!("← RES body: {s}"),
+        Ok(Err(e)) => tracing::debug!("← RES body: {} bytes ({e})", body.len()),
         Err(_) => tracing::warn!("← RES body: {} bytes (panic)", body.len()),
     }
 }

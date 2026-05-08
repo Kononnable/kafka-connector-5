@@ -101,10 +101,24 @@ REWRITES=$(grep -c 'rewriting broker' < "$LOG" 2>/dev/null; true)
 PANICS=$(grep -c 'panicked' < "$LOG" 2>/dev/null; true)
 
 echo "  deserialization errors:  $DESER_ERR (expect 0)"
-echo "  undecoded (total):       $UNDECODED (expect >0 = ApiVersions)"
+echo "  undecoded (total):       $UNDECODED"
 echo "  undecoded (non-Api):     $NON_API (expect 0)"
 echo "  port rewrites:           $REWRITES (expect >0)"
 echo "  panics:                  $PANICS (expect 0)"
+
+# Show undecoded entries (marked as "missed")
+if [ "$UNDECODED" -gt 0 ]; then
+    echo ""
+    echo "  --- Missed (undecoded) ---"
+    # Show the REQ header line followed by its undecoded body line
+    grep -B1 'undecoded' < "$LOG" 2>/dev/null | grep -E '(→ REQ  corr|undecoded)' | while IFS= read -r line; do
+        if echo "$line" | grep -q '→ REQ  corr'; then
+            CORR=$(echo "$line" | sed 's/.*corr=//' | sed 's/ .*//')
+            API=$(echo "$line" | sed 's/.*api=//' | sed 's/ .*//')
+            echo "  - missed: corr=$CORR $API"
+        fi
+    done | head -10
+fi
 
 if [ "$DESER_ERR" -ne 0 ]; then
     echo "  FAIL: deserialization errors found"

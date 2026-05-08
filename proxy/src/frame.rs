@@ -279,7 +279,7 @@ pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
         15 => Some((9, 10)),    // DescribeGroups
         16 => Some((9, 9)),     // ListGroups
         17 => Some((9, 9)),     // SaslHandshake
-        18 => Some((9, 4)),     // ApiVersions (v0-4)
+        18 => Some((3, 4)),     // ApiVersions (v3+ uses v2 header per KIP-511)
         19 => Some((9, 10)),    // CreateTopics
         20 => Some((9, 9)),     // DeleteTopics
         21 => Some((9, 6)),     // DeleteRecords
