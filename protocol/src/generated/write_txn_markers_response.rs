@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -68,14 +66,14 @@ impl ApiResponse for WriteTxnMarkersResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let markers = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let markers = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { markers })
     }
 }
-impl KafkaSerialize for WriteTxnMarkersResponse {
+impl KafkaCodec for WriteTxnMarkersResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -88,15 +86,13 @@ impl KafkaSerialize for WriteTxnMarkersResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for WriteTxnMarkersResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let markers = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let markers = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -104,7 +100,7 @@ impl KafkaDeserialize for WriteTxnMarkersResponse {
     }
 }
 
-impl KafkaSerialize for WritableTxnMarkerPartitionResult {
+impl KafkaCodec for WritableTxnMarkerPartitionResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -118,16 +114,14 @@ impl KafkaSerialize for WritableTxnMarkerPartitionResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for WritableTxnMarkerPartitionResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -138,7 +132,7 @@ impl KafkaDeserialize for WritableTxnMarkerPartitionResult {
     }
 }
 
-impl KafkaSerialize for WritableTxnMarkerResult {
+impl KafkaCodec for WritableTxnMarkerResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -152,16 +146,14 @@ impl KafkaSerialize for WritableTxnMarkerResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for WritableTxnMarkerResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -172,7 +164,7 @@ impl KafkaDeserialize for WritableTxnMarkerResult {
     }
 }
 
-impl KafkaSerialize for WritableTxnMarkerTopicResult {
+impl KafkaCodec for WritableTxnMarkerTopicResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -186,16 +178,14 @@ impl KafkaSerialize for WritableTxnMarkerTopicResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for WritableTxnMarkerTopicResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

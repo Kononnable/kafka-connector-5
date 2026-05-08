@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -73,12 +71,12 @@ impl ApiResponse for UpdateRaftVoterResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut current_leader = if is_flexible {
             Default::default()
         } else {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -87,7 +85,7 @@ impl ApiResponse for UpdateRaftVoterResponse {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        current_leader = KafkaDeserialize::decode(buf, version, true)?;
+                        current_leader = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -102,7 +100,7 @@ impl ApiResponse for UpdateRaftVoterResponse {
         })
     }
 }
-impl KafkaSerialize for UpdateRaftVoterResponse {
+impl KafkaCodec for UpdateRaftVoterResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -130,20 +128,18 @@ impl KafkaSerialize for UpdateRaftVoterResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for UpdateRaftVoterResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut current_leader = if is_flexible {
             Default::default()
         } else {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -152,7 +148,7 @@ impl KafkaDeserialize for UpdateRaftVoterResponse {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        current_leader = KafkaDeserialize::decode(buf, version, true)?;
+                        current_leader = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -168,7 +164,7 @@ impl KafkaDeserialize for UpdateRaftVoterResponse {
     }
 }
 
-impl KafkaSerialize for CurrentLeader {
+impl KafkaCodec for CurrentLeader {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -184,18 +180,16 @@ impl KafkaSerialize for CurrentLeader {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for CurrentLeader {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let leader_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let leader_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let host = KafkaCodec::decode(buf, version, is_flexible)?;
+        let port = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

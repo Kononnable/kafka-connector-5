@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -77,14 +75,14 @@ impl ApiRequest for LeaveGroupRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let member_id = if 0 <= version.0 && version.0 <= 2 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let members = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -98,7 +96,7 @@ impl ApiRequest for LeaveGroupRequest {
         })
     }
 }
-impl KafkaSerialize for LeaveGroupRequest {
+impl KafkaCodec for LeaveGroupRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -117,22 +115,20 @@ impl KafkaSerialize for LeaveGroupRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for LeaveGroupRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let member_id = if 0 <= version.0 && version.0 <= 2 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let members = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -147,7 +143,7 @@ impl KafkaDeserialize for LeaveGroupRequest {
     }
 }
 
-impl KafkaSerialize for MemberIdentity {
+impl KafkaCodec for MemberIdentity {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -168,26 +164,24 @@ impl KafkaSerialize for MemberIdentity {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for MemberIdentity {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let member_id = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let group_instance_id = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let reason = if 5 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

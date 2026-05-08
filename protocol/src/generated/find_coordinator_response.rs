@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -134,37 +132,37 @@ impl ApiResponse for FindCoordinatorResponse {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_message = if 1 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let node_id = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let host = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let port = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let coordinators = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -182,7 +180,7 @@ impl ApiResponse for FindCoordinatorResponse {
         })
     }
 }
-impl KafkaSerialize for FindCoordinatorResponse {
+impl KafkaCodec for FindCoordinatorResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -215,46 +213,44 @@ impl KafkaSerialize for FindCoordinatorResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for FindCoordinatorResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_message = if 1 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let node_id = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let host = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let port = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let coordinators = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -273,7 +269,7 @@ impl KafkaDeserialize for FindCoordinatorResponse {
     }
 }
 
-impl KafkaSerialize for Coordinator {
+impl KafkaCodec for Coordinator {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -303,41 +299,39 @@ impl KafkaSerialize for Coordinator {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for Coordinator {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let key = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let node_id = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let host = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let port = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_message = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -21,7 +19,7 @@ pub struct RequestHeader {
     pub client_id: Option<String>,
 }
 
-impl KafkaSerialize for RequestHeader {
+impl KafkaCodec for RequestHeader {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -39,19 +37,17 @@ impl KafkaSerialize for RequestHeader {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for RequestHeader {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let request_api_key = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let request_api_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let correlation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let request_api_key = KafkaCodec::decode(buf, version, is_flexible)?;
+        let request_api_version = KafkaCodec::decode(buf, version, is_flexible)?;
+        let correlation_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let client_id = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

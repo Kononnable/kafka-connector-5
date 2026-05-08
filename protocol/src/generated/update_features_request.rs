@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -71,10 +69,10 @@ impl ApiRequest for UpdateFeaturesRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let feature_updates = KafkaCodec::decode(buf, version, is_flexible)?;
         let validate_only = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -88,7 +86,7 @@ impl ApiRequest for UpdateFeaturesRequest {
         })
     }
 }
-impl KafkaSerialize for UpdateFeaturesRequest {
+impl KafkaCodec for UpdateFeaturesRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -105,18 +103,16 @@ impl KafkaSerialize for UpdateFeaturesRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for UpdateFeaturesRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let feature_updates = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let feature_updates = KafkaCodec::decode(buf, version, is_flexible)?;
         let validate_only = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -131,7 +127,7 @@ impl KafkaDeserialize for UpdateFeaturesRequest {
     }
 }
 
-impl KafkaSerialize for FeatureUpdateKey {
+impl KafkaCodec for FeatureUpdateKey {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -151,23 +147,21 @@ impl KafkaSerialize for FeatureUpdateKey {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for FeatureUpdateKey {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_version_level = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let feature = KafkaCodec::decode(buf, version, is_flexible)?;
+        let max_version_level = KafkaCodec::decode(buf, version, is_flexible)?;
         let allow_downgrade = if version.0 == 0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let upgrade_type = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

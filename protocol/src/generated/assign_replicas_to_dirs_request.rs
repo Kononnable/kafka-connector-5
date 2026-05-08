@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -72,9 +70,9 @@ impl ApiRequest for AssignReplicasToDirsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let directories = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let directories = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -85,7 +83,7 @@ impl ApiRequest for AssignReplicasToDirsRequest {
         })
     }
 }
-impl KafkaSerialize for AssignReplicasToDirsRequest {
+impl KafkaCodec for AssignReplicasToDirsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -100,17 +98,15 @@ impl KafkaSerialize for AssignReplicasToDirsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AssignReplicasToDirsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let broker_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let directories = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let broker_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let directories = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -122,7 +118,7 @@ impl KafkaDeserialize for AssignReplicasToDirsRequest {
     }
 }
 
-impl KafkaSerialize for DirectoryData {
+impl KafkaCodec for DirectoryData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -136,16 +132,14 @@ impl KafkaSerialize for DirectoryData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DirectoryData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -153,7 +147,7 @@ impl KafkaDeserialize for DirectoryData {
     }
 }
 
-impl KafkaSerialize for PartitionData {
+impl KafkaCodec for PartitionData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -166,15 +160,13 @@ impl KafkaSerialize for PartitionData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for PartitionData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -182,7 +174,7 @@ impl KafkaDeserialize for PartitionData {
     }
 }
 
-impl KafkaSerialize for TopicData {
+impl KafkaCodec for TopicData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -196,16 +188,14 @@ impl KafkaSerialize for TopicData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TopicData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

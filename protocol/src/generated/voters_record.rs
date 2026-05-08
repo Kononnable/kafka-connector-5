@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -46,7 +44,7 @@ pub struct Voter {
     pub kraft_version_feature: KRaftVersionFeature,
 }
 
-impl KafkaSerialize for VotersRecord {
+impl KafkaCodec for VotersRecord {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -60,16 +58,14 @@ impl KafkaSerialize for VotersRecord {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for VotersRecord {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let version_val = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let version_val = KafkaCodec::decode(buf, version, is_flexible)?;
+        let voters = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -80,7 +76,7 @@ impl KafkaDeserialize for VotersRecord {
     }
 }
 
-impl KafkaSerialize for Endpoint {
+impl KafkaCodec for Endpoint {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -95,17 +91,15 @@ impl KafkaSerialize for Endpoint {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for Endpoint {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let host = KafkaCodec::decode(buf, version, is_flexible)?;
+        let port = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -113,7 +107,7 @@ impl KafkaDeserialize for Endpoint {
     }
 }
 
-impl KafkaSerialize for KRaftVersionFeature {
+impl KafkaCodec for KRaftVersionFeature {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -129,16 +123,14 @@ impl KafkaSerialize for KRaftVersionFeature {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for KRaftVersionFeature {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let min_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let min_supported_version = KafkaCodec::decode(buf, version, is_flexible)?;
+        let max_supported_version = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -149,7 +141,7 @@ impl KafkaDeserialize for KRaftVersionFeature {
     }
 }
 
-impl KafkaSerialize for Voter {
+impl KafkaCodec for Voter {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -166,18 +158,16 @@ impl KafkaSerialize for Voter {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for Voter {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let voter_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voter_directory_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let endpoints = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let kraft_version_feature = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let voter_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let voter_directory_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let endpoints = KafkaCodec::decode(buf, version, is_flexible)?;
+        let kraft_version_feature = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

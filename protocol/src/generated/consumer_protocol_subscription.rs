@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -35,7 +33,7 @@ pub struct TopicPartition {
     pub partitions: Vec<i32>,
 }
 
-impl KafkaSerialize for ConsumerProtocolSubscription {
+impl KafkaCodec for ConsumerProtocolSubscription {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -58,28 +56,26 @@ impl KafkaSerialize for ConsumerProtocolSubscription {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ConsumerProtocolSubscription {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let user_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
+        let user_data = KafkaCodec::decode(buf, version, is_flexible)?;
         let owned_partitions = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let generation_id = if 2 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let rack_id = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -96,7 +92,7 @@ impl KafkaDeserialize for ConsumerProtocolSubscription {
     }
 }
 
-impl KafkaSerialize for TopicPartition {
+impl KafkaCodec for TopicPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -114,21 +110,19 @@ impl KafkaSerialize for TopicPartition {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TopicPartition {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partitions = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

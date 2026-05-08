@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -81,15 +79,15 @@ impl ApiRequest for WriteShareGroupStateRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { group_id, topics })
     }
 }
-impl KafkaSerialize for WriteShareGroupStateRequest {
+impl KafkaCodec for WriteShareGroupStateRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -103,16 +101,14 @@ impl KafkaSerialize for WriteShareGroupStateRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for WriteShareGroupStateRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -120,7 +116,7 @@ impl KafkaDeserialize for WriteShareGroupStateRequest {
     }
 }
 
-impl KafkaSerialize for PartitionData {
+impl KafkaCodec for PartitionData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -137,19 +133,17 @@ impl KafkaSerialize for PartitionData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for PartitionData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let state_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let start_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let state_batches = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition = KafkaCodec::decode(buf, version, is_flexible)?;
+        let state_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let leader_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let start_offset = KafkaCodec::decode(buf, version, is_flexible)?;
+        let state_batches = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -163,7 +157,7 @@ impl KafkaDeserialize for PartitionData {
     }
 }
 
-impl KafkaSerialize for StateBatch {
+impl KafkaCodec for StateBatch {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -179,18 +173,16 @@ impl KafkaSerialize for StateBatch {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for StateBatch {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let first_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let last_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let delivery_state = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let delivery_count = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let first_offset = KafkaCodec::decode(buf, version, is_flexible)?;
+        let last_offset = KafkaCodec::decode(buf, version, is_flexible)?;
+        let delivery_state = KafkaCodec::decode(buf, version, is_flexible)?;
+        let delivery_count = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -203,7 +195,7 @@ impl KafkaDeserialize for StateBatch {
     }
 }
 
-impl KafkaSerialize for WriteStateData {
+impl KafkaCodec for WriteStateData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -217,16 +209,14 @@ impl KafkaSerialize for WriteStateData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for WriteStateData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

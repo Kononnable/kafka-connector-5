@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -69,8 +67,8 @@ impl ApiRequest for AlterUserScramCredentialsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let deletions = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let upsertions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let deletions = KafkaCodec::decode(buf, version, is_flexible)?;
+        let upsertions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -80,7 +78,7 @@ impl ApiRequest for AlterUserScramCredentialsRequest {
         })
     }
 }
-impl KafkaSerialize for AlterUserScramCredentialsRequest {
+impl KafkaCodec for AlterUserScramCredentialsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -94,16 +92,14 @@ impl KafkaSerialize for AlterUserScramCredentialsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AlterUserScramCredentialsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let deletions = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let upsertions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let deletions = KafkaCodec::decode(buf, version, is_flexible)?;
+        let upsertions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -114,7 +110,7 @@ impl KafkaDeserialize for AlterUserScramCredentialsRequest {
     }
 }
 
-impl KafkaSerialize for ScramCredentialDeletion {
+impl KafkaCodec for ScramCredentialDeletion {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -128,16 +124,14 @@ impl KafkaSerialize for ScramCredentialDeletion {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ScramCredentialDeletion {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let mechanism = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let mechanism = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -145,7 +139,7 @@ impl KafkaDeserialize for ScramCredentialDeletion {
     }
 }
 
-impl KafkaSerialize for ScramCredentialUpsertion {
+impl KafkaCodec for ScramCredentialUpsertion {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -162,19 +156,17 @@ impl KafkaSerialize for ScramCredentialUpsertion {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ScramCredentialUpsertion {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let mechanism = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let iterations = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let salt = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let salted_password = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let mechanism = KafkaCodec::decode(buf, version, is_flexible)?;
+        let iterations = KafkaCodec::decode(buf, version, is_flexible)?;
+        let salt = KafkaCodec::decode(buf, version, is_flexible)?;
+        let salted_password = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

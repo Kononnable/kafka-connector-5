@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -98,11 +96,11 @@ impl ApiRequest for FetchSnapshotRequest {
         let mut cluster_id = if is_flexible {
             Default::default()
         } else {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         };
-        let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let replica_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let max_bytes = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..tag_count {
@@ -110,7 +108,7 @@ impl ApiRequest for FetchSnapshotRequest {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        cluster_id = KafkaDeserialize::decode(buf, version, true)?;
+                        cluster_id = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -126,7 +124,7 @@ impl ApiRequest for FetchSnapshotRequest {
         })
     }
 }
-impl KafkaSerialize for FetchSnapshotRequest {
+impl KafkaCodec for FetchSnapshotRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -155,9 +153,7 @@ impl KafkaSerialize for FetchSnapshotRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for FetchSnapshotRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
@@ -166,11 +162,11 @@ impl KafkaDeserialize for FetchSnapshotRequest {
         let mut cluster_id = if is_flexible {
             Default::default()
         } else {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         };
-        let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_bytes = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let replica_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let max_bytes = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..tag_count {
@@ -178,7 +174,7 @@ impl KafkaDeserialize for FetchSnapshotRequest {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        cluster_id = KafkaDeserialize::decode(buf, version, true)?;
+                        cluster_id = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -195,7 +191,7 @@ impl KafkaDeserialize for FetchSnapshotRequest {
     }
 }
 
-impl KafkaSerialize for PartitionSnapshot {
+impl KafkaCodec for PartitionSnapshot {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -228,23 +224,21 @@ impl KafkaSerialize for PartitionSnapshot {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for PartitionSnapshot {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let current_leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let snapshot_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let position = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition = KafkaCodec::decode(buf, version, is_flexible)?;
+        let current_leader_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let snapshot_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let position = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut replica_directory_id = if 1 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                KafkaDeserialize::decode(buf, version, is_flexible)?
+                KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -256,7 +250,7 @@ impl KafkaDeserialize for PartitionSnapshot {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        replica_directory_id = KafkaDeserialize::decode(buf, version, true)?;
+                        replica_directory_id = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -274,7 +268,7 @@ impl KafkaDeserialize for PartitionSnapshot {
     }
 }
 
-impl KafkaSerialize for SnapshotId {
+impl KafkaCodec for SnapshotId {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -288,16 +282,14 @@ impl KafkaSerialize for SnapshotId {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for SnapshotId {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let end_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let end_offset = KafkaCodec::decode(buf, version, is_flexible)?;
+        let epoch = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -305,7 +297,7 @@ impl KafkaDeserialize for SnapshotId {
     }
 }
 
-impl KafkaSerialize for TopicSnapshot {
+impl KafkaCodec for TopicSnapshot {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -319,16 +311,14 @@ impl KafkaSerialize for TopicSnapshot {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TopicSnapshot {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -74,13 +72,13 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let allow_replication_factor_change = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -91,7 +89,7 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
         })
     }
 }
-impl KafkaSerialize for AlterPartitionReassignmentsRequest {
+impl KafkaCodec for AlterPartitionReassignmentsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -109,21 +107,19 @@ impl KafkaSerialize for AlterPartitionReassignmentsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AlterPartitionReassignmentsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let allow_replication_factor_change = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -135,7 +131,7 @@ impl KafkaDeserialize for AlterPartitionReassignmentsRequest {
     }
 }
 
-impl KafkaSerialize for ReassignablePartition {
+impl KafkaCodec for ReassignablePartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -149,16 +145,14 @@ impl KafkaSerialize for ReassignablePartition {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ReassignablePartition {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let replicas = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let replicas = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -169,7 +163,7 @@ impl KafkaDeserialize for ReassignablePartition {
     }
 }
 
-impl KafkaSerialize for ReassignableTopic {
+impl KafkaCodec for ReassignableTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -183,16 +177,14 @@ impl KafkaSerialize for ReassignableTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ReassignableTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -75,14 +73,14 @@ impl ApiRequest for DescribeConfigsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let resources = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let resources = KafkaCodec::decode(buf, version, is_flexible)?;
         let include_synonyms = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_documentation = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -96,7 +94,7 @@ impl ApiRequest for DescribeConfigsRequest {
         })
     }
 }
-impl KafkaSerialize for DescribeConfigsRequest {
+impl KafkaCodec for DescribeConfigsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -116,22 +114,20 @@ impl KafkaSerialize for DescribeConfigsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeConfigsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let resources = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let resources = KafkaCodec::decode(buf, version, is_flexible)?;
         let include_synonyms = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let include_documentation = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -146,7 +142,7 @@ impl KafkaDeserialize for DescribeConfigsRequest {
     }
 }
 
-impl KafkaSerialize for DescribeConfigsResource {
+impl KafkaCodec for DescribeConfigsResource {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -161,17 +157,15 @@ impl KafkaSerialize for DescribeConfigsResource {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeConfigsResource {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let resource_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let resource_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let configuration_keys = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let resource_type = KafkaCodec::decode(buf, version, is_flexible)?;
+        let resource_name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let configuration_keys = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

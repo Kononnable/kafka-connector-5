@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -90,25 +88,25 @@ impl ApiResponse for CreateDelegationTokenResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let principal_type = KafkaCodec::decode(buf, version, is_flexible)?;
+        let principal_name = KafkaCodec::decode(buf, version, is_flexible)?;
         let token_requester_principal_type = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let token_requester_principal_name = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let issue_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let expiry_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let token_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let hmac = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let issue_timestamp_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let expiry_timestamp_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let max_timestamp_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let token_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let hmac = KafkaCodec::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -127,7 +125,7 @@ impl ApiResponse for CreateDelegationTokenResponse {
         })
     }
 }
-impl KafkaSerialize for CreateDelegationTokenResponse {
+impl KafkaCodec for CreateDelegationTokenResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -156,33 +154,31 @@ impl KafkaSerialize for CreateDelegationTokenResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for CreateDelegationTokenResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let principal_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let principal_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let principal_type = KafkaCodec::decode(buf, version, is_flexible)?;
+        let principal_name = KafkaCodec::decode(buf, version, is_flexible)?;
         let token_requester_principal_type = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let token_requester_principal_name = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let issue_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let expiry_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_timestamp_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let token_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let hmac = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let issue_timestamp_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let expiry_timestamp_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let max_timestamp_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let token_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let hmac = KafkaCodec::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

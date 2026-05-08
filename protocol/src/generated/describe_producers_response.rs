@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -83,8 +81,8 @@ impl ApiResponse for DescribeProducersResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -94,7 +92,7 @@ impl ApiResponse for DescribeProducersResponse {
         })
     }
 }
-impl KafkaSerialize for DescribeProducersResponse {
+impl KafkaCodec for DescribeProducersResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -108,16 +106,14 @@ impl KafkaSerialize for DescribeProducersResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeProducersResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -128,7 +124,7 @@ impl KafkaDeserialize for DescribeProducersResponse {
     }
 }
 
-impl KafkaSerialize for PartitionResponse {
+impl KafkaCodec for PartitionResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -144,18 +140,16 @@ impl KafkaSerialize for PartitionResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for PartitionResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let active_producers = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_message = KafkaCodec::decode(buf, version, is_flexible)?;
+        let active_producers = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -168,7 +162,7 @@ impl KafkaDeserialize for PartitionResponse {
     }
 }
 
-impl KafkaSerialize for ProducerState {
+impl KafkaCodec for ProducerState {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -187,20 +181,18 @@ impl KafkaSerialize for ProducerState {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ProducerState {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let last_sequence = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let last_timestamp = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let coordinator_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let current_txn_start_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let producer_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let producer_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let last_sequence = KafkaCodec::decode(buf, version, is_flexible)?;
+        let last_timestamp = KafkaCodec::decode(buf, version, is_flexible)?;
+        let coordinator_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let current_txn_start_offset = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -215,7 +207,7 @@ impl KafkaDeserialize for ProducerState {
     }
 }
 
-impl KafkaSerialize for TopicResponse {
+impl KafkaCodec for TopicResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -229,16 +221,14 @@ impl KafkaSerialize for TopicResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TopicResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

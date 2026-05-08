@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -195,26 +193,26 @@ impl ApiResponse for FetchResponse {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let throttle_time_ms = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = if 7 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_id = if 7 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let responses = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut node_endpoints = if 16 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                KafkaDeserialize::decode(buf, version, is_flexible)?
+                KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -226,7 +224,7 @@ impl ApiResponse for FetchResponse {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
+                        node_endpoints = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -243,7 +241,7 @@ impl ApiResponse for FetchResponse {
         })
     }
 }
-impl KafkaSerialize for FetchResponse {
+impl KafkaCodec for FetchResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -279,35 +277,33 @@ impl KafkaSerialize for FetchResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for FetchResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let throttle_time_ms = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let error_code = if 7 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let session_id = if 7 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let responses = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let responses = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut node_endpoints = if 16 <= version.0 {
             if is_flexible {
                 Default::default()
             } else {
-                KafkaDeserialize::decode(buf, version, is_flexible)?
+                KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -319,7 +315,7 @@ impl KafkaDeserialize for FetchResponse {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        node_endpoints = KafkaDeserialize::decode(buf, version, true)?;
+                        node_endpoints = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -337,7 +333,7 @@ impl KafkaDeserialize for FetchResponse {
     }
 }
 
-impl KafkaSerialize for AbortedTransaction {
+impl KafkaCodec for AbortedTransaction {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -355,21 +351,19 @@ impl KafkaSerialize for AbortedTransaction {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AbortedTransaction {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let producer_id = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let first_offset = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -383,7 +377,7 @@ impl KafkaDeserialize for AbortedTransaction {
     }
 }
 
-impl KafkaSerialize for EpochEndOffset {
+impl KafkaCodec for EpochEndOffset {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -401,21 +395,19 @@ impl KafkaSerialize for EpochEndOffset {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for EpochEndOffset {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let epoch = if 12 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let end_offset = if 12 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -426,7 +418,7 @@ impl KafkaDeserialize for EpochEndOffset {
     }
 }
 
-impl KafkaSerialize for FetchableTopicResponse {
+impl KafkaCodec for FetchableTopicResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -445,25 +437,23 @@ impl KafkaSerialize for FetchableTopicResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for FetchableTopicResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let topic = if 0 <= version.0 && version.0 <= 12 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if 13 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -475,7 +465,7 @@ impl KafkaDeserialize for FetchableTopicResponse {
     }
 }
 
-impl KafkaSerialize for LeaderIdAndEpoch {
+impl KafkaCodec for LeaderIdAndEpoch {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -493,21 +483,19 @@ impl KafkaSerialize for LeaderIdAndEpoch {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for LeaderIdAndEpoch {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let leader_id = if 12 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let leader_epoch = if 12 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -521,7 +509,7 @@ impl KafkaDeserialize for LeaderIdAndEpoch {
     }
 }
 
-impl KafkaSerialize for NodeEndpoint {
+impl KafkaCodec for NodeEndpoint {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -545,31 +533,29 @@ impl KafkaSerialize for NodeEndpoint {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for NodeEndpoint {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let node_id = if 16 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let host = if 16 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let port = if 16 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let rack = if 16 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -585,7 +571,7 @@ impl KafkaDeserialize for NodeEndpoint {
     }
 }
 
-impl KafkaSerialize for PartitionData {
+impl KafkaCodec for PartitionData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -655,24 +641,22 @@ impl KafkaSerialize for PartitionData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for PartitionData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let high_watermark = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let high_watermark = KafkaCodec::decode(buf, version, is_flexible)?;
         let last_stable_offset = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let log_start_offset = if 5 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -680,7 +664,7 @@ impl KafkaDeserialize for PartitionData {
             if is_flexible {
                 Default::default()
             } else {
-                KafkaDeserialize::decode(buf, version, is_flexible)?
+                KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -689,7 +673,7 @@ impl KafkaDeserialize for PartitionData {
             if is_flexible {
                 Default::default()
             } else {
-                KafkaDeserialize::decode(buf, version, is_flexible)?
+                KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
@@ -698,22 +682,22 @@ impl KafkaDeserialize for PartitionData {
             if is_flexible {
                 Default::default()
             } else {
-                KafkaDeserialize::decode(buf, version, is_flexible)?
+                KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
             Default::default()
         };
         let aborted_transactions = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let preferred_read_replica = if 11 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let records = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let records = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
             for _ in 0..tag_count {
@@ -721,13 +705,13 @@ impl KafkaDeserialize for PartitionData {
                 let (__tag_len, _) = decode_unsigned_varint(buf)?;
                 match __tag_id {
                     0 => {
-                        diverging_epoch = KafkaDeserialize::decode(buf, version, true)?;
+                        diverging_epoch = KafkaCodec::decode(buf, version, true)?;
                     }
                     1 => {
-                        current_leader = KafkaDeserialize::decode(buf, version, true)?;
+                        current_leader = KafkaCodec::decode(buf, version, true)?;
                     }
                     2 => {
-                        snapshot_id = KafkaDeserialize::decode(buf, version, true)?;
+                        snapshot_id = KafkaCodec::decode(buf, version, true)?;
                     }
                     _ => {
                         buf.advance(__tag_len as usize);
@@ -751,7 +735,7 @@ impl KafkaDeserialize for PartitionData {
     }
 }
 
-impl KafkaSerialize for SnapshotId {
+impl KafkaCodec for SnapshotId {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -765,16 +749,14 @@ impl KafkaSerialize for SnapshotId {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for SnapshotId {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let end_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let end_offset = KafkaCodec::decode(buf, version, is_flexible)?;
+        let epoch = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

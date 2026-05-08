@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -121,22 +119,22 @@ impl ApiRequest for OffsetFetchRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let group_id = if 0 <= version.0 && version.0 <= 7 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if 0 <= version.0 && version.0 <= 7 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let groups = if 8 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let require_stable = if 7 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -151,7 +149,7 @@ impl ApiRequest for OffsetFetchRequest {
         })
     }
 }
-impl KafkaSerialize for OffsetFetchRequest {
+impl KafkaCodec for OffsetFetchRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -175,31 +173,29 @@ impl KafkaSerialize for OffsetFetchRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for OffsetFetchRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let group_id = if 0 <= version.0 && version.0 <= 7 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if 0 <= version.0 && version.0 <= 7 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let groups = if 8 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let require_stable = if 7 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -215,7 +211,7 @@ impl KafkaDeserialize for OffsetFetchRequest {
     }
 }
 
-impl KafkaSerialize for OffsetFetchRequestGroup {
+impl KafkaCodec for OffsetFetchRequestGroup {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -239,31 +235,29 @@ impl KafkaSerialize for OffsetFetchRequestGroup {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for OffsetFetchRequestGroup {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let group_id = if 8 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let member_id = if 9 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let member_epoch = if 9 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if 8 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -279,7 +273,7 @@ impl KafkaDeserialize for OffsetFetchRequestGroup {
     }
 }
 
-impl KafkaSerialize for OffsetFetchRequestTopic {
+impl KafkaCodec for OffsetFetchRequestTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -297,21 +291,19 @@ impl KafkaSerialize for OffsetFetchRequestTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for OffsetFetchRequestTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if 0 <= version.0 && version.0 <= 7 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partition_indexes = if 0 <= version.0 && version.0 <= 7 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -325,7 +317,7 @@ impl KafkaDeserialize for OffsetFetchRequestTopic {
     }
 }
 
-impl KafkaSerialize for OffsetFetchRequestTopics {
+impl KafkaCodec for OffsetFetchRequestTopics {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -346,26 +338,24 @@ impl KafkaSerialize for OffsetFetchRequestTopics {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for OffsetFetchRequestTopics {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let name = if 8 <= version.0 && version.0 <= 9 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_id = if 10 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let partition_indexes = if 8 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

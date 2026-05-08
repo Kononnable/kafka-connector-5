@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -88,18 +86,18 @@ impl ApiResponse for DescribeClusterResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_message = KafkaCodec::decode(buf, version, is_flexible)?;
         let endpoint_type = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let controller_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let brokers = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let cluster_authorized_operations = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let cluster_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let controller_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let brokers = KafkaCodec::decode(buf, version, is_flexible)?;
+        let cluster_authorized_operations = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -115,7 +113,7 @@ impl ApiResponse for DescribeClusterResponse {
         })
     }
 }
-impl KafkaSerialize for DescribeClusterResponse {
+impl KafkaCodec for DescribeClusterResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -138,26 +136,24 @@ impl KafkaSerialize for DescribeClusterResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeClusterResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_message = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_message = KafkaCodec::decode(buf, version, is_flexible)?;
         let endpoint_type = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let controller_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let brokers = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let cluster_authorized_operations = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let cluster_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let controller_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let brokers = KafkaCodec::decode(buf, version, is_flexible)?;
+        let cluster_authorized_operations = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -174,7 +170,7 @@ impl KafkaDeserialize for DescribeClusterResponse {
     }
 }
 
-impl KafkaSerialize for DescribeClusterBroker {
+impl KafkaCodec for DescribeClusterBroker {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -193,20 +189,18 @@ impl KafkaSerialize for DescribeClusterBroker {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeClusterBroker {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let broker_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let rack = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let broker_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let host = KafkaCodec::decode(buf, version, is_flexible)?;
+        let port = KafkaCodec::decode(buf, version, is_flexible)?;
+        let rack = KafkaCodec::decode(buf, version, is_flexible)?;
         let is_fenced = if 2 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

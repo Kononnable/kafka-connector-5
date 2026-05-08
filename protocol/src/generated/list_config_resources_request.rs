@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -52,7 +50,7 @@ impl ApiRequest for ListConfigResourcesRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let resource_types = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -62,7 +60,7 @@ impl ApiRequest for ListConfigResourcesRequest {
         Ok(Self { resource_types })
     }
 }
-impl KafkaSerialize for ListConfigResourcesRequest {
+impl KafkaCodec for ListConfigResourcesRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -77,16 +75,14 @@ impl KafkaSerialize for ListConfigResourcesRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ListConfigResourcesRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let resource_types = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -88,25 +86,25 @@ impl ApiRequest for InitProducerIdRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transaction_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let transactional_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transaction_timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let producer_id = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_epoch = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let enable2_pc = if 6 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let keep_prepared_txn = if 6 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -123,7 +121,7 @@ impl ApiRequest for InitProducerIdRequest {
         })
     }
 }
-impl KafkaSerialize for InitProducerIdRequest {
+impl KafkaCodec for InitProducerIdRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -150,33 +148,31 @@ impl KafkaSerialize for InitProducerIdRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for InitProducerIdRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transaction_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let transactional_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transaction_timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let producer_id = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_epoch = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let enable2_pc = if 6 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let keep_prepared_txn = if 6 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

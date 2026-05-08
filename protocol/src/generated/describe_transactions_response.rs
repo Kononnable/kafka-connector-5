@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -75,8 +73,8 @@ impl ApiResponse for DescribeTransactionsResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transaction_states = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transaction_states = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -86,7 +84,7 @@ impl ApiResponse for DescribeTransactionsResponse {
         })
     }
 }
-impl KafkaSerialize for DescribeTransactionsResponse {
+impl KafkaCodec for DescribeTransactionsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -100,16 +98,14 @@ impl KafkaSerialize for DescribeTransactionsResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeTransactionsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transaction_states = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transaction_states = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -120,7 +116,7 @@ impl KafkaDeserialize for DescribeTransactionsResponse {
     }
 }
 
-impl KafkaSerialize for TopicData {
+impl KafkaCodec for TopicData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -134,16 +130,14 @@ impl KafkaSerialize for TopicData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TopicData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -151,7 +145,7 @@ impl KafkaDeserialize for TopicData {
     }
 }
 
-impl KafkaSerialize for TransactionState {
+impl KafkaCodec for TransactionState {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -173,22 +167,20 @@ impl KafkaSerialize for TransactionState {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TransactionState {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transactional_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transaction_state = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transaction_timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let transaction_start_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transactional_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transaction_state = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transaction_timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let transaction_start_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let producer_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let producer_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

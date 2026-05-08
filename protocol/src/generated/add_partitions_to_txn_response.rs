@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -102,19 +100,19 @@ impl ApiResponse for AddPartitionsToTxnResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_code = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let results_by_transaction = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let results_by_topic_v3_and_below = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -129,7 +127,7 @@ impl ApiResponse for AddPartitionsToTxnResponse {
         })
     }
 }
-impl KafkaSerialize for AddPartitionsToTxnResponse {
+impl KafkaCodec for AddPartitionsToTxnResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -153,27 +151,25 @@ impl KafkaSerialize for AddPartitionsToTxnResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddPartitionsToTxnResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_code = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let results_by_transaction = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let results_by_topic_v3_and_below = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -189,7 +185,7 @@ impl KafkaDeserialize for AddPartitionsToTxnResponse {
     }
 }
 
-impl KafkaSerialize for AddPartitionsToTxnPartitionResult {
+impl KafkaCodec for AddPartitionsToTxnPartitionResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -204,16 +200,14 @@ impl KafkaSerialize for AddPartitionsToTxnPartitionResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddPartitionsToTxnPartitionResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partition_error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partition_error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -224,7 +218,7 @@ impl KafkaDeserialize for AddPartitionsToTxnPartitionResult {
     }
 }
 
-impl KafkaSerialize for AddPartitionsToTxnResult {
+impl KafkaCodec for AddPartitionsToTxnResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -242,21 +236,19 @@ impl KafkaSerialize for AddPartitionsToTxnResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddPartitionsToTxnResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let transactional_id = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topic_results = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -270,7 +262,7 @@ impl KafkaDeserialize for AddPartitionsToTxnResult {
     }
 }
 
-impl KafkaSerialize for AddPartitionsToTxnTopicResult {
+impl KafkaCodec for AddPartitionsToTxnTopicResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -285,16 +277,14 @@ impl KafkaSerialize for AddPartitionsToTxnTopicResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddPartitionsToTxnTopicResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let results_by_partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let results_by_partition = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

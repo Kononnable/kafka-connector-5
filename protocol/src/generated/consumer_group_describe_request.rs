@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -48,8 +46,8 @@ impl ApiRequest for ConsumerGroupDescribeRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let include_authorized_operations = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_ids = KafkaCodec::decode(buf, version, is_flexible)?;
+        let include_authorized_operations = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -59,7 +57,7 @@ impl ApiRequest for ConsumerGroupDescribeRequest {
         })
     }
 }
-impl KafkaSerialize for ConsumerGroupDescribeRequest {
+impl KafkaCodec for ConsumerGroupDescribeRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -74,16 +72,14 @@ impl KafkaSerialize for ConsumerGroupDescribeRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ConsumerGroupDescribeRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let group_ids = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let include_authorized_operations = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_ids = KafkaCodec::decode(buf, version, is_flexible)?;
+        let include_authorized_operations = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

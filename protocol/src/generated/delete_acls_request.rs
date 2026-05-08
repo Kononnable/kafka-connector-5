@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -63,14 +61,14 @@ impl ApiRequest for DeleteAclsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let filters = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { filters })
     }
 }
-impl KafkaSerialize for DeleteAclsRequest {
+impl KafkaCodec for DeleteAclsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -83,15 +81,13 @@ impl KafkaSerialize for DeleteAclsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DeleteAclsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let filters = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -99,7 +95,7 @@ impl KafkaDeserialize for DeleteAclsRequest {
     }
 }
 
-impl KafkaSerialize for DeleteAclsFilter {
+impl KafkaCodec for DeleteAclsFilter {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -122,25 +118,23 @@ impl KafkaSerialize for DeleteAclsFilter {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DeleteAclsFilter {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let resource_type_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let resource_name_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let resource_type_filter = KafkaCodec::decode(buf, version, is_flexible)?;
+        let resource_name_filter = KafkaCodec::decode(buf, version, is_flexible)?;
         let pattern_type_filter = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let principal_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let host_filter = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let operation = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let permission_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let principal_filter = KafkaCodec::decode(buf, version, is_flexible)?;
+        let host_filter = KafkaCodec::decode(buf, version, is_flexible)?;
+        let operation = KafkaCodec::decode(buf, version, is_flexible)?;
+        let permission_type = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

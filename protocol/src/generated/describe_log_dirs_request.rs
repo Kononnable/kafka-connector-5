@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -52,14 +50,14 @@ impl ApiRequest for DescribeLogDirsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { topics })
     }
 }
-impl KafkaSerialize for DescribeLogDirsRequest {
+impl KafkaCodec for DescribeLogDirsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -72,15 +70,13 @@ impl KafkaSerialize for DescribeLogDirsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeLogDirsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -88,7 +84,7 @@ impl KafkaDeserialize for DescribeLogDirsRequest {
     }
 }
 
-impl KafkaSerialize for DescribableLogDirTopic {
+impl KafkaCodec for DescribableLogDirTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -102,16 +98,14 @@ impl KafkaSerialize for DescribableLogDirTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribableLogDirTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

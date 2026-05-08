@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -93,13 +91,13 @@ impl ApiResponse for DescribeLogDirsResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_code = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -110,7 +108,7 @@ impl ApiResponse for DescribeLogDirsResponse {
         })
     }
 }
-impl KafkaSerialize for DescribeLogDirsResponse {
+impl KafkaCodec for DescribeLogDirsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -127,21 +125,19 @@ impl KafkaSerialize for DescribeLogDirsResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeLogDirsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_code = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -153,7 +149,7 @@ impl KafkaDeserialize for DescribeLogDirsResponse {
     }
 }
 
-impl KafkaSerialize for DescribeLogDirsPartition {
+impl KafkaCodec for DescribeLogDirsPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -169,18 +165,16 @@ impl KafkaSerialize for DescribeLogDirsPartition {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeLogDirsPartition {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partition_size = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let offset_lag = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let is_future_key = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partition_size = KafkaCodec::decode(buf, version, is_flexible)?;
+        let offset_lag = KafkaCodec::decode(buf, version, is_flexible)?;
+        let is_future_key = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -193,7 +187,7 @@ impl KafkaDeserialize for DescribeLogDirsPartition {
     }
 }
 
-impl KafkaSerialize for DescribeLogDirsResult {
+impl KafkaCodec for DescribeLogDirsResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -214,24 +208,22 @@ impl KafkaSerialize for DescribeLogDirsResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeLogDirsResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let log_dir = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
+        let log_dir = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let total_bytes = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let usable_bytes = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -248,7 +240,7 @@ impl KafkaDeserialize for DescribeLogDirsResult {
     }
 }
 
-impl KafkaSerialize for DescribeLogDirsTopic {
+impl KafkaCodec for DescribeLogDirsTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -262,16 +254,14 @@ impl KafkaSerialize for DescribeLogDirsTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeLogDirsTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

@@ -210,7 +210,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
     // Module-level allow for unused imports (not all traits are used in every file).
     code.push_str("#![allow(unused_imports, unused_variables)]\n");
-    code.push_str("use crate::protocol::serialization::{KafkaSerialize, KafkaDeserialize, decode_unsigned_varint, encode_unsigned_varint};\n");
+    code.push_str("use crate::protocol::serialization::{KafkaCodec, KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};\n");
     code.push_str(
         "use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};\n",
     );
@@ -408,16 +408,12 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
         }
     } // end if let Some(ak)
 
-    // KafkaSerialize/KafkaDeserialize for all message types
-    code.push_str(&generate_kafka_serialize_impl(&msg.name, &msg.fields));
-    code.push('\n');
-    code.push_str(&generate_kafka_deserialize_impl(&msg.name, &msg.fields));
+    // KafkaCodec for all message types
+    code.push_str(&generate_kafka_codec_impl(&msg.name, &msg.fields));
     code.push('\n');
     // And for nested structs.
     for (struct_name, struct_fields) in &nested {
-        code.push_str(&generate_kafka_serialize_impl(struct_name, struct_fields));
-        code.push('\n');
-        code.push_str(&generate_kafka_deserialize_impl(struct_name, struct_fields));
+        code.push_str(&generate_kafka_codec_impl(struct_name, struct_fields));
         code.push('\n');
     }
 
@@ -586,12 +582,12 @@ fn generate_tagged_decode_body(fields: &[Field]) -> String {
         if needs_presence {
             let _inner_type = strip_option_wrapper(&rust_type);
             code.push_str(&format!(
-                "                    {} => {{ {} = Some(KafkaDeserialize::decode(buf, version, true)?); }}\n",
+                "                    {} => {{ {} = Some(KafkaCodec::decode(buf, version, true)?); }}\n",
                 tag_id, rust_name
             ));
         } else {
             code.push_str(&format!(
-                "                    {} => {{ {} = KafkaDeserialize::decode(buf, version, true)?; }}\n",
+                "                    {} => {{ {} = KafkaCodec::decode(buf, version, true)?; }}\n",
                 tag_id, rust_name
             ));
         }
@@ -701,13 +697,13 @@ fn generate_deserialize_field(field: &Field) -> String {
             c.push_str(&format!("{}None\n", guard));
             c.push_str(&format!("{}}} else {{\n", guard));
             c.push_str(&format!(
-                "{}Some(KafkaDeserialize::decode(buf, version, true)?)\n",
+                "{}Some(KafkaCodec::decode(buf, version, true)?)\n",
                 guard
             ));
             c.push_str(&format!("{}}}\n", guard));
             c.push_str(&format!("{}}} else {{\n", guard));
             c.push_str(&format!(
-                "{}Some(KafkaDeserialize::decode(buf, version, false)?)\n",
+                "{}Some(KafkaCodec::decode(buf, version, false)?)\n",
                 guard
             ));
             c.push_str(&format!("{}}}\n", guard));
@@ -732,10 +728,10 @@ fn generate_deserialize_field(field: &Field) -> String {
         }
         if field.tag.is_some() {
             code.push_str("            if is_flexible { Default::default() } else {\n");
-            code.push_str("                KafkaDeserialize::decode(buf, version, is_flexible)?\n");
+            code.push_str("                KafkaCodec::decode(buf, version, is_flexible)?\n");
             code.push_str("            }\n");
         } else {
-            code.push_str("            KafkaDeserialize::decode(buf, version, is_flexible)?\n");
+            code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
         }
         code.push_str("        } else {\n");
         code.push_str("            Default::default()\n");
@@ -746,11 +742,11 @@ fn generate_deserialize_field(field: &Field) -> String {
                 "        let mut {} = if is_flexible {{ Default::default() }} else {{\n",
                 rust_name
             ));
-            code.push_str("            KafkaDeserialize::decode(buf, version, is_flexible)?\n");
+            code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
             code.push_str("        };\n");
         } else {
             code.push_str(&format!(
-                "        let {} = KafkaDeserialize::decode(buf, version, is_flexible)?;\n",
+                "        let {} = KafkaCodec::decode(buf, version, is_flexible)?;\n",
                 rust_name
             ));
         }
@@ -758,10 +754,9 @@ fn generate_deserialize_field(field: &Field) -> String {
     code
 }
 
-/// Generate a `KafkaSerialize` impl for a struct (main or nested).
-fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String {
+/// Generate a `KafkaCodec` impl for a struct (main or nested).
+fn encode_impl_body(_struct_name: &str, fields: &[Field]) -> String {
     let mut code = String::new();
-    code.push_str(&format!("impl KafkaSerialize for {} {{\n", struct_name));
     code.push_str("    fn encode<B: BufMut>(&self, buf: &mut B, version: ApiVer, is_flexible: bool) -> Result<(), SerializationError> {\n");
     for f in fields {
         let rust_name = escape_field_name(&camel_to_snake(&f.name));
@@ -818,13 +813,11 @@ fn generate_kafka_serialize_impl(struct_name: &str, fields: &[Field]) -> String 
     code.push_str("        }\n");
     code.push_str("        Ok(())\n");
     code.push_str("    }\n");
-    code.push_str("}\n");
     code
 }
 
-fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> String {
+fn decode_impl_body(_struct_name: &str, fields: &[Field]) -> String {
     let mut code = String::new();
-    code.push_str(&format!("impl KafkaDeserialize for {} {{\n", struct_name));
     code.push_str("    fn decode<B: Buf>(buf: &mut B, version: ApiVer, is_flexible: bool) -> Result<Self, SerializationError> {\n");
     for f in fields {
         let rust_name = escape_var_name(&camel_to_snake(&f.name));
@@ -848,10 +841,10 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
             code.push_str("            if present == 0 {\n");
             code.push_str("                None\n");
             code.push_str("            } else {\n");
-            code.push_str("                Some(KafkaDeserialize::decode(buf, version, true)?)\n");
+            code.push_str("                Some(KafkaCodec::decode(buf, version, true)?)\n");
             code.push_str("            }\n");
             code.push_str("        } else {\n");
-            code.push_str("            Some(KafkaDeserialize::decode(buf, version, false)?)\n");
+            code.push_str("            Some(KafkaCodec::decode(buf, version, false)?)\n");
             code.push_str("        };\n");
             if has_version_gate {
                 code.push_str("        } else {\n");
@@ -867,12 +860,10 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
             }
             if is_tagged {
                 code.push_str("            if is_flexible { Default::default() } else {\n");
-                code.push_str(
-                    "                KafkaDeserialize::decode(buf, version, is_flexible)?\n",
-                );
+                code.push_str("                KafkaCodec::decode(buf, version, is_flexible)?\n");
                 code.push_str("            }\n");
             } else {
-                code.push_str("            KafkaDeserialize::decode(buf, version, is_flexible)?\n");
+                code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
             }
             code.push_str("        } else {\n");
             code.push_str("            Default::default()\n");
@@ -883,12 +874,12 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
                 "        let mut {} = if is_flexible {{ Default::default() }} else {{\n",
                 rust_name
             ));
-            code.push_str("            KafkaDeserialize::decode(buf, version, is_flexible)?\n");
+            code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
             code.push_str("        };\n");
         } else {
             // Unconditional field
             code.push_str(&format!(
-                "        let {} = KafkaDeserialize::decode(buf, version, is_flexible)?;\n",
+                "        let {} = KafkaCodec::decode(buf, version, is_flexible)?;\n",
                 rust_name
             ));
         }
@@ -913,6 +904,15 @@ fn generate_kafka_deserialize_impl(struct_name: &str, fields: &[Field]) -> Strin
             .join(", ")
     ));
     code.push_str("    }\n");
+    code
+}
+
+fn generate_kafka_codec_impl(struct_name: &str, fields: &[Field]) -> String {
+    let mut code = String::new();
+    code.push_str(&format!("impl KafkaCodec for {} {{\n", struct_name));
+    code.push_str(&encode_impl_body(struct_name, fields));
+    code.push('\n');
+    code.push_str(&decode_impl_body(struct_name, fields));
     code.push_str("}\n");
     code
 }

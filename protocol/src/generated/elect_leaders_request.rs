@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -66,12 +64,12 @@ impl ApiRequest for ElectLeadersRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let election_type = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic_partitions = KafkaCodec::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -82,7 +80,7 @@ impl ApiRequest for ElectLeadersRequest {
         })
     }
 }
-impl KafkaSerialize for ElectLeadersRequest {
+impl KafkaCodec for ElectLeadersRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -99,21 +97,19 @@ impl KafkaSerialize for ElectLeadersRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ElectLeadersRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let election_type = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topic_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic_partitions = KafkaCodec::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -125,7 +121,7 @@ impl KafkaDeserialize for ElectLeadersRequest {
     }
 }
 
-impl KafkaSerialize for TopicPartitions {
+impl KafkaCodec for TopicPartitions {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -139,16 +135,14 @@ impl KafkaSerialize for TopicPartitions {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TopicPartitions {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

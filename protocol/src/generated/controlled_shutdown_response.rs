@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -40,7 +38,7 @@ impl ApiResponse for ControlledShutdownResponse {
         Ok(Self {})
     }
 }
-impl KafkaSerialize for ControlledShutdownResponse {
+impl KafkaCodec for ControlledShutdownResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -52,9 +50,7 @@ impl KafkaSerialize for ControlledShutdownResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ControlledShutdownResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,

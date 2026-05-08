@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -57,15 +55,15 @@ impl ApiRequest for DescribeClientQuotasRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let components = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let strict = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let components = KafkaCodec::decode(buf, version, is_flexible)?;
+        let strict = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { components, strict })
     }
 }
-impl KafkaSerialize for DescribeClientQuotasRequest {
+impl KafkaCodec for DescribeClientQuotasRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -79,16 +77,14 @@ impl KafkaSerialize for DescribeClientQuotasRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for DescribeClientQuotasRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let components = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let strict = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let components = KafkaCodec::decode(buf, version, is_flexible)?;
+        let strict = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -96,7 +92,7 @@ impl KafkaDeserialize for DescribeClientQuotasRequest {
     }
 }
 
-impl KafkaSerialize for ComponentData {
+impl KafkaCodec for ComponentData {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -111,17 +107,15 @@ impl KafkaSerialize for ComponentData {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ComponentData {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let entity_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let match_type = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let r#match = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let entity_type = KafkaCodec::decode(buf, version, is_flexible)?;
+        let match_type = KafkaCodec::decode(buf, version, is_flexible)?;
+        let r#match = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

@@ -8,10 +8,10 @@
 //!
 //! The headers are decoded manually using the protocol crate's primitive decoders
 //! because the generated `RequestHeader`/`ResponseHeader` structs do not yet
-//! implement `KafkaDeserialize`.
+//! implement `KafkaCodec`.
 
 use bytes::Buf;
-use protocol::protocol::serialization::{DecodeError, KafkaDeserialize};
+use protocol::protocol::serialization::{SerializationError, KafkaCodec};
 use std::fmt;
 use std::time::Instant;
 
@@ -133,7 +133,7 @@ pub struct ParsedResponseHeader {
 /// Flexible (v2+) additionally has:
 ///   _tag_buffer:        unsigned varint count + tagged field entries
 pub fn request_body_offset(data: &[u8], is_flexible: bool) -> usize {
-    use protocol::protocol::serialization::KafkaDeserialize;
+    use protocol::protocol::serialization::KafkaCodec;
     let mut cur: &[u8] = data;
     let _ = cur.get_i16(); // api_key
     let _ = cur.get_i16(); // api_version
@@ -142,7 +142,7 @@ pub fn request_body_offset(data: &[u8], is_flexible: bool) -> usize {
     // (2-byte i16 length prefix, -1 = null), even in flexible mode.
     // This is because older brokers must be able to parse the request header
     // from newer clients before they negotiate the version range.
-    let _: Option<String> = match KafkaDeserialize::decode(&mut cur, protocol::traits::ApiVersion::new(0), false) {
+    let _: Option<String> = match KafkaCodec::decode(&mut cur, protocol::traits::ApiVersion::new(0), false) {
         Ok(v) => v,
         Err(_) => return data.len(),
     };
@@ -203,7 +203,7 @@ pub fn try_parse_size(data: &[u8]) -> Option<usize> {
 /// Per Kafka spec: ClientId is ALWAYS a classic nullable string (2-byte i16 length),
 /// even in flexible mode. This is so older brokers can parse ApiVersionsRequest
 /// from newer clients before version negotiation.
-pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequestHeader, DecodeError> {
+pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequestHeader, SerializationError> {
     let mut buf: &[u8] = data;
     let api_key = i16::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
     let api_version = i16::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
@@ -211,7 +211,7 @@ pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequ
     // ClientId is ALWAYS classic NULLABLE_STRING (i16 length prefix), not compact!
     let client_id = match String::decode(&mut buf, protocol::traits::ApiVersion::new(0), false) {
         Ok(s) => s,
-        Err(DecodeError::UnexpectedNull) => String::new(),
+        Err(SerializationError::UnexpectedNull) => String::new(),
         Err(e) => return Err(e),
     };
     // For flexible v2, skip the tag buffer
@@ -238,7 +238,7 @@ pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequ
 ///
 /// Wire format v1 (flexible):
 ///   correlation_id (i32) + tag_buffer (unsigned varint)
-pub fn parse_response_header(data: &[u8], is_flexible: bool) -> Result<ParsedResponseHeader, DecodeError> {
+pub fn parse_response_header(data: &[u8], is_flexible: bool) -> Result<ParsedResponseHeader, SerializationError> {
     let mut buf: &[u8] = data;
     let correlation_id = i32::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
     // For flexible (v1), skip tag_buffer bytes

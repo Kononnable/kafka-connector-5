@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -68,15 +66,15 @@ impl ApiRequest for ListTransactionsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let state_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_id_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let state_filters = KafkaCodec::decode(buf, version, is_flexible)?;
+        let producer_id_filters = KafkaCodec::decode(buf, version, is_flexible)?;
         let duration_filter = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let transactional_id_pattern = if 2 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -91,7 +89,7 @@ impl ApiRequest for ListTransactionsRequest {
         })
     }
 }
-impl KafkaSerialize for ListTransactionsRequest {
+impl KafkaCodec for ListTransactionsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -112,23 +110,21 @@ impl KafkaSerialize for ListTransactionsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ListTransactionsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let state_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let producer_id_filters = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let state_filters = KafkaCodec::decode(buf, version, is_flexible)?;
+        let producer_id_filters = KafkaCodec::decode(buf, version, is_flexible)?;
         let duration_filter = if 1 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let transactional_id_pattern = if 2 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

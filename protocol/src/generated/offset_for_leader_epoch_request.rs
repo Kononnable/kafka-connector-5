@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -74,18 +72,18 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let replica_id = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self { replica_id, topics })
     }
 }
-impl KafkaSerialize for OffsetForLeaderEpochRequest {
+impl KafkaCodec for OffsetForLeaderEpochRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -101,20 +99,18 @@ impl KafkaSerialize for OffsetForLeaderEpochRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for OffsetForLeaderEpochRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let replica_id = if 3 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -122,7 +118,7 @@ impl KafkaDeserialize for OffsetForLeaderEpochRequest {
     }
 }
 
-impl KafkaSerialize for OffsetForLeaderPartition {
+impl KafkaCodec for OffsetForLeaderPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -140,21 +136,19 @@ impl KafkaSerialize for OffsetForLeaderPartition {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for OffsetForLeaderPartition {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition = KafkaCodec::decode(buf, version, is_flexible)?;
         let current_leader_epoch = if 2 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let leader_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let leader_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -166,7 +160,7 @@ impl KafkaDeserialize for OffsetForLeaderPartition {
     }
 }
 
-impl KafkaSerialize for OffsetForLeaderTopic {
+impl KafkaCodec for OffsetForLeaderTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -180,16 +174,14 @@ impl KafkaSerialize for OffsetForLeaderTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for OffsetForLeaderTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

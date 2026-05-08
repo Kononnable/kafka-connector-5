@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -63,8 +61,8 @@ impl ApiResponse for AlterReplicaLogDirsResponse {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -74,7 +72,7 @@ impl ApiResponse for AlterReplicaLogDirsResponse {
         })
     }
 }
-impl KafkaSerialize for AlterReplicaLogDirsResponse {
+impl KafkaCodec for AlterReplicaLogDirsResponse {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -88,16 +86,14 @@ impl KafkaSerialize for AlterReplicaLogDirsResponse {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AlterReplicaLogDirsResponse {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let throttle_time_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let results = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let throttle_time_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -108,7 +104,7 @@ impl KafkaDeserialize for AlterReplicaLogDirsResponse {
     }
 }
 
-impl KafkaSerialize for AlterReplicaLogDirPartitionResult {
+impl KafkaCodec for AlterReplicaLogDirPartitionResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -122,16 +118,14 @@ impl KafkaSerialize for AlterReplicaLogDirPartitionResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AlterReplicaLogDirPartitionResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let error_code = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -142,7 +136,7 @@ impl KafkaDeserialize for AlterReplicaLogDirPartitionResult {
     }
 }
 
-impl KafkaSerialize for AlterReplicaLogDirTopicResult {
+impl KafkaCodec for AlterReplicaLogDirTopicResult {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -156,16 +150,14 @@ impl KafkaSerialize for AlterReplicaLogDirTopicResult {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AlterReplicaLogDirTopicResult {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic_name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -122,27 +120,27 @@ impl ApiRequest for AddPartitionsToTxnRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let transactions = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_transactional_id = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_id = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_epoch = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_topics = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -158,7 +156,7 @@ impl ApiRequest for AddPartitionsToTxnRequest {
         })
     }
 }
-impl KafkaSerialize for AddPartitionsToTxnRequest {
+impl KafkaCodec for AddPartitionsToTxnRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -188,36 +186,34 @@ impl KafkaSerialize for AddPartitionsToTxnRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddPartitionsToTxnRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let transactions = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_transactional_id = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_id = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_producer_epoch = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let v3_and_below_topics = if 0 <= version.0 && version.0 <= 3 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -234,7 +230,7 @@ impl KafkaDeserialize for AddPartitionsToTxnRequest {
     }
 }
 
-impl KafkaSerialize for AddPartitionsToTxnTopic {
+impl KafkaCodec for AddPartitionsToTxnTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -248,16 +244,14 @@ impl KafkaSerialize for AddPartitionsToTxnTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddPartitionsToTxnTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -265,7 +259,7 @@ impl KafkaDeserialize for AddPartitionsToTxnTopic {
     }
 }
 
-impl KafkaSerialize for AddPartitionsToTxnTransaction {
+impl KafkaCodec for AddPartitionsToTxnTransaction {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -292,36 +286,34 @@ impl KafkaSerialize for AddPartitionsToTxnTransaction {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddPartitionsToTxnTransaction {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let transactional_id = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_id = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let producer_epoch = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let verify_only = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
         let topics = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };

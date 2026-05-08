@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -78,11 +76,11 @@ impl ApiRequest for ControllerRegistrationRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let controller_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let incarnation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let zk_migration_ready = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let features = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let controller_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let incarnation_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let zk_migration_ready = KafkaCodec::decode(buf, version, is_flexible)?;
+        let listeners = KafkaCodec::decode(buf, version, is_flexible)?;
+        let features = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -95,7 +93,7 @@ impl ApiRequest for ControllerRegistrationRequest {
         })
     }
 }
-impl KafkaSerialize for ControllerRegistrationRequest {
+impl KafkaCodec for ControllerRegistrationRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -112,19 +110,17 @@ impl KafkaSerialize for ControllerRegistrationRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ControllerRegistrationRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let controller_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let incarnation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let zk_migration_ready = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let features = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let controller_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let incarnation_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let zk_migration_ready = KafkaCodec::decode(buf, version, is_flexible)?;
+        let listeners = KafkaCodec::decode(buf, version, is_flexible)?;
+        let features = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -138,7 +134,7 @@ impl KafkaDeserialize for ControllerRegistrationRequest {
     }
 }
 
-impl KafkaSerialize for Feature {
+impl KafkaCodec for Feature {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -155,17 +151,15 @@ impl KafkaSerialize for Feature {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for Feature {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let min_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let max_supported_version = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let min_supported_version = KafkaCodec::decode(buf, version, is_flexible)?;
+        let max_supported_version = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -177,7 +171,7 @@ impl KafkaDeserialize for Feature {
     }
 }
 
-impl KafkaSerialize for Listener {
+impl KafkaCodec for Listener {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -193,18 +187,16 @@ impl KafkaSerialize for Listener {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for Listener {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let security_protocol = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let host = KafkaCodec::decode(buf, version, is_flexible)?;
+        let port = KafkaCodec::decode(buf, version, is_flexible)?;
+        let security_protocol = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

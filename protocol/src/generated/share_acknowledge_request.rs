@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -79,10 +77,10 @@ impl ApiRequest for ShareAcknowledgeRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let share_session_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let member_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let share_session_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -94,7 +92,7 @@ impl ApiRequest for ShareAcknowledgeRequest {
         })
     }
 }
-impl KafkaSerialize for ShareAcknowledgeRequest {
+impl KafkaCodec for ShareAcknowledgeRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -110,18 +108,16 @@ impl KafkaSerialize for ShareAcknowledgeRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ShareAcknowledgeRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let group_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let member_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let share_session_epoch = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let member_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let share_session_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -134,7 +130,7 @@ impl KafkaDeserialize for ShareAcknowledgeRequest {
     }
 }
 
-impl KafkaSerialize for AcknowledgePartition {
+impl KafkaCodec for AcknowledgePartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -149,16 +145,14 @@ impl KafkaSerialize for AcknowledgePartition {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AcknowledgePartition {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let acknowledgement_batches = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
+        let acknowledgement_batches = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -169,7 +163,7 @@ impl KafkaDeserialize for AcknowledgePartition {
     }
 }
 
-impl KafkaSerialize for AcknowledgeTopic {
+impl KafkaCodec for AcknowledgeTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -183,16 +177,14 @@ impl KafkaSerialize for AcknowledgeTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AcknowledgeTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -203,7 +195,7 @@ impl KafkaDeserialize for AcknowledgeTopic {
     }
 }
 
-impl KafkaSerialize for AcknowledgementBatch {
+impl KafkaCodec for AcknowledgementBatch {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -218,17 +210,15 @@ impl KafkaSerialize for AcknowledgementBatch {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AcknowledgementBatch {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let first_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let last_offset = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let acknowledge_types = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let first_offset = KafkaCodec::decode(buf, version, is_flexible)?;
+        let last_offset = KafkaCodec::decode(buf, version, is_flexible)?;
+        let acknowledge_types = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

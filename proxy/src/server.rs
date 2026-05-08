@@ -7,7 +7,7 @@ use crate::error::ProxyError;
 use crate::frame;
 use crate::tracker::RequestTracker;
 use bytes::{Buf, Bytes, BytesMut};
-use protocol::protocol::serialization::KafkaDeserialize;
+use protocol::protocol::serialization::KafkaCodec;
 
 use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -296,7 +296,7 @@ fn rewrite_broker_port_in_metadata(
 
         // Skip throttle_time_ms (v3+)
         if api_version >= 3 {
-            let _: i32 = match KafkaDeserialize::decode(&mut cursor, ver, is_flexible) {
+            let _: i32 = match KafkaCodec::decode(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
@@ -314,7 +314,7 @@ fn rewrite_broker_port_in_metadata(
             }
             (raw - 1) as usize
         } else {
-            let count: i32 = KafkaDeserialize::decode(&mut cursor, ver, is_flexible)
+            let count: i32 = KafkaCodec::decode(&mut cursor, ver, is_flexible)
                 .map_err(|_| ProxyError::Upstream("failed to decode broker count".into()))?;
             if count < 0 {
                 return Ok(());
@@ -323,20 +323,20 @@ fn rewrite_broker_port_in_metadata(
         };
 
         for _ in 0..broker_count {
-            let _: i32 = match KafkaDeserialize::decode(&mut cursor, ver, is_flexible) {
+            let _: i32 = match KafkaCodec::decode(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
-            let host: String = match KafkaDeserialize::decode(&mut cursor, ver, is_flexible) {
+            let host: String = match KafkaCodec::decode(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
             let port_offset = body_total - cursor.len();
-            let port: i32 = match KafkaDeserialize::decode(&mut cursor, ver, is_flexible) {
+            let port: i32 = match KafkaCodec::decode(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };
-            let _: Option<String> = match KafkaDeserialize::decode(&mut cursor, ver, is_flexible) {
+            let _: Option<String> = match KafkaCodec::decode(&mut cursor, ver, is_flexible) {
                 Ok(v) => v,
                 Err(_) => return Ok(()),
             };

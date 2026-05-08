@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -24,7 +22,7 @@ pub struct TopicPartition {
     pub partitions: Vec<i32>,
 }
 
-impl KafkaSerialize for ConsumerProtocolAssignment {
+impl KafkaCodec for ConsumerProtocolAssignment {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -38,16 +36,14 @@ impl KafkaSerialize for ConsumerProtocolAssignment {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ConsumerProtocolAssignment {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let assigned_partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let user_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let assigned_partitions = KafkaCodec::decode(buf, version, is_flexible)?;
+        let user_data = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -58,7 +54,7 @@ impl KafkaDeserialize for ConsumerProtocolAssignment {
     }
 }
 
-impl KafkaSerialize for TopicPartition {
+impl KafkaCodec for TopicPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -72,16 +68,14 @@ impl KafkaSerialize for TopicPartition {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for TopicPartition {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

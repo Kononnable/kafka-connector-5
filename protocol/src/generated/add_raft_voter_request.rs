@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -66,11 +64,11 @@ impl ApiRequest for AddRaftVoterRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voter_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voter_directory_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let cluster_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let voter_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let voter_directory_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let listeners = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -83,7 +81,7 @@ impl ApiRequest for AddRaftVoterRequest {
         })
     }
 }
-impl KafkaSerialize for AddRaftVoterRequest {
+impl KafkaCodec for AddRaftVoterRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -100,19 +98,17 @@ impl KafkaSerialize for AddRaftVoterRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for AddRaftVoterRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let cluster_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let timeout_ms = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voter_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let voter_directory_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let listeners = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let cluster_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
+        let voter_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let voter_directory_id = KafkaCodec::decode(buf, version, is_flexible)?;
+        let listeners = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -126,7 +122,7 @@ impl KafkaDeserialize for AddRaftVoterRequest {
     }
 }
 
-impl KafkaSerialize for Listener {
+impl KafkaCodec for Listener {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -141,17 +137,15 @@ impl KafkaSerialize for Listener {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for Listener {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let host = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let port = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let host = KafkaCodec::decode(buf, version, is_flexible)?;
+        let port = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -14,7 +12,7 @@ pub struct ResponseHeader {
     pub correlation_id: i32,
 }
 
-impl KafkaSerialize for ResponseHeader {
+impl KafkaCodec for ResponseHeader {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -27,15 +25,13 @@ impl KafkaSerialize for ResponseHeader {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ResponseHeader {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let correlation_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let correlation_id = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

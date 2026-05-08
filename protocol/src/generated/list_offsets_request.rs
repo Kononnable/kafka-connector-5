@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -86,15 +84,15 @@ impl ApiRequest for ListOffsetsRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let replica_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let isolation_level = if 2 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = if 10 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -109,7 +107,7 @@ impl ApiRequest for ListOffsetsRequest {
         })
     }
 }
-impl KafkaSerialize for ListOffsetsRequest {
+impl KafkaCodec for ListOffsetsRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -129,23 +127,21 @@ impl KafkaSerialize for ListOffsetsRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ListOffsetsRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let replica_id = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let replica_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let isolation_level = if 2 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let topics = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = if 10 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
@@ -161,7 +157,7 @@ impl KafkaDeserialize for ListOffsetsRequest {
     }
 }
 
-impl KafkaSerialize for ListOffsetsPartition {
+impl KafkaCodec for ListOffsetsPartition {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -179,21 +175,19 @@ impl KafkaSerialize for ListOffsetsPartition {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ListOffsetsPartition {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
         let current_leader_epoch = if 4 <= version.0 {
-            KafkaDeserialize::decode(buf, version, is_flexible)?
+            KafkaCodec::decode(buf, version, is_flexible)?
         } else {
             Default::default()
         };
-        let timestamp = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let timestamp = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -205,7 +199,7 @@ impl KafkaDeserialize for ListOffsetsPartition {
     }
 }
 
-impl KafkaSerialize for ListOffsetsTopic {
+impl KafkaCodec for ListOffsetsTopic {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -219,16 +213,14 @@ impl KafkaSerialize for ListOffsetsTopic {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for ListOffsetsTopic {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let partitions = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let name = KafkaCodec::decode(buf, version, is_flexible)?;
+        let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

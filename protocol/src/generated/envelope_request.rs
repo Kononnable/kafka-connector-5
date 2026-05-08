@@ -1,7 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{
-    KafkaDeserialize, KafkaSerialize, decode_unsigned_varint, encode_unsigned_varint,
-};
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
@@ -50,9 +48,9 @@ impl ApiRequest for EnvelopeRequest {
     }
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
-        let request_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let request_principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let client_host_address = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let request_data = KafkaCodec::decode(buf, version, is_flexible)?;
+        let request_principal = KafkaCodec::decode(buf, version, is_flexible)?;
+        let client_host_address = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
@@ -63,7 +61,7 @@ impl ApiRequest for EnvelopeRequest {
         })
     }
 }
-impl KafkaSerialize for EnvelopeRequest {
+impl KafkaCodec for EnvelopeRequest {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -78,17 +76,15 @@ impl KafkaSerialize for EnvelopeRequest {
         }
         Ok(())
     }
-}
 
-impl KafkaDeserialize for EnvelopeRequest {
     fn decode<B: Buf>(
         buf: &mut B,
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let request_data = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let request_principal = KafkaDeserialize::decode(buf, version, is_flexible)?;
-        let client_host_address = KafkaDeserialize::decode(buf, version, is_flexible)?;
+        let request_data = KafkaCodec::decode(buf, version, is_flexible)?;
+        let request_principal = KafkaCodec::decode(buf, version, is_flexible)?;
+        let client_host_address = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
