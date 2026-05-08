@@ -353,10 +353,8 @@ fn rewrite_broker_port_in_metadata(
                 }
             }
             // Rewrite any broker matching proxy_host that has a port mapping
-            if host == proxy_host {
-                if let Some(new_port) = config.proxy_port_for(port) {
-                    patches.push((port_offset, new_port));
-                }
+            if host == proxy_host && let Some(new_port) = config.proxy_port_for(port) {
+                patches.push((port_offset, new_port));
             }
         }
         patches
