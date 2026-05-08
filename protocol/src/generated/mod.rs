@@ -404,6 +404,8 @@ pub use write_txn_markers_request::WriteTxnMarkersRequest;
 pub use write_txn_markers_response::WriteTxnMarkersResponse;
 
 use crate::traits::ApiRequest;
+use crate::traits::ApiResponse;
+use bytes::Bytes;
 /// Look up whether a given API key + version uses flexible (compact) wire encoding.
 /// Generated from each message's `flexibleVersions` field.
 pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
@@ -502,5 +504,581 @@ pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
         85 => api_version >= WriteShareGroupStateRequest::get_min_flexible_version().0,
         27 => api_version >= WriteTxnMarkersRequest::get_min_flexible_version().0,
         _ => false,
+    }
+}
+
+/// Deserialize a request body for the given API key and version.
+pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {
+    let ver = crate::traits::ApiVersion::new(version);
+    let mut buf = Bytes::copy_from_slice(body);
+    match api_key {
+        25 => AddOffsetsToTxnRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        24 => AddPartitionsToTxnRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        80 => AddRaftVoterRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        67 => AllocateProducerIdsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        49 => AlterClientQuotasRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        33 => AlterConfigsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        45 => AlterPartitionReassignmentsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        56 => AlterPartitionRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        34 => AlterReplicaLogDirsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        91 => AlterShareGroupOffsetsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        51 => AlterUserScramCredentialsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        18 => ApiVersionsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        73 => AssignReplicasToDirsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        53 => BeginQuorumEpochRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        63 => BrokerHeartbeatRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        62 => BrokerRegistrationRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        69 => ConsumerGroupDescribeRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        68 => ConsumerGroupHeartbeatRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        7 => ControlledShutdownRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        70 => ControllerRegistrationRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        30 => CreateAclsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        38 => CreateDelegationTokenRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        37 => CreatePartitionsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        19 => CreateTopicsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        31 => DeleteAclsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        42 => DeleteGroupsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        21 => DeleteRecordsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        92 => DeleteShareGroupOffsetsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        86 => DeleteShareGroupStateRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        20 => DeleteTopicsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        29 => DescribeAclsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        48 => DescribeClientQuotasRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        60 => DescribeClusterRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        32 => DescribeConfigsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        41 => DescribeDelegationTokenRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        15 => DescribeGroupsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        35 => DescribeLogDirsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        61 => DescribeProducersRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        55 => DescribeQuorumRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        90 => DescribeShareGroupOffsetsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        75 => DescribeTopicPartitionsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        65 => DescribeTransactionsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        50 => DescribeUserScramCredentialsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        43 => ElectLeadersRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        54 => EndQuorumEpochRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        26 => EndTxnRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        58 => EnvelopeRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        40 => ExpireDelegationTokenRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        1 => FetchRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        59 => FetchSnapshotRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        10 => FindCoordinatorRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        71 => GetTelemetrySubscriptionsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        12 => HeartbeatRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        44 => IncrementalAlterConfigsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        22 => InitProducerIdRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        83 => InitializeShareGroupStateRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        11 => JoinGroupRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        4 => LeaderAndIsrRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        13 => LeaveGroupRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        74 => ListConfigResourcesRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        16 => ListGroupsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        2 => ListOffsetsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        46 => ListPartitionReassignmentsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        66 => ListTransactionsRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        3 => MetadataRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        8 => OffsetCommitRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        47 => OffsetDeleteRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        9 => OffsetFetchRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        23 => OffsetForLeaderEpochRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        0 => ProduceRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        72 => PushTelemetryRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        84 => ReadShareGroupStateRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        87 => ReadShareGroupStateSummaryRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        81 => RemoveRaftVoterRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        39 => RenewDelegationTokenRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        36 => SaslAuthenticateRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        17 => SaslHandshakeRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        79 => ShareAcknowledgeRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        78 => ShareFetchRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        77 => ShareGroupDescribeRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        76 => ShareGroupHeartbeatRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        5 => StopReplicaRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        89 => StreamsGroupDescribeRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        88 => StreamsGroupHeartbeatRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        14 => SyncGroupRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        28 => TxnOffsetCommitRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        64 => UnregisterBrokerRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        57 => UpdateFeaturesRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        6 => UpdateMetadataRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        82 => UpdateRaftVoterRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        52 => VoteRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        85 => WriteShareGroupStateRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        27 => WriteTxnMarkersRequest::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        _ => Err(format!("unknown api key {api_key}")),
+    }
+}
+
+/// Deserialize a response body for the given API key and version.
+pub fn decode_response_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {
+    let ver = crate::traits::ApiVersion::new(version);
+    let mut buf = Bytes::copy_from_slice(body);
+    match api_key {
+        25 => AddOffsetsToTxnResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        24 => AddPartitionsToTxnResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        80 => AddRaftVoterResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        67 => AllocateProducerIdsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        49 => AlterClientQuotasResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        33 => AlterConfigsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        45 => AlterPartitionReassignmentsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        56 => AlterPartitionResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        34 => AlterReplicaLogDirsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        91 => AlterShareGroupOffsetsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        51 => AlterUserScramCredentialsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        18 => ApiVersionsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        73 => AssignReplicasToDirsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        53 => BeginQuorumEpochResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        63 => BrokerHeartbeatResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        62 => BrokerRegistrationResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        69 => ConsumerGroupDescribeResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        68 => ConsumerGroupHeartbeatResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        7 => ControlledShutdownResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        70 => ControllerRegistrationResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        30 => CreateAclsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        38 => CreateDelegationTokenResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        37 => CreatePartitionsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        19 => CreateTopicsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        31 => DeleteAclsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        42 => DeleteGroupsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        21 => DeleteRecordsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        92 => DeleteShareGroupOffsetsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        86 => DeleteShareGroupStateResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        20 => DeleteTopicsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        29 => DescribeAclsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        48 => DescribeClientQuotasResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        60 => DescribeClusterResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        32 => DescribeConfigsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        41 => DescribeDelegationTokenResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        15 => DescribeGroupsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        35 => DescribeLogDirsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        61 => DescribeProducersResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        55 => DescribeQuorumResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        90 => DescribeShareGroupOffsetsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        75 => DescribeTopicPartitionsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        65 => DescribeTransactionsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        50 => DescribeUserScramCredentialsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        43 => ElectLeadersResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        54 => EndQuorumEpochResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        26 => EndTxnResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        58 => EnvelopeResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        40 => ExpireDelegationTokenResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        1 => FetchResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        59 => FetchSnapshotResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        10 => FindCoordinatorResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        71 => GetTelemetrySubscriptionsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        12 => HeartbeatResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        44 => IncrementalAlterConfigsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        22 => InitProducerIdResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        83 => InitializeShareGroupStateResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        11 => JoinGroupResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        4 => LeaderAndIsrResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        13 => LeaveGroupResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        74 => ListConfigResourcesResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        16 => ListGroupsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        2 => ListOffsetsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        46 => ListPartitionReassignmentsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        66 => ListTransactionsResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        3 => MetadataResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        8 => OffsetCommitResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        47 => OffsetDeleteResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        9 => OffsetFetchResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        23 => OffsetForLeaderEpochResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        0 => ProduceResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        72 => PushTelemetryResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        84 => ReadShareGroupStateResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        87 => ReadShareGroupStateSummaryResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        81 => RemoveRaftVoterResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        39 => RenewDelegationTokenResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        36 => SaslAuthenticateResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        17 => SaslHandshakeResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        79 => ShareAcknowledgeResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        78 => ShareFetchResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        77 => ShareGroupDescribeResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        76 => ShareGroupHeartbeatResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        5 => StopReplicaResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        89 => StreamsGroupDescribeResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        88 => StreamsGroupHeartbeatResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        14 => SyncGroupResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        28 => TxnOffsetCommitResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        64 => UnregisterBrokerResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        57 => UpdateFeaturesResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        6 => UpdateMetadataResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        82 => UpdateRaftVoterResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        52 => VoteResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        85 => WriteShareGroupStateResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        27 => WriteTxnMarkersResponse::deserialize(ver, &mut buf)
+            .map(|v| format!("{v:?}"))
+            .map_err(|e| format!("{e}")),
+        _ => Err(format!("unknown api key {api_key}")),
     }
 }

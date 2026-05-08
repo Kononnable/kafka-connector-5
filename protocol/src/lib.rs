@@ -3,7 +3,6 @@
 //! This library provides functionality to parse Kafka protocol JSON definitions
 //! into Rust structs for building Kafka clients.
 
-pub mod dispatch;
 pub mod generated;
 pub mod generator;
 pub mod protocol;

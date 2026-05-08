@@ -112,6 +112,8 @@ pub fn generate_all() -> GeneratedFiles {
 
     // Generate is_flexible_api dispatch function
     mod_rs.push_str("use crate::traits::ApiRequest;\n");
+    mod_rs.push_str("use crate::traits::ApiResponse;\n");
+    mod_rs.push_str("use bytes::Bytes;\n");
     mod_rs.push_str(
         "/// Look up whether a given API key + version uses flexible (compact) wire encoding.\n",
     );
@@ -132,6 +134,52 @@ pub fn generate_all() -> GeneratedFiles {
         }
     }
     mod_rs.push_str("        _ => false,\n");
+    mod_rs.push_str("    }\n");
+    mod_rs.push_str("}\n");
+    mod_rs.push('\n');
+
+    // ----- decode_request_body -----
+    mod_rs.push_str("/// Deserialize a request body for the given API key and version.\n");
+    mod_rs.push_str("pub fn decode_request_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {\n");
+    mod_rs.push_str("    let ver = crate::traits::ApiVersion::new(version);\n");
+    mod_rs.push_str("    let mut buf = Bytes::copy_from_slice(body);\n");
+    mod_rs.push_str("    match api_key {\n");
+    for msg in &parsed {
+        if let Some(ak) = msg
+            .api_key
+            .filter(|_| msg.message_type == MessageType::Request)
+        {
+            let struct_name = &msg.name;
+            mod_rs.push_str(&format!(
+                "        {} => {}::deserialize(ver, &mut buf).map(|v| format!(\"{{v:?}}\")).map_err(|e| format!(\"{{e}}\")),\n",
+                ak, struct_name
+            ));
+        }
+    }
+    mod_rs.push_str("        _ => Err(format!(\"unknown api key {api_key}\")),\n");
+    mod_rs.push_str("    }\n");
+    mod_rs.push_str("}\n");
+    mod_rs.push('\n');
+
+    // ----- decode_response_body -----
+    mod_rs.push_str("/// Deserialize a response body for the given API key and version.\n");
+    mod_rs.push_str("pub fn decode_response_body(api_key: i16, version: i16, body: &[u8]) -> Result<String, String> {\n");
+    mod_rs.push_str("    let ver = crate::traits::ApiVersion::new(version);\n");
+    mod_rs.push_str("    let mut buf = Bytes::copy_from_slice(body);\n");
+    mod_rs.push_str("    match api_key {\n");
+    for msg in &parsed {
+        if let Some(ak) = msg
+            .api_key
+            .filter(|_| msg.message_type == MessageType::Response)
+        {
+            let struct_name = &msg.name;
+            mod_rs.push_str(&format!(
+                "        {} => {}::deserialize(ver, &mut buf).map(|v| format!(\"{{v:?}}\")).map_err(|e| format!(\"{{e}}\")),\n",
+                ak, struct_name
+            ));
+        }
+    }
+    mod_rs.push_str("        _ => Err(format!(\"unknown api key {api_key}\")),\n");
     mod_rs.push_str("    }\n");
     mod_rs.push_str("}\n");
 

@@ -141,7 +141,7 @@ where
 
 /// Try to deserialize a request body, returning a description string.
 fn describe_request_body(api_key: i16, version: i16, body: &[u8]) -> String {
-    match protocol::dispatch::decode_request_body(api_key, version, body) {
+    match protocol::generated::decode_request_body(api_key, version, body) {
         Ok(s) => s,
         Err(e) => format!("{} bytes (undecoded: {e})", body.len()),
     }
@@ -150,7 +150,7 @@ fn describe_request_body(api_key: i16, version: i16, body: &[u8]) -> String {
 /// Try to deserialize a response body, returning a description string.
 fn describe_response_body(api_key: i16, version: i16, body: &[u8]) -> String {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        protocol::dispatch::decode_response_body(api_key, version, body)
+        protocol::generated::decode_response_body(api_key, version, body)
     }));
     match result {
         Ok(Ok(s)) => s,

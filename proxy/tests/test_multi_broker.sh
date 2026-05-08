@@ -46,9 +46,7 @@ cleanup
 
 MODE="${ARGS[0]:-}"
 
-if $DEBUG; then
-    export PROXY_DECODE_MAX=0
-fi
+# (no env var needed anymore — fmt_compact was removed)
 
 # Broker ports (cluster running on 19092/29092/39092 by default).
 # e.g. BROKER_PORTS="19092" to use a single broker.
