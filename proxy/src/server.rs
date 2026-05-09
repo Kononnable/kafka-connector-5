@@ -9,10 +9,9 @@ use crate::tracker::RequestTracker;
 use bytes::{Buf, Bytes, BytesMut};
 use protocol::protocol::serialization::KafkaCodec;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Mutex;
 
 /// The Kafka proxy server.
 #[derive(Debug, Clone)]
@@ -100,7 +99,7 @@ where
             break;
         }
 
-        inspect_requests(&buf, &tracker).await;
+        inspect_requests(&buf, &tracker);
 
         tokio::io::AsyncWriteExt::write_all_buf(&mut writer, &mut buf).await?;
     }
@@ -128,7 +127,7 @@ where
             break;
         }
 
-        inspect_and_rewrite_responses(&mut buf, &tracker, &config).await?;
+        inspect_and_rewrite_responses(&mut buf, &tracker, &config)?;
 
         tokio::io::AsyncWriteExt::write_all_buf(&mut writer, &mut buf).await?;
     }
@@ -159,7 +158,7 @@ fn describe_response_body(api_key: i16, version: i16, body: &[u8]) -> String {
     }
 }
 
-async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) {
+fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) {
     let mut offset = 0;
     loop {
         let remaining = &buf[offset..];
@@ -184,7 +183,7 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
                 parsed.size,
                 body_desc,
             );
-            let mut t = tracker.lock().await;
+            let mut t = tracker.lock().unwrap();
             let inflight = t.track_request(hdr);
             tracing::trace!(
                 "tracking req  corr={} api={}({}) v={} | in-flight={}",
@@ -201,7 +200,7 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
 
 // ── Response inspection + Metadata rewrite ────────────────────────────
 
-async fn inspect_and_rewrite_responses(
+fn inspect_and_rewrite_responses(
     buf: &mut BytesMut,
     tracker: &Arc<Mutex<RequestTracker>>,
     config: &ProxyConfig,
@@ -216,7 +215,7 @@ async fn inspect_and_rewrite_responses(
         if let Some(ref res) = parsed.response {
             // Look up the matching request
             let (meta_version, _body_desc) = {
-                let mut t = tracker.lock().await;
+                let mut t = tracker.lock().unwrap();
                 if let Some(completion) = t.complete_response(res.correlation_id) {
                     let frame_body = &remaining[4..consumed];
                     let is_flex = completion.api_key != 18
