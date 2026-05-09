@@ -6,9 +6,9 @@
 //!
 //! **Response:** `[size: i32] [ResponseHeader] [ResponseBody]`
 //!
-//! The headers are decoded manually using the protocol crate's primitive decoders
-//! because the generated `RequestHeader`/`ResponseHeader` structs do not yet
-//! implement `KafkaCodec`.
+//! Headers are parsed using the generated `RequestHeader::decode` and
+//! `ResponseHeader::peek_correlation_id` (two-phase approach for responses
+//! where is_flexible is not yet known).
 
 use bytes::Buf;
 use protocol::protocol::serialization::SerializationError;
@@ -169,14 +169,6 @@ pub fn parse_response_header(data: &[u8]) -> Result<ParsedResponseHeader, Serial
     use protocol::generated::response_header::ResponseHeader;
     let correlation_id = ResponseHeader::peek_correlation_id(data)?;
     Ok(ParsedResponseHeader { correlation_id })
-}
-
-/// Whether a given API key uses flexible encoding at the given protocol version.
-/// This depends on the `flexibleVersions` field in each message's JSON definition.
-/// Whether a given API key uses flexible encoding at the given protocol version.
-/// Delegates to the protocol crate's generated dispatch table.
-pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {
-    protocol::generated::is_flexible_api(api_key, api_version)
 }
 
 /// Return the byte offset where the response body starts after the response header.

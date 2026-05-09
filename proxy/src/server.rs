@@ -169,7 +169,7 @@ async fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) 
 
         if let Some(ref hdr) = parsed.request {
             let frame_body = &remaining[4..consumed];
-            let is_flex = frame::is_flexible_api(hdr.api_key, hdr.api_version);
+            let is_flex = protocol::generated::is_flexible_api(hdr.api_key, hdr.api_version);
             let body_off = frame::request_body_offset(frame_body, is_flex);
             let body_desc = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 describe_request_body(hdr.api_key, hdr.api_version, &frame_body[body_off..])
@@ -220,7 +220,7 @@ async fn inspect_and_rewrite_responses(
                 if let Some(completion) = t.complete_response(res.correlation_id) {
                     let frame_body = &remaining[4..consumed];
                     let is_flex = completion.api_key != 18
-                        && frame::is_flexible_api(completion.api_key, completion.api_version);
+                        && protocol::generated::is_flexible_api(completion.api_key, completion.api_version);
                     let body_off = frame::response_body_offset(frame_body, is_flex);
                     let body_desc = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         describe_response_body(completion.api_key, completion.api_version, &frame_body[body_off..])
