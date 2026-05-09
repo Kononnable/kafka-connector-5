@@ -11,7 +11,7 @@
 //! implement `KafkaCodec`.
 
 use bytes::Buf;
-use protocol::protocol::serialization::{SerializationError, KafkaCodec};
+use protocol::protocol::serialization::SerializationError;
 use std::fmt;
 use std::time::Instant;
 
@@ -151,59 +151,23 @@ pub fn try_parse_size(data: &[u8]) -> Option<usize> {
 /// Per Kafka spec: ClientId is ALWAYS a classic nullable string (2-byte i16 length),
 /// even in flexible mode. This is so older brokers can parse ApiVersionsRequest
 /// from newer clients before version negotiation.
-pub fn parse_request_header(data: &[u8], is_flexible: bool) -> Result<ParsedRequestHeader, SerializationError> {
-    let mut buf: &[u8] = data;
-    let api_key = i16::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
-    let api_version = i16::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
-    let correlation_id = i32::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
-    // ClientId is ALWAYS classic NULLABLE_STRING (i16 length prefix), not compact!
-    let client_id = match String::decode(&mut buf, protocol::traits::ApiVersion::new(0), false) {
-        Ok(s) => s,
-        Err(SerializationError::UnexpectedNull) => String::new(),
-        Err(e) => return Err(e),
-    };
-    // For flexible v2, skip the tag buffer
-    if is_flexible {
-        let (tag_count, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut buf).unwrap_or((0, 0));
-        for _ in 0..tag_count {
-            let (_, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut buf).unwrap_or((0, 0));
-            let (len, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut buf).unwrap_or((0, 0));
-            buf.advance(len as usize);
-        }
-    }
+pub fn parse_request_header(data: &[u8]) -> Result<ParsedRequestHeader, SerializationError> {
+    use protocol::generated::request_header::RequestHeader;
+    let mut buf = bytes::Bytes::copy_from_slice(data);
+    let hdr = RequestHeader::decode(&mut buf)?;
     Ok(ParsedRequestHeader {
-        api_key,
-        api_version,
-        correlation_id,
-        client_id,
+        api_key: hdr.request_api_key,
+        api_version: hdr.request_api_version,
+        correlation_id: hdr.correlation_id,
+        client_id: hdr.client_id.unwrap_or_default(),
     })
 }
 
 /// Parse a `ResponseHeader` from raw bytes (after the 4-byte size prefix).
-///
-/// Wire format v0 (non-flexible):
-///   correlation_id (i32)
-///
-/// Wire format v1 (flexible):
-///   correlation_id (i32) + tag_buffer (unsigned varint)
-pub fn parse_response_header(data: &[u8], is_flexible: bool) -> Result<ParsedResponseHeader, SerializationError> {
-    let mut buf: &[u8] = data;
-    let correlation_id = i32::decode(&mut buf, protocol::traits::ApiVersion::new(0), false)?;
-    // For flexible (v1), skip tag_buffer bytes
-    if is_flexible {
-        let (tag_count, _) =
-            protocol::protocol::serialization::decode_unsigned_varint(&mut buf)
-                .unwrap_or((0, 0));
-        for _ in 0..tag_count {
-            let (_, _) =
-                protocol::protocol::serialization::decode_unsigned_varint(&mut buf)
-                    .unwrap_or((0, 0));
-            let (len, _) =
-                protocol::protocol::serialization::decode_unsigned_varint(&mut buf)
-                    .unwrap_or((0, 0));
-            buf.advance(len as usize);
-        }
-    }
+/// Tag buffer (if flexible) is accounted for via `response_body_offset`.
+pub fn parse_response_header(data: &[u8]) -> Result<ParsedResponseHeader, SerializationError> {
+    use protocol::generated::response_header::ResponseHeader;
+    let correlation_id = ResponseHeader::peek_correlation_id(data)?;
     Ok(ParsedResponseHeader { correlation_id })
 }
 
@@ -256,14 +220,7 @@ pub fn consume_frame(buf: &[u8], is_request: bool) -> Option<(ParsedFrame, usize
     let raw = &buf[4..total]; // skip size prefix
 
     let (request, response) = if is_request {
-        // Determine header version by peeking at api_key/api_version
-        let hdr_is_flex = {
-            let mut peek: &[u8] = raw;
-            let ak = i16::decode(&mut peek, protocol::traits::ApiVersion::new(0), false).unwrap_or(0);
-            let av = i16::decode(&mut peek, protocol::traits::ApiVersion::new(0), false).unwrap_or(0);
-            is_flexible_api(ak, av)
-        };
-        match parse_request_header(raw, hdr_is_flex) {
+        match parse_request_header(raw) {
             Ok(hdr) => (Some(hdr), None),
             Err(e) => {
                 tracing::warn!("failed to parse request header: {e}");
@@ -272,7 +229,7 @@ pub fn consume_frame(buf: &[u8], is_request: bool) -> Option<(ParsedFrame, usize
             }
         }
     } else {
-        match parse_response_header(raw, false) {
+        match parse_response_header(raw) {
             Ok(hdr) => (None, Some(hdr)),
             Err(e) => {
                 tracing::warn!("failed to parse response header: {e}");

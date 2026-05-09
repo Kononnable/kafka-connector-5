@@ -426,8 +426,12 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
         }
     } // end if let Some(ak)
 
-    // KafkaCodec for all message types
-    code.push_str(&generate_kafka_codec_impl(&msg.name, &msg.fields));
+    // KafkaCodec for all message types (except headers which get inherent methods)
+    if msg.message_type == MessageType::Header {
+        code.push_str(&generate_header_impl(&msg.name, &msg.fields));
+    } else {
+        code.push_str(&generate_kafka_codec_impl(&msg.name, &msg.fields));
+    }
     code.push('\n');
     // And for nested structs.
     for (struct_name, struct_fields) in &nested {
@@ -922,6 +926,94 @@ fn decode_impl_body(_struct_name: &str, fields: &[Field]) -> String {
             .join(", ")
     ));
     code.push_str("    }\n");
+    code
+}
+
+fn generate_header_impl(struct_name: &str, fields: &[Field]) -> String {
+    let mut code = String::new();
+    if struct_name == "RequestHeader" {
+        // RequestHeader inherent encode/decode
+        code.push_str("impl RequestHeader {\n");
+        code.push_str("    pub fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), SerializationError> {\n");
+        code.push_str("        let version = ApiVer::new(self.request_api_version);\n");
+        code.push_str(
+            "        // Per KIP-511, ApiVersions (key 18) always uses header v1 (non-flexible)\n",
+        );
+        code.push_str("        let is_flexible = self.request_api_key != 18 && crate::generated::is_flexible_api(self.request_api_key, self.request_api_version);\n");
+        for f in fields {
+            let rust_name = escape_field_name(&camel_to_snake(&f.name));
+            let cond = field_version_condition(f);
+            if let Some(ref c) = cond {
+                code.push_str(&format!("        if {} {{\n", c));
+            }
+            if f.name == "ClientId" {
+                code.push_str(&format!(
+                    "            self.{}.encode(buf, version, false)?;\n",
+                    rust_name
+                ));
+            } else {
+                code.push_str(&format!(
+                    "            self.{}.encode(buf, version, is_flexible)?;\n",
+                    rust_name
+                ));
+            }
+            if cond.is_some() {
+                code.push_str("        }\n");
+            }
+        }
+        code.push_str("        if is_flexible {\n");
+        code.push_str("            encode_unsigned_varint(0u64, buf);\n");
+        code.push_str("        }\n");
+        code.push_str("        Ok(())\n");
+        code.push_str("    }\n");
+        code.push_str(
+            "    pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, SerializationError> {\n",
+        );
+        code.push_str("        let request_api_key = i16::decode(buf, ApiVer::new(0), false)?;\n");
+        code.push_str(
+            "        let request_api_version = i16::decode(buf, ApiVer::new(0), false)?;\n",
+        );
+        code.push_str(
+            "        // Header is flexible at v2+ (KIP-511: ApiVersions always uses v1)\n",
+        );
+        code.push_str(
+            "        let is_flexible = request_api_key != 18 && crate::generated::is_flexible_api(request_api_key, request_api_version);\n",
+        );
+        code.push_str(
+            "        let correlation_id = i32::decode(buf, ApiVer::new(0), is_flexible)?;\n",
+        );
+        code.push_str("        // ClientId is ALWAYS classic nullable string (KIP-511)\n");
+        code.push_str("        let client_id = if 1 <= request_api_version {\n");
+        code.push_str(
+            "            <Option<String> as KafkaCodec>::decode(buf, ApiVer::new(0), false)?\n",
+        );
+        code.push_str("        } else {\n");
+        code.push_str("            Default::default()\n");
+        code.push_str("        };\n");
+        code.push_str("        if is_flexible {\n");
+        code.push_str("            let (_tag_count, _) = decode_unsigned_varint(buf)?;\n");
+        code.push_str("        }\n");
+        code.push_str("        Ok(Self { request_api_key, request_api_version, correlation_id, client_id })\n");
+        code.push_str("    }\n");
+        code.push_str("}\n");
+    } else if struct_name == "ResponseHeader" {
+        // ResponseHeader: peek_correlation_id + decode with is_flexible
+        code.push_str("impl ResponseHeader {\n");
+        code.push_str(
+            "    pub fn peek_correlation_id(buf: &[u8]) -> Result<i32, SerializationError> {\n",
+        );
+        code.push_str("        let mut cur: &[u8] = buf;\n");
+        code.push_str("        i32::decode(&mut cur, ApiVer::new(0), false)\n");
+        code.push_str("    }\n");
+        code.push_str("    pub fn decode<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, SerializationError> {\n");
+        code.push_str("        let correlation_id = i32::decode(buf, ApiVer::new(0), false)?;\n");
+        code.push_str("        if is_flexible {\n");
+        code.push_str("            let (_tag_count, _) = decode_unsigned_varint(buf)?;\n");
+        code.push_str("        }\n");
+        code.push_str("        Ok(Self { correlation_id })\n");
+        code.push_str("    }\n");
+        code.push_str("}\n");
+    }
     code
 }
 

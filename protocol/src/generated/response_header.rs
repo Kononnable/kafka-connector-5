@@ -12,26 +12,13 @@ pub struct ResponseHeader {
     pub correlation_id: i32,
 }
 
-impl KafkaCodec for ResponseHeader {
-    fn encode<B: BufMut>(
-        &self,
-        buf: &mut B,
-        version: ApiVer,
-        is_flexible: bool,
-    ) -> Result<(), SerializationError> {
-        self.correlation_id.encode(buf, version, is_flexible)?;
-        if is_flexible {
-            encode_unsigned_varint(0u64, buf);
-        }
-        Ok(())
+impl ResponseHeader {
+    pub fn peek_correlation_id(buf: &[u8]) -> Result<i32, SerializationError> {
+        let mut cur: &[u8] = buf;
+        i32::decode(&mut cur, ApiVer::new(0), false)
     }
-
-    fn decode<B: Buf>(
-        buf: &mut B,
-        version: ApiVer,
-        is_flexible: bool,
-    ) -> Result<Self, SerializationError> {
-        let correlation_id = KafkaCodec::decode(buf, version, is_flexible)?;
+    pub fn decode<B: Buf>(buf: &mut B, is_flexible: bool) -> Result<Self, SerializationError> {
+        let correlation_id = i32::decode(buf, ApiVer::new(0), false)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }

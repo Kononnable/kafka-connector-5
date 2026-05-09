@@ -6,10 +6,8 @@
 # undecoded messages (except ApiVersions), and port rewrites.
 #
 # Usage:
-#   ./test_multi_broker.sh                          # 3 proxies (3-broker cluster)
-#   ./test_multi_broker.sh single                   # 1 proxy (single-broker cluster)
-#   ./test_multi_broker.sh --debug                  # show proxy output
-#   ./test_multi_broker.sh single --debug
+#   ./test_multi_broker.sh           # 3 proxies (3-broker cluster)
+#   ./test_multi_broker.sh --debug   # show proxy output
 #
 # Exit code: 0 = all checks passed, 1 = something failed
 
@@ -21,14 +19,11 @@ PASS=0
 FAIL=0
 DEBUG=false
 
-# Parse args: extract --debug flag from any position
-ARGS=()
+# Parse args: check for --debug flag
 DEBUG=false
 for arg in "$@"; do
     if [ "$arg" = "--debug" ]; then
         DEBUG=true
-    else
-        ARGS+=("$arg")
     fi
 done
 
@@ -43,10 +38,6 @@ cleanup() {
 }
 trap cleanup EXIT
 cleanup
-
-MODE="${ARGS[0]:-}"
-
-# (no env var needed anymore — fmt_compact was removed)
 
 # Broker ports (cluster running on 19092/29092/39092 by default).
 # e.g. BROKER_PORTS="19092" to use a single broker.
@@ -64,20 +55,12 @@ for i in "${!BA[@]}"; do
     PORT_MAP+="${BA[$i]}:${PROXY_PORTS[$i]}"
 done
 
-if [ "$MODE" = "single" ]; then
-    # Single-proxy mode: use only the first broker.
-    LOGDIR=$(mktemp -d /tmp/proxy_test_XXXX)
-    RUST_LOG=info "$PROXY_BIN" 127.0.0.1:${PROXY_PORTS[0]} 127.0.0.1:${BA[0]} "$(echo "$PORT_MAP" | cut -d, -f1)" > "$LOGDIR/proxy.log" 2>&1 &
-    LOG="$LOGDIR/proxy.log"
-else
-    # Multi-proxy mode: start one proxy per broker.
-    LOGDIR=$(mktemp -d /tmp/proxy_test_XXXX)
-    for i in "${!BA[@]}"; do
-        [ $i -ge 3 ] && break
-        RUST_LOG=info "$PROXY_BIN" 127.0.0.1:${PROXY_PORTS[$i]} 127.0.0.1:${BA[$i]} "$PORT_MAP" > "$LOGDIR/proxy$((i+1)).log" 2>&1 &
-    done
-    LOG="$LOGDIR/proxy1.log"
-fi
+LOGDIR=$(mktemp -d /tmp/proxy_test_XXXX)
+for i in "${!BA[@]}"; do
+    [ $i -ge 3 ] && break
+    RUST_LOG=info "$PROXY_BIN" 127.0.0.1:${PROXY_PORTS[$i]} 127.0.0.1:${BA[$i]} "$PORT_MAP" > "$LOGDIR/proxy$((i+1)).log" 2>&1 &
+done
+LOG="$LOGDIR/proxy1.log"
 
 echo "=== Proxy log: $LOG ==="
 
@@ -114,11 +97,20 @@ sleep 2
 echo ""
 echo "=== Proxy log checks ==="
 
-DESER_ERR=$(grep -c 'deser err' < "$LOG" 2>/dev/null; true)
-UNDECODED=$(grep -c '→ REQ body.*undecoded' < "$LOG" 2>/dev/null; true)
-NON_API=$(grep '→ REQ body.*undecoded' < "$LOG" 2>/dev/null | grep -v '20 bytes' | wc -l; true)
-REWRITES=$(grep -c 'rewriting broker' < "$LOG" 2>/dev/null; true)
-PANICS=$(grep -c 'panicked' < "$LOG" 2>/dev/null; true)
+# Aggregate counts across all proxy logs
+ALL_LOGS=$(ls "$LOGDIR"/proxy*.log 2>/dev/null)
+DESER_ERR=0
+UNDECODED=0
+NON_API=0
+REWRITES=0
+PANICS=0
+for f in $ALL_LOGS; do
+    DESER_ERR=$((DESER_ERR + $(grep -c 'deser err' < "$f" 2>/dev/null || true)))
+    UNDECODED=$((UNDECODED + $(grep -c '→ REQ body.*undecoded' < "$f" 2>/dev/null || true)))
+    NON_API=$(($NON_API + $(grep '→ REQ body.*undecoded' < "$f" 2>/dev/null | grep -v '20 bytes' | wc -l || true)))
+    REWRITES=$((REWRITES + $(grep -c 'rewriting broker' < "$f" 2>/dev/null || true)))
+    PANICS=$((PANICS + $(grep -c 'panicked' < "$f" 2>/dev/null || true)))
+done
 
 echo "  deserialization errors:  $DESER_ERR (expect 0)"
 echo "  undecoded (total):       $UNDECODED"
@@ -159,8 +151,11 @@ fi
 
 if $DEBUG; then
     echo ""
-    echo "=== Proxy request/response log ==="
-    grep -E '→ REQ|← RES' < "$LOG" 2>/dev/null | head -40
+    for f in $ALL_LOGS; do
+        name=$(basename "$f")
+        echo "=== Proxy request/response log ($name) ==="
+        grep -E '→ REQ|← RES' < "$f" 2>/dev/null
+    done
 else
     echo "  (use --debug to show proxy log)"
 fi

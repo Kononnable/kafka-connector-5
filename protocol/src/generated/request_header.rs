@@ -19,35 +19,33 @@ pub struct RequestHeader {
     pub client_id: Option<String>,
 }
 
-impl KafkaCodec for RequestHeader {
-    fn encode<B: BufMut>(
-        &self,
-        buf: &mut B,
-        version: ApiVer,
-        is_flexible: bool,
-    ) -> Result<(), SerializationError> {
+impl RequestHeader {
+    pub fn encode<B: BufMut>(&self, buf: &mut B) -> Result<(), SerializationError> {
+        let version = ApiVer::new(self.request_api_version);
+        // Per KIP-511, ApiVersions (key 18) always uses header v1 (non-flexible)
+        let is_flexible = self.request_api_key != 18
+            && crate::generated::is_flexible_api(self.request_api_key, self.request_api_version);
         self.request_api_key.encode(buf, version, is_flexible)?;
         self.request_api_version.encode(buf, version, is_flexible)?;
         self.correlation_id.encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
-            self.client_id.encode(buf, version, is_flexible)?;
+            self.client_id.encode(buf, version, false)?;
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
         }
         Ok(())
     }
-
-    fn decode<B: Buf>(
-        buf: &mut B,
-        version: ApiVer,
-        is_flexible: bool,
-    ) -> Result<Self, SerializationError> {
-        let request_api_key = KafkaCodec::decode(buf, version, is_flexible)?;
-        let request_api_version = KafkaCodec::decode(buf, version, is_flexible)?;
-        let correlation_id = KafkaCodec::decode(buf, version, is_flexible)?;
-        let client_id = if 1 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
+    pub fn decode<B: Buf>(buf: &mut B) -> Result<Self, SerializationError> {
+        let request_api_key = i16::decode(buf, ApiVer::new(0), false)?;
+        let request_api_version = i16::decode(buf, ApiVer::new(0), false)?;
+        // Header is flexible at v2+ (KIP-511: ApiVersions always uses v1)
+        let is_flexible = request_api_key != 18
+            && crate::generated::is_flexible_api(request_api_key, request_api_version);
+        let correlation_id = i32::decode(buf, ApiVer::new(0), is_flexible)?;
+        // ClientId is ALWAYS classic nullable string (KIP-511)
+        let client_id = if 1 <= request_api_version {
+            <Option<String> as KafkaCodec>::decode(buf, ApiVer::new(0), false)?
         } else {
             Default::default()
         };
