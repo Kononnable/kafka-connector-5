@@ -10,7 +10,7 @@ use bytes::{Buf, Bytes, BytesMut};
 use protocol::protocol::serialization::KafkaCodec;
 
 use std::sync::{Arc, Mutex};
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 /// The Kafka proxy server.
@@ -93,7 +93,7 @@ where
     let mut buf = BytesMut::with_capacity(64 * 1024);
 
     loop {
-        let n = tokio::io::AsyncReadExt::read_buf(&mut reader, &mut buf).await?;
+        let n = reader.read_buf(&mut buf).await?;
         if n == 0 {
             tracing::debug!("client→broker: source EOF");
             break;
@@ -101,7 +101,7 @@ where
 
         inspect_requests(&buf, &tracker);
 
-        tokio::io::AsyncWriteExt::write_all_buf(&mut writer, &mut buf).await?;
+        writer.write_all_buf(&mut buf).await?;
     }
     Ok(())
 }
@@ -121,7 +121,7 @@ where
     let mut buf = BytesMut::with_capacity(64 * 1024);
 
     loop {
-        let n = tokio::io::AsyncReadExt::read_buf(&mut reader, &mut buf).await?;
+        let n = reader.read_buf(&mut buf).await?;
         if n == 0 {
             tracing::debug!("broker→client: source EOF");
             break;
@@ -129,7 +129,7 @@ where
 
         inspect_and_rewrite_responses(&mut buf, &tracker, &config)?;
 
-        tokio::io::AsyncWriteExt::write_all_buf(&mut writer, &mut buf).await?;
+        writer.write_all_buf(&mut buf).await?;
     }
     Ok(())
 }
