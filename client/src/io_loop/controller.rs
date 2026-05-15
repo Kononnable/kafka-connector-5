@@ -1,3 +1,5 @@
+use crate::cluster::ClusterOptions;
+
 use std::sync::mpsc;
 use std::sync::Arc;
 
@@ -22,6 +24,7 @@ pub(crate) enum LifecycleState {
 }
 
 pub(crate) struct EventLoop {
+    options: ClusterOptions,
     cmd_rx: mpsc::Receiver<Command>,
     poll: Poll,
     connections: Vec<Connection>,
@@ -30,7 +33,7 @@ pub(crate) struct EventLoop {
 }
 
 impl EventLoop {
-    pub(crate) fn new() -> (Self, CommandSender) {
+    pub(crate) fn new(options: ClusterOptions) -> (Self, CommandSender) {
         let poll = Poll::new().expect("failed to create mio Poll");
         let (tx, rx) = mpsc::channel();
 
@@ -38,6 +41,7 @@ impl EventLoop {
 
         let cmd_tx = CommandSender::new(tx, Arc::new(waker));
         let event_loop = EventLoop {
+            options,
             cmd_rx: rx,
             poll,
             connections: Vec::new(),

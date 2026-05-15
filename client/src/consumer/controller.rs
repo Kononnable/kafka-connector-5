@@ -1,1 +1,1 @@
-pub struct Consumer;
+pub struct ConsumerController;

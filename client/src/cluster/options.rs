@@ -1,1 +1,1 @@
-pub struct KafkaOptions;
+pub struct ClusterOptions;
