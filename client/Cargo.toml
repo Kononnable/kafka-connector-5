@@ -2,3 +2,8 @@
 name = "client"
 version.workspace = true
 edition.workspace = true
+
+[dependencies]
+protocol = { path = "../protocol" }
+bytes = { workspace = true }
+thiserror = "2"
