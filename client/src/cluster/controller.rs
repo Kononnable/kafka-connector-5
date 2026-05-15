@@ -1,20 +1,21 @@
-use std::sync::mpsc;
 use std::thread;
+use std::thread::JoinHandle;
 
+use crate::io_loop::Command;
+use crate::io_loop::CommandSender;
 use crate::io_loop::EventLoop;
 use super::KafkaOptions;
 
 pub struct KafkaCluster {
-    event_loop: Option<thread::JoinHandle<()>>,
-    cmd_tx: mpsc::Sender<()>,
+    event_loop: Option<JoinHandle<()>>,
+    cmd_tx: CommandSender,
 }
 
 impl KafkaCluster {
     pub fn new(_options: KafkaOptions) -> Self {
-        let (cmd_tx, cmd_rx) = mpsc::channel();
+        let (mut el, cmd_tx) = EventLoop::new();
 
         let event_loop = thread::spawn(move || {
-            let mut el = EventLoop::new(cmd_rx);
             el.run();
         });
 
@@ -27,8 +28,11 @@ impl KafkaCluster {
 
 impl Drop for KafkaCluster {
     fn drop(&mut self) {
+        let _ = self.cmd_tx.send(Command::Shutdown);
         if let Some(handle) = self.event_loop.take() {
-            let _ = handle.join();
+            if let Err(e) = handle.join() {
+                tracing::error!("event loop thread panicked: {e:?}");
+            }
         }
     }
 }
