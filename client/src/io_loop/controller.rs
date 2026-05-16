@@ -5,6 +5,8 @@ use std::time::Instant;
 
 use mio::net::TcpStream;
 use mio::{Events, Interest, Poll, Token, Waker};
+use protocol::generated::{ApiVersionsRequest, ApiVersionsResponse, ResponseHeader};
+use protocol::traits::{ApiResponse, ApiVersion};
 
 use super::connection::Connection;
 use super::lifecycle_state::LifecycleState;
@@ -83,7 +85,7 @@ impl EventLoop {
 
                 if let Some(conn) = self.connections.iter_mut().find(|c| c.token() == token) {
                     if event.is_readable() {
-                        conn.on_readable();
+                        let _ = conn.on_readable();
                     }
                     if event.is_writable() {
                         conn.on_writable();
@@ -134,20 +136,21 @@ impl EventLoop {
                 let token = Token(self.next_token);
                 self.next_token += 1;
 
-                if let Ok(mut stream) = TcpStream::connect(*addr) {
-                    if self
+                if let Ok(mut stream) = TcpStream::connect(*addr)
+                    && self
                         .poll
                         .registry()
-                        .register(&mut stream, token, Interest::WRITABLE)
+                        .register(&mut stream, token, Interest::WRITABLE | Interest::READABLE)
                         .is_ok()
-                    {
-                        candidates.push((stream, token));
-                    }
+                {
+                    candidates.push((stream, token));
                 }
             }
 
             if candidates.is_empty() {
-                tracing::warn!("no bootstrap addresses could be resolved, retrying in {retry_delay:?}");
+                tracing::warn!(
+                    "no bootstrap addresses could be resolved, retrying in {retry_delay:?}"
+                );
                 thread::sleep(retry_delay);
                 continue;
             }
@@ -176,20 +179,42 @@ impl EventLoop {
                         let token = event.token();
                         if let Some(pos) = candidates.iter().position(|(_, t)| *t == token) {
                             let (stream, _) = candidates.swap_remove(pos);
-                            // Deregister and close remaining candidates
+
+                            let mut conn = Connection::new(
+                                token,
+                                stream,
+                                Some(self.options.client_name.clone()),
+                            );
+
+                            if let Err(reason) = self.fetch_api_versions(&mut conn, token) {
+                                let addr = conn
+                                    .stream()
+                                    .peer_addr()
+                                    .map_or_else(|_| "unknown".to_string(), |a| a.to_string());
+                                tracing::warn!(
+                                    "failed to fetch api versions from {addr}: {reason}"
+                                );
+                                let _ = self.poll.registry().deregister(conn.stream());
+                                continue;
+                            }
+
+                            // Success — close remaining candidates, keep this one.
                             for (mut other, _) in candidates.drain(..) {
                                 let _ = self.poll.registry().deregister(&mut other);
                             }
-                            self.connections
-                                .push(Connection::new(token, stream));
-                            tracing::info!("connected to bootstrap broker");
+                            let addr = conn
+                                .stream()
+                                .peer_addr()
+                                .map_or("unknown".to_string(), |a| a.to_string());
+                            self.connections.push(conn);
+                            tracing::info!("connected to bootstrap broker {addr}");
                             return;
                         }
                     }
                 }
             }
 
-            // All timed out — deregister, close, sleep, retry
+            // All candidates exhausted — deregister, sleep, retry.
             for (mut other, _) in candidates.drain(..) {
                 let _ = self.poll.registry().deregister(&mut other);
             }
@@ -198,6 +223,61 @@ impl EventLoop {
                 "no bootstrap connection within {timeout:?}, retrying in {retry_delay:?}"
             );
             thread::sleep(retry_delay);
+        }
+    }
+
+    fn fetch_api_versions(&mut self, conn: &mut Connection, token: Token) -> Result<(), String> {
+        let deadline = Instant::now() + self.options.request_timeout;
+        let version = ApiVersion::new(0);
+
+        conn.send_api_request(&ApiVersionsRequest::default(), Some(version))
+            .map_err(|e| format!("serialize: {e}"))?;
+
+        let mut poll_events = Events::with_capacity(1);
+        while conn.can_write() {
+            let rem = deadline.saturating_duration_since(Instant::now());
+            if rem.is_zero() {
+                return Err("write timed out".into());
+            }
+            let _ = self.poll.poll(&mut poll_events, Some(rem));
+            if poll_events
+                .iter()
+                .any(|e| e.token() == token && e.is_writable())
+            {
+                conn.on_writable();
+            }
+        }
+
+        loop {
+            let rem = deadline.saturating_duration_since(Instant::now());
+            if rem.is_zero() {
+                return Err("read timed out".into());
+            }
+            let _ = self.poll.poll(&mut poll_events, Some(rem));
+            if poll_events
+                .iter()
+                .any(|e| e.token() == token && e.is_readable())
+            {
+                match conn.on_readable() {
+                    Ok(0) => return Err("connection closed".into()),
+                    Ok(_) => {}
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => continue,
+                    Err(e) => return Err(format!("read error: {e}")),
+                }
+                if let Some((_, mut body)) = conn.read_broker_response() {
+                    if ResponseHeader::decode(&mut body, false).is_err() {
+                        return Err("invalid response header".into());
+                    }
+                    match ApiVersionsResponse::deserialize(version, &mut body) {
+                        Ok(resp) if resp.error_code == 0 => {
+                            conn.set_api_versions(resp.api_keys);
+                            return Ok(());
+                        }
+                        Ok(resp) => return Err(format!("broker error: {}", resp.error_code)),
+                        Err(e) => return Err(format!("decode response: {e}")),
+                    }
+                }
+            }
         }
     }
 
