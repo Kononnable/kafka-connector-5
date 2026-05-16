@@ -6,6 +6,7 @@ use std::sync::Arc;
 use mio::{Events, Poll, Token, Waker};
 
 use super::connection::Connection;
+use super::lifecycle_state::LifecycleState;
 use super::metadata::MetadataCache;
 use super::sender::CommandSender;
 
@@ -14,13 +15,6 @@ const WAKEUP_TOKEN: Token = Token(0);
 
 pub(crate) enum Command {
     Shutdown,
-}
-
-#[derive(PartialEq, Eq)]
-pub(crate) enum LifecycleState {
-    Active,
-    ShutdownInitialized,
-    ShutdownComplete,
 }
 
 pub(crate) struct EventLoop {
@@ -33,29 +27,33 @@ pub(crate) struct EventLoop {
 }
 
 impl EventLoop {
-    pub(crate) fn new(options: ClusterOptions) -> (Self, CommandSender) {
+    pub(crate) fn new(options: ClusterOptions) -> (Self, CommandSender, LifecycleState) {
         let poll = Poll::new().expect("failed to create mio Poll");
         let (tx, rx) = mpsc::channel();
 
         let waker = Waker::new(poll.registry(), WAKEUP_TOKEN).expect("failed to create mio Waker");
 
         let cmd_tx = CommandSender::new(tx, Arc::new(waker));
+        let lifecycle = LifecycleState::new();
+
         let event_loop = EventLoop {
             options,
             cmd_rx: rx,
             poll,
             connections: Vec::new(),
             metadata_cache: MetadataCache::new(),
-            lifecycle: LifecycleState::Active,
+            lifecycle: lifecycle.clone(),
         };
 
-        (event_loop, cmd_tx)
+        (event_loop, cmd_tx, lifecycle)
     }
 
     pub(crate) fn run(&mut self) {
+        self.lifecycle.set_active();
+
         let mut events = Events::with_capacity(1024);
 
-        while self.lifecycle != LifecycleState::ShutdownComplete {
+        while !self.lifecycle.is_shutdown_complete() {
             // Block indefinitely — the waker will interrupt poll when a command arrives.
             if let Err(e) = self.poll.poll(&mut events, None) {
                 match e.kind() {
@@ -100,8 +98,9 @@ impl EventLoop {
         while let Ok(cmd) = self.cmd_rx.try_recv() {
             match cmd {
                 Command::Shutdown => {
-                    self.lifecycle = LifecycleState::ShutdownComplete;
+                    self.lifecycle.set_shutdown_triggered();
                     // TODO: graceful close sequence (flush pending sends, leave group, etc.)
+                    self.lifecycle.set_shutdown_complete();
                 }
             }
         }

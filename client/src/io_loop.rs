@@ -3,9 +3,11 @@ use std::time::Instant;
 
 pub(crate) mod connection;
 pub(crate) mod controller;
+pub(crate) mod lifecycle_state;
 pub(crate) mod metadata;
 pub(crate) mod sender;
 
+pub use lifecycle_state::LifecycleState;
 pub(crate) use controller::{Command, EventLoop};
 pub(crate) use sender::CommandSender;
 
