@@ -2,6 +2,15 @@ use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+/// Observable states of the event loop lifecycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum State {
+    Initializing,
+    Active,
+    ShutdownTriggered,
+    ShutdownComplete,
+}
+
 /// Tracks whether the event loop is still running.
 ///
 /// Cloning shares the same underlying atomic state so the handle
@@ -23,11 +32,6 @@ impl LifecycleState {
         self.0.store(Self::ACTIVE, Ordering::Relaxed);
     }
 
-    /// Returns `true` when the event loop thread is running and polling.
-    pub fn is_active(&self) -> bool {
-        self.0.load(Ordering::Relaxed) == Self::ACTIVE
-    }
-
     pub(crate) fn set_shutdown_triggered(&self) {
         self.0.store(Self::SHUTDOWN_TRIGGERED, Ordering::Relaxed);
     }
@@ -36,13 +40,14 @@ impl LifecycleState {
         self.0.store(Self::SHUTDOWN_COMPLETE, Ordering::Relaxed);
     }
 
-    /// Returns `true` when the event loop has received a shutdown command.
-    pub fn is_shutdown_triggered(&self) -> bool {
-        self.0.load(Ordering::Relaxed) == Self::SHUTDOWN_TRIGGERED
-    }
-
-    /// Returns `true` when the event loop has fully shut down.
-    pub fn is_shutdown_complete(&self) -> bool {
-        self.0.load(Ordering::Relaxed) == Self::SHUTDOWN_COMPLETE
+    /// Returns the current lifecycle state.
+    pub fn state(&self) -> State {
+        match self.0.load(Ordering::Relaxed) {
+            Self::INITIALIZING => State::Initializing,
+            Self::ACTIVE => State::Active,
+            Self::SHUTDOWN_TRIGGERED => State::ShutdownTriggered,
+            Self::SHUTDOWN_COMPLETE => State::ShutdownComplete,
+            _ => unreachable!(),
+        }
     }
 }

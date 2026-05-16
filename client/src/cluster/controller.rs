@@ -47,7 +47,7 @@ impl ClusterController {
         self: Arc<Self>,
         options: ProducerOptions,
     ) -> Result<ProducerController, Vec<ProducerOptionsValidationError>> {
-        while !self.lifecycle_state.is_active() {
+        while self.lifecycle_state.state() != crate::io_loop::State::Active {
             Delay::new(Duration::from_millis(10)).await;
         }
         ProducerController::new(self, options)
@@ -60,7 +60,7 @@ impl ClusterController {
         self: Arc<Self>,
         options: ConsumerOptions,
     ) -> Result<ConsumerController, Vec<ConsumerOptionsValidationError>> {
-        while !self.lifecycle_state.is_active() {
+        while self.lifecycle_state.state() != crate::io_loop::State::Active {
             Delay::new(Duration::from_millis(10)).await;
         }
         ConsumerController::new(self, options)

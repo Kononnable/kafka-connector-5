@@ -53,7 +53,7 @@ impl EventLoop {
 
         let mut events = Events::with_capacity(1024);
 
-        while !self.lifecycle.is_shutdown_complete() {
+        while self.lifecycle.state() != super::State::ShutdownComplete {
             // Block indefinitely — the waker will interrupt poll when a command arrives.
             if let Err(e) = self.poll.poll(&mut events, None) {
                 match e.kind() {
