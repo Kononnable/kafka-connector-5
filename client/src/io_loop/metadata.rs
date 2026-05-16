@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
-pub(crate) struct BrokerInfo;
+struct BrokerInfo;
 
-pub(crate) struct PartitionInfo;
+struct PartitionInfo;
 
-pub(crate) struct MetadataCache {
+pub struct MetadataCache {
     _brokers: HashMap<u32, BrokerInfo>,
     _partitions: HashMap<(String, u32), PartitionInfo>,
 }
 
 impl MetadataCache {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         MetadataCache {
             _brokers: HashMap::new(),
             _partitions: HashMap::new(),

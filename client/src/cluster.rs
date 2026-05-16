@@ -1,6 +1,6 @@
-pub(crate) mod controller;
-pub(crate) mod error;
-pub(crate) mod options;
+mod controller;
+mod error;
+mod options;
 
 pub use controller::ClusterController;
 pub use error::ClusterOptionsValidationError;

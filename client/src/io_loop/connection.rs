@@ -1,19 +1,25 @@
+use mio::net::TcpStream;
 use mio::Token;
 
-pub(crate) struct Connection {
+pub struct Connection {
     token: Token,
+    stream: TcpStream,
 }
 
 impl Connection {
-    pub(crate) fn token(&self) -> Token {
+    pub fn new(token: Token, stream: TcpStream) -> Self {
+        Connection { token, stream }
+    }
+
+    pub fn token(&self) -> Token {
         self.token
     }
 
-    pub(crate) fn on_readable(&mut self) {
+    pub fn on_readable(&mut self) {
         // TODO: read bytes from socket, parse responses
     }
 
-    pub(crate) fn on_writable(&mut self) {
+    pub fn on_writable(&mut self) {
         // TODO: write pending bytes to socket
     }
 }

@@ -17,25 +17,31 @@ pub enum State {
 #[derive(Clone, Debug)]
 pub struct LifecycleState(Arc<AtomicU8>);
 
+impl Default for LifecycleState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LifecycleState {
     const INITIALIZING: u8 = 0;
     const ACTIVE: u8 = 1;
     const SHUTDOWN_TRIGGERED: u8 = 2;
     const SHUTDOWN_COMPLETE: u8 = 3;
 
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         LifecycleState(Arc::new(AtomicU8::new(Self::INITIALIZING)))
     }
 
-    pub(crate) fn set_active(&self) {
+    pub fn set_active(&self) {
         self.0.store(Self::ACTIVE, Ordering::Relaxed);
     }
 
-    pub(crate) fn set_shutdown_triggered(&self) {
+    pub fn set_shutdown_triggered(&self) {
         self.0.store(Self::SHUTDOWN_TRIGGERED, Ordering::Relaxed);
     }
 
-    pub(crate) fn set_shutdown_complete(&self) {
+    pub fn set_shutdown_complete(&self) {
         self.0.store(Self::SHUTDOWN_COMPLETE, Ordering::Relaxed);
     }
 
