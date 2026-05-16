@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use crate::cluster::ClusterController;
-
 use super::ConsumerOptions;
 use super::error::ConsumerOptionsValidationError;
+use crate::cluster::ClusterController;
 
 pub struct ConsumerController {
     _cluster: Arc<ClusterController>,

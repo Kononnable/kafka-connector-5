@@ -4,9 +4,10 @@
 //! A companion test using `expect_test::expect_file![]` verifies the output and can
 //! cleanly regenerate it when schemas or the codegen logic change.
 
-use super::structs::{Field, MessageStruct, MessageType};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
+
+use super::structs::{Field, MessageStruct, MessageType};
 
 // ---------------------------------------------------------------------------
 // Public API

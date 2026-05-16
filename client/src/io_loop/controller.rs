@@ -1,7 +1,4 @@
-use crate::cluster::ClusterOptions;
-
-use std::sync::Arc;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 
 use mio::{Events, Poll, Token, Waker};
 
@@ -9,6 +6,7 @@ use super::connection::Connection;
 use super::lifecycle_state::LifecycleState;
 use super::metadata::MetadataCache;
 use super::sender::CommandSender;
+use crate::cluster::ClusterOptions;
 
 /// Token used for the wakeup fd (eventfd/pipe) to interrupt poll.
 const WAKEUP_TOKEN: Token = Token(0);

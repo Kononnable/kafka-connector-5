@@ -17,8 +17,9 @@
 //! | `array`          | 4-byte length (int32) + N elements, -1 ⇒ null          |
 //! | `uuid`           | 16 raw bytes                                           |
 
-pub use crate::traits::SerializationError;
 use bytes::{Buf, BufMut};
+
+pub use crate::traits::SerializationError;
 
 // ---------------------------------------------------------------------------
 // Helper: unsigned varint encoding (used internally by varint / varlong)
@@ -702,8 +703,9 @@ impl KafkaCodec for [u8; 16] {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use bytes::BytesMut;
+
+    use super::*;
 
     #[test]
     fn test_roundtrip_i8() {
@@ -949,8 +951,7 @@ mod tests {
 
     #[test]
     fn test_tagged_field_roundtrip() {
-        use crate::generated::fetch_snapshot_request::FetchSnapshotRequest;
-        use crate::generated::fetch_snapshot_request::TopicSnapshot;
+        use crate::generated::fetch_snapshot_request::{FetchSnapshotRequest, TopicSnapshot};
 
         let original = FetchSnapshotRequest {
             cluster_id: Some("test-cluster-id".into()),

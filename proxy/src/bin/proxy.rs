@@ -7,9 +7,10 @@
 //! Example for a 3-broker cluster:
 //!   proxy 127.0.0.1:9192 127.0.0.1:9092 "9092:9192,9093:9193,9094:9194"
 
-use proxy::{ProxyConfig, ProxyServer};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+
+use proxy::{ProxyConfig, ProxyServer};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]

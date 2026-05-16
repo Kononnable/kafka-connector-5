@@ -1,22 +1,15 @@
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::Duration;
 
 use futures_timer::Delay;
-use std::time::Duration;
 
 use super::ClusterOptions;
 use super::error::ClusterOptionsValidationError;
-use crate::consumer::ConsumerController;
-use crate::consumer::ConsumerOptions;
-use crate::consumer::ConsumerOptionsValidationError;
-use crate::io_loop::Command;
-use crate::io_loop::CommandSender;
-use crate::io_loop::EventLoop;
-use crate::io_loop::LifecycleState;
-use crate::producer::ProducerController;
-use crate::producer::ProducerOptions;
-use crate::producer::ProducerOptionsValidationError;
+use crate::consumer::{ConsumerController, ConsumerOptions, ConsumerOptionsValidationError};
+use crate::io_loop::{Command, CommandSender, EventLoop, LifecycleState};
+use crate::producer::{ProducerController, ProducerOptions, ProducerOptionsValidationError};
 
 pub struct ClusterController {
     event_loop: Option<JoinHandle<()>>,

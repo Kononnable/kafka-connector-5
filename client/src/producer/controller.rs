@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use crate::cluster::ClusterController;
-
 use super::ProducerOptions;
 use super::error::ProducerOptionsValidationError;
+use crate::cluster::ClusterController;
 
 pub struct ProducerController {
     _cluster: Arc<ClusterController>,

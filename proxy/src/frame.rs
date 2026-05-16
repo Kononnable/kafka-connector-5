@@ -10,10 +10,11 @@
 //! `ResponseHeader::peek_correlation_id` (two-phase approach for responses
 //! where is_flexible is not yet known).
 
-use bytes::Buf;
-use protocol::protocol::serialization::SerializationError;
 use std::fmt;
 use std::time::Instant;
+
+use bytes::Buf;
+use protocol::protocol::serialization::SerializationError;
 
 // ---------------------------------------------------------------------------
 // ParsedFrame

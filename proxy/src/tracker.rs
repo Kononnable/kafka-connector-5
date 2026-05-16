@@ -4,9 +4,10 @@
 //! with a timestamp. When the matching response arrives, we compute the
 //! round-trip latency and log it.
 
-use crate::frame::{InFlightRequest, ParsedRequestHeader};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+use crate::frame::{InFlightRequest, ParsedRequestHeader};
 
 /// Tracks in-flight Kafka requests by correlation ID.
 #[derive(Debug, Clone)]

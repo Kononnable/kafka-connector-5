@@ -3,8 +3,9 @@
 //! Every Kafka API message implements either [`ApiRequest`] or [`ApiResponse`],
 //! providing serialization/deserialization support and version metadata.
 
-use bytes::{Bytes, BytesMut};
 use std::fmt;
+
+use bytes::{Bytes, BytesMut};
 
 impl From<std::str::Utf8Error> for SerializationError {
     fn from(_: std::str::Utf8Error) -> Self {

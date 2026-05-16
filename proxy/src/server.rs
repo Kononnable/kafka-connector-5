@@ -2,16 +2,17 @@
 //! them to an upstream Kafka broker using bidirectional copy, with
 //! frame inspection, logging, latency tracking, and Metadata rewrite.
 
+use std::sync::{Arc, Mutex};
+
+use bytes::{Buf, Bytes, BytesMut};
+use protocol::protocol::serialization::KafkaCodec;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
+
 use crate::config::ProxyConfig;
 use crate::error::ProxyError;
 use crate::frame;
 use crate::tracker::RequestTracker;
-use bytes::{Buf, Bytes, BytesMut};
-use protocol::protocol::serialization::KafkaCodec;
-
-use std::sync::{Arc, Mutex};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
 
 /// The Kafka proxy server.
 #[derive(Debug, Clone)]

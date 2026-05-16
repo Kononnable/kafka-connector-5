@@ -1,6 +1,7 @@
 //! Error types for the Kafka proxy.
 
 use std::io;
+
 use thiserror::Error;
 
 /// Errors that can occur during proxy operation.
