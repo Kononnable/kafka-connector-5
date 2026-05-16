@@ -58,11 +58,17 @@ impl ProxyConfig {
             }
             let parts: Vec<&str> = pair.split(':').collect();
             if parts.len() != 2 {
-                return Err(format!("invalid port mapping: {pair}, expected broker_port:proxy_port"));
+                return Err(format!(
+                    "invalid port mapping: {pair}, expected broker_port:proxy_port"
+                ));
             }
-            let broker_port: u16 = parts[0].trim().parse()
+            let broker_port: u16 = parts[0]
+                .trim()
+                .parse()
                 .map_err(|_| format!("invalid broker port: {}", parts[0]))?;
-            let proxy_port: u16 = parts[1].trim().parse()
+            let proxy_port: u16 = parts[1]
+                .trim()
+                .parse()
                 .map_err(|_| format!("invalid proxy port: {}", parts[1]))?;
             map.insert(broker_port, proxy_port);
         }

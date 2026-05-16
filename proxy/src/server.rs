@@ -49,12 +49,12 @@ impl ProxyServer {
 }
 
 /// Per-connection handler: pipes client ↔ broker, inspecting frames as they pass.
-async fn handle_connection(
-    client: TcpStream,
-    config: Arc<ProxyConfig>,
-) -> Result<(), ProxyError> {
+async fn handle_connection(client: TcpStream, config: Arc<ProxyConfig>) -> Result<(), ProxyError> {
     let broker = TcpStream::connect(config.broker_addr).await.map_err(|e| {
-        ProxyError::Upstream(format!("failed to connect to broker {}: {}", config.broker_addr, e))
+        ProxyError::Upstream(format!(
+            "failed to connect to broker {}: {}",
+            config.broker_addr, e
+        ))
     })?;
 
     tracing::info!("connected to upstream broker at {}", config.broker_addr);
@@ -66,13 +66,15 @@ async fn handle_connection(
     let tracker2 = Arc::clone(&tracker);
     let config2 = Arc::clone(&config);
 
-    let c2b = tokio::spawn(async move {
-        pipe_client_to_broker(client_r, broker_w, tracker, config).await
-    });
+    let c2b =
+        tokio::spawn(
+            async move { pipe_client_to_broker(client_r, broker_w, tracker, config).await },
+        );
 
-    let b2c = tokio::spawn(async move {
-        pipe_broker_to_client(broker_r, client_w, tracker2, config2).await
-    });
+    let b2c =
+        tokio::spawn(
+            async move { pipe_broker_to_client(broker_r, client_w, tracker2, config2).await },
+        );
 
     let _ = tokio::try_join!(c2b, b2c);
     Ok(())
@@ -136,8 +138,6 @@ where
 
 // ── Request inspection (read-only) ────────────────────────────────────
 
-
-
 /// Try to deserialize a request body, returning a description string.
 fn describe_request_body(api_key: i16, version: i16, body: &[u8]) -> String {
     match protocol::generated::decode_request_body(api_key, version, body) {
@@ -172,7 +172,8 @@ fn inspect_requests(buf: &BytesMut, tracker: &Arc<Mutex<RequestTracker>>) {
             let body_off = frame::request_body_offset(frame_body, is_flex);
             let body_desc = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 describe_request_body(hdr.api_key, hdr.api_version, &frame_body[body_off..])
-            })).unwrap_or_else(|_| format!("{} bytes (panic)", frame_body.len() - body_off));
+            }))
+            .unwrap_or_else(|_| format!("{} bytes (panic)", frame_body.len() - body_off));
             tracing::info!(
                 "→ REQ  corr={} api={}({}) v={} client={} | {} bytes | {}",
                 hdr.correlation_id,
@@ -219,11 +220,19 @@ fn inspect_and_rewrite_responses(
                 if let Some(completion) = t.complete_response(res.correlation_id) {
                     let frame_body = &remaining[4..consumed];
                     let is_flex = completion.api_key != 18
-                        && protocol::generated::is_flexible_api(completion.api_key, completion.api_version);
+                        && protocol::generated::is_flexible_api(
+                            completion.api_key,
+                            completion.api_version,
+                        );
                     let body_off = frame::response_body_offset(frame_body, is_flex);
                     let body_desc = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        describe_response_body(completion.api_key, completion.api_version, &frame_body[body_off..])
-                    })).unwrap_or_else(|_| format!("{} bytes (panic)", frame_body.len() - body_off));
+                        describe_response_body(
+                            completion.api_key,
+                            completion.api_version,
+                            &frame_body[body_off..],
+                        )
+                    }))
+                    .unwrap_or_else(|_| format!("{} bytes (panic)", frame_body.len() - body_off));
                     tracing::info!(
                         "← RES  corr={} api={}({}) v={} client={} | {} bytes | {:?} | {}",
                         res.correlation_id,
@@ -235,7 +244,11 @@ fn inspect_and_rewrite_responses(
                         completion.latency,
                         body_desc,
                     );
-                    let meta = if completion.api_key == 3 { Some(completion.api_version) } else { None };
+                    let meta = if completion.api_key == 3 {
+                        Some(completion.api_version)
+                    } else {
+                        None
+                    };
                     (meta, body_desc)
                 } else {
                     let desc = format!("orphan corr={}", res.correlation_id);
@@ -303,11 +316,10 @@ fn rewrite_broker_port_in_metadata(
 
         // Read broker count
         let broker_count = if is_flexible {
-            let (raw, _) =
-                protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
-                    .map_err(|e| {
-                        ProxyError::Upstream(format!("failed to decode broker count: {e}"))
-                    })?;
+            let (raw, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
+                .map_err(|e| {
+                ProxyError::Upstream(format!("failed to decode broker count: {e}"))
+            })?;
             if raw == 0 {
                 return Ok(());
             }
@@ -344,15 +356,19 @@ fn rewrite_broker_port_in_metadata(
                     protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
                         .map_err(|_| ProxyError::Upstream("tag count error".into()))?;
                 for _ in 0..tag_count {
-                    let (_, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
-                        .map_err(|_| ProxyError::Upstream("tag id error".into()))?;
-                    let (len, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
-                        .map_err(|_| ProxyError::Upstream("tag len error".into()))?;
+                    let (_, _) =
+                        protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
+                            .map_err(|_| ProxyError::Upstream("tag id error".into()))?;
+                    let (len, _) =
+                        protocol::protocol::serialization::decode_unsigned_varint(&mut cursor)
+                            .map_err(|_| ProxyError::Upstream("tag len error".into()))?;
                     cursor.advance(len as usize);
                 }
             }
             // Rewrite any broker matching proxy_host that has a port mapping
-            if host == proxy_host && let Some(new_port) = config.proxy_port_for(port) {
+            if host == proxy_host
+                && let Some(new_port) = config.proxy_port_for(port)
+            {
                 patches.push((port_offset, new_port));
             }
         }

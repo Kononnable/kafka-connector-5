@@ -70,10 +70,10 @@ impl ClusterController {
 impl Drop for ClusterController {
     fn drop(&mut self) {
         let _ = self.cmd_tx.send(Command::Shutdown);
-        if let Some(handle) = self.event_loop.take() {
-            if let Err(e) = handle.join() {
-                tracing::error!("event loop thread panicked: {e:?}");
-            }
+        if let Some(handle) = self.event_loop.take()
+            && let Err(e) = handle.join()
+        {
+            tracing::error!("event loop thread panicked: {e:?}");
         }
     }
 }

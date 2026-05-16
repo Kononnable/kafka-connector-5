@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use crate::cluster::ClusterController;
 
-use super::error::ProducerOptionsValidationError;
 use super::ProducerOptions;
+use super::error::ProducerOptionsValidationError;
 
 pub struct ProducerController {
-    cluster: Arc<ClusterController>,
-    options: ProducerOptions,
+    _cluster: Arc<ClusterController>,
+    _options: ProducerOptions,
 }
 
 impl ProducerController {
@@ -16,6 +16,9 @@ impl ProducerController {
         options: ProducerOptions,
     ) -> Result<Self, Vec<ProducerOptionsValidationError>> {
         options.validate()?;
-        Ok(ProducerController { cluster, options })
+        Ok(ProducerController {
+            _cluster: cluster,
+            _options: options,
+        })
     }
 }

@@ -1,6 +1,6 @@
+use std::sync::Arc;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 /// Observable states of the event loop lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -15,8 +15,6 @@ use protocol::protocol::serialization::SerializationError;
 use std::fmt;
 use std::time::Instant;
 
-
-
 // ---------------------------------------------------------------------------
 // ParsedFrame
 // ---------------------------------------------------------------------------
@@ -90,16 +88,20 @@ pub fn request_body_offset(data: &[u8], is_flexible: bool) -> usize {
     // (2-byte i16 length prefix, -1 = null), even in flexible mode.
     // This is because older brokers must be able to parse the request header
     // from newer clients before they negotiate the version range.
-    let _: Option<String> = match KafkaCodec::decode(&mut cur, protocol::traits::ApiVersion::new(0), false) {
-        Ok(v) => v,
-        Err(_) => return data.len(),
-    };
+    let _: Option<String> =
+        match KafkaCodec::decode(&mut cur, protocol::traits::ApiVersion::new(0), false) {
+            Ok(v) => v,
+            Err(_) => return data.len(),
+        };
     if is_flexible {
         // tag_buffer: read and skip the varint
-        let (tag_count, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
+        let (tag_count, _) =
+            protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
         for _ in 0..tag_count {
-            let (_, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
-            let (len, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur).unwrap_or((0, 0));
+            let (_, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur)
+                .unwrap_or((0, 0));
+            let (len, _) = protocol::protocol::serialization::decode_unsigned_varint(&mut cur)
+                .unwrap_or((0, 0));
             cur.advance(len as usize);
         }
     }

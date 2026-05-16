@@ -1,7 +1,7 @@
 use crate::cluster::ClusterOptions;
 
-use std::sync::mpsc;
 use std::sync::Arc;
+use std::sync::mpsc;
 
 use mio::{Events, Poll, Token, Waker};
 
@@ -18,11 +18,11 @@ pub(crate) enum Command {
 }
 
 pub(crate) struct EventLoop {
-    options: ClusterOptions,
+    _options: ClusterOptions,
     cmd_rx: mpsc::Receiver<Command>,
     poll: Poll,
     connections: Vec<Connection>,
-    metadata_cache: MetadataCache,
+    _metadata_cache: MetadataCache,
     lifecycle: LifecycleState,
 }
 
@@ -37,11 +37,11 @@ impl EventLoop {
         let lifecycle = LifecycleState::new();
 
         let event_loop = EventLoop {
-            options,
+            _options: options,
             cmd_rx: rx,
             poll,
             connections: Vec::new(),
-            metadata_cache: MetadataCache::new(),
+            _metadata_cache: MetadataCache::new(),
             lifecycle: lifecycle.clone(),
         };
 

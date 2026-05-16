@@ -1,7 +1,7 @@
-pub(crate) mod consumer_record;
-pub(crate) mod controller;
-pub(crate) mod error;
-pub(crate) mod options;
+pub mod consumer_record;
+pub mod controller;
+pub mod error;
+pub mod options;
 
 pub use consumer_record::ConsumerRecord;
 pub use controller::ConsumerController;

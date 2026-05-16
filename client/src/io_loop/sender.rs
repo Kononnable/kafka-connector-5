@@ -1,5 +1,5 @@
-use std::sync::mpsc;
 use std::sync::Arc;
+use std::sync::mpsc;
 
 use mio::Waker;
 
@@ -19,7 +19,9 @@ impl CommandSender {
 
     pub(crate) fn send(&self, cmd: Command) -> Result<(), mpsc::SendError<Command>> {
         self.tx.send(cmd)?;
-        self.waker.wake().expect("failed to wake event loop: poll registry dropped before sender");
+        self.waker
+            .wake()
+            .expect("failed to wake event loop: poll registry dropped before sender");
         Ok(())
     }
 }
