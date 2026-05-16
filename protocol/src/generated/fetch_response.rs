@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // FetchResponse
@@ -36,7 +37,7 @@ pub struct AbortedTransaction {
     pub first_offset: i64,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EpochEndOffset {
     /// The largest epoch.
     /// Available in version 12+.
@@ -44,6 +45,14 @@ pub struct EpochEndOffset {
     /// The end offset of the epoch.
     /// Available in version 12+.
     pub end_offset: i64,
+}
+impl Default for EpochEndOffset {
+    fn default() -> Self {
+        Self {
+            epoch: -1,
+            end_offset: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -58,7 +67,7 @@ pub struct FetchableTopicResponse {
     pub partitions: Vec<PartitionData>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LeaderIdAndEpoch {
     /// The ID of the current leader or -1 if the leader is unknown.
     /// Available in version 12+.
@@ -66,6 +75,14 @@ pub struct LeaderIdAndEpoch {
     /// The latest known leader epoch.
     /// Available in version 12+.
     pub leader_epoch: i32,
+}
+impl Default for LeaderIdAndEpoch {
+    fn default() -> Self {
+        Self {
+            leader_id: -1,
+            leader_epoch: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -81,7 +98,7 @@ pub struct NodeEndpoint {
     pub rack: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PartitionData {
     /// The partition index.
     pub partition_index: i32,
@@ -113,13 +130,38 @@ pub struct PartitionData {
     /// The record data.
     pub records: Option<Vec<u8>>,
 }
+impl Default for PartitionData {
+    fn default() -> Self {
+        Self {
+            partition_index: 0,
+            error_code: 0,
+            high_watermark: 0,
+            last_stable_offset: -1,
+            log_start_offset: -1,
+            diverging_epoch: Default::default(),
+            current_leader: Default::default(),
+            snapshot_id: Default::default(),
+            aborted_transactions: None,
+            preferred_read_replica: -1,
+            records: None,
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SnapshotId {
     /// The end offset of the epoch.
     pub end_offset: i64,
     /// The largest epoch.
     pub epoch: i32,
+}
+impl Default for SnapshotId {
+    fn default() -> Self {
+        Self {
+            end_offset: -1,
+            epoch: -1,
+        }
+    }
 }
 
 impl ApiResponse for FetchResponse {
@@ -202,27 +244,27 @@ impl ApiResponse for FetchResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let error_code = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let session_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let responses = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut node_endpoints = if 16 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -293,27 +335,27 @@ impl KafkaCodec for FetchResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let error_code = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let session_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let responses = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut node_endpoints = if 16 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -367,12 +409,12 @@ impl KafkaCodec for AbortedTransaction {
         let producer_id = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let first_offset = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -411,12 +453,12 @@ impl KafkaCodec for EpochEndOffset {
         let epoch = if 12 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let end_offset = if 12 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -453,12 +495,12 @@ impl KafkaCodec for FetchableTopicResponse {
         let topic = if 0 <= version.0 && version.0 <= 12 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 13 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -499,12 +541,12 @@ impl KafkaCodec for LeaderIdAndEpoch {
         let leader_id = if 12 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let leader_epoch = if 12 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -546,17 +588,17 @@ impl KafkaCodec for NodeEndpoint {
         let host = if 16 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let port = if 16 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let rack = if 16 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -647,12 +689,12 @@ impl KafkaCodec for PartitionData {
         let last_stable_offset = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let log_start_offset = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let mut diverging_epoch = if 12 <= version.0 {
             if is_flexible {
@@ -684,12 +726,12 @@ impl KafkaCodec for PartitionData {
         let aborted_transactions = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let preferred_read_replica = if 11 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let records = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

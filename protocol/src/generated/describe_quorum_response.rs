@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeQuorumResponse
@@ -61,7 +62,7 @@ pub struct PartitionData {
     pub observers: Vec<ReplicaState>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ReplicaState {
     /// The ID of the replica.
     pub replica_id: i32,
@@ -76,6 +77,17 @@ pub struct ReplicaState {
     /// The leader wall clock append time of the offset for which the follower made the most recent fetch request. This is reported as the current time for the leader and -1 if unknown for a voter.
     /// Available in version 1+.
     pub last_caught_up_timestamp: i64,
+}
+impl Default for ReplicaState {
+    fn default() -> Self {
+        Self {
+            replica_id: 0,
+            replica_directory_id: [0u8; 16],
+            log_end_offset: 0,
+            last_fetch_timestamp: -1,
+            last_caught_up_timestamp: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -139,13 +151,13 @@ impl ApiResponse for DescribeQuorumResponse {
         let error_message = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let nodes = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -188,13 +200,13 @@ impl KafkaCodec for DescribeQuorumResponse {
         let error_message = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let nodes = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -235,12 +247,12 @@ impl KafkaCodec for Listener {
         let host = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let port = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -273,7 +285,7 @@ impl KafkaCodec for Node {
         let listeners = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -315,7 +327,7 @@ impl KafkaCodec for PartitionData {
         let error_message = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let leader_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let leader_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -374,18 +386,18 @@ impl KafkaCodec for ReplicaState {
         let replica_directory_id = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let log_end_offset = KafkaCodec::decode(buf, version, is_flexible)?;
         let last_fetch_timestamp = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let last_caught_up_timestamp = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

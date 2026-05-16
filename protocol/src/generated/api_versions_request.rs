@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ApiVersionsRequest
@@ -69,12 +70,12 @@ impl ApiRequest for ApiVersionsRequest {
         let client_software_name = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let client_software_version = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -114,12 +115,12 @@ impl KafkaCodec for ApiVersionsRequest {
         let client_software_name = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let client_software_version = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

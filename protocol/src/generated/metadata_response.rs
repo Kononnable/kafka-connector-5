@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // MetadataResponse
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MetadataResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     /// Available in version 3+.
@@ -30,6 +31,19 @@ pub struct MetadataResponse {
     /// Available in version 13+.
     pub error_code: i16,
 }
+impl Default for MetadataResponse {
+    fn default() -> Self {
+        Self {
+            throttle_time_ms: 0,
+            brokers: IndexMap::new(),
+            cluster_id: None,
+            controller_id: -1,
+            topics: Vec::new(),
+            cluster_authorized_operations: -2147483648,
+            error_code: 0,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MetadataResponseBroker {
@@ -42,7 +56,7 @@ pub struct MetadataResponseBroker {
     pub rack: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MetadataResponsePartition {
     /// The partition error, or 0 if there was no error.
     pub error_code: i16,
@@ -61,8 +75,21 @@ pub struct MetadataResponsePartition {
     /// Available in version 5+.
     pub offline_replicas: Vec<i32>,
 }
+impl Default for MetadataResponsePartition {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            partition_index: 0,
+            leader_id: 0,
+            leader_epoch: -1,
+            replica_nodes: Vec::new(),
+            isr_nodes: Vec::new(),
+            offline_replicas: Vec::new(),
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MetadataResponseTopic {
     /// The topic error, or 0 if there was no error.
     pub error_code: i16,
@@ -79,6 +106,18 @@ pub struct MetadataResponseTopic {
     /// 32-bit bitfield to represent authorized operations for this topic.
     /// Available in version 8+.
     pub topic_authorized_operations: i32,
+}
+impl Default for MetadataResponseTopic {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            name: None,
+            topic_id: [0u8; 16],
+            is_internal: false,
+            partitions: Vec::new(),
+            topic_authorized_operations: -2147483648,
+        }
+    }
 }
 
 impl ApiResponse for MetadataResponse {
@@ -124,7 +163,7 @@ impl ApiResponse for MetadataResponse {
         }
         if 1 <= version.0 {
             self.controller_id.encode(buf, version, is_flexible)?;
-        } else if self.controller_id != 0 {
+        } else if self.controller_id != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ControllerId",
                 version,
@@ -135,7 +174,7 @@ impl ApiResponse for MetadataResponse {
         if 8 <= version.0 && version.0 <= 10 {
             self.cluster_authorized_operations
                 .encode(buf, version, is_flexible)?;
-        } else if self.cluster_authorized_operations != 0 {
+        } else if self.cluster_authorized_operations != -2147483648 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ClusterAuthorizedOperations",
                 version,
@@ -161,29 +200,29 @@ impl ApiResponse for MetadataResponse {
         let throttle_time_ms = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let brokers = KafkaCodec::decode(buf, version, is_flexible)?;
         let cluster_id = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let controller_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let cluster_authorized_operations = if 8 <= version.0 && version.0 <= 10 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -2147483648
         };
         let error_code = if 13 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -238,29 +277,29 @@ impl KafkaCodec for MetadataResponse {
         let throttle_time_ms = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let brokers = KafkaCodec::decode(buf, version, is_flexible)?;
         let cluster_id = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let controller_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let cluster_authorized_operations = if 8 <= version.0 && version.0 <= 10 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -2147483648
         };
         let error_code = if 13 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -305,7 +344,7 @@ impl KafkaCodec for MetadataResponseBroker {
         let rack = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -349,14 +388,14 @@ impl KafkaCodec for MetadataResponsePartition {
         let leader_epoch = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let replica_nodes = KafkaCodec::decode(buf, version, is_flexible)?;
         let isr_nodes = KafkaCodec::decode(buf, version, is_flexible)?;
         let offline_replicas = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -409,18 +448,18 @@ impl KafkaCodec for MetadataResponseTopic {
         let topic_id = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let is_internal = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         let topic_authorized_operations = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -2147483648
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

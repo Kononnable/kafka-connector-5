@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // CreateDelegationTokenRequest
@@ -83,12 +84,12 @@ impl ApiRequest for CreateDelegationTokenRequest {
         let owner_principal_type = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let owner_principal_name = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let renewers = KafkaCodec::decode(buf, version, is_flexible)?;
         let max_lifetime_ms = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -134,12 +135,12 @@ impl KafkaCodec for CreateDelegationTokenRequest {
         let owner_principal_type = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let owner_principal_name = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let renewers = KafkaCodec::decode(buf, version, is_flexible)?;
         let max_lifetime_ms = KafkaCodec::decode(buf, version, is_flexible)?;

@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DeleteAclsRequest
@@ -13,7 +14,7 @@ pub struct DeleteAclsRequest {
     pub filters: Vec<DeleteAclsFilter>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DeleteAclsFilter {
     /// The resource type.
     pub resource_type_filter: i8,
@@ -30,6 +31,19 @@ pub struct DeleteAclsFilter {
     pub operation: i8,
     /// The permission type.
     pub permission_type: i8,
+}
+impl Default for DeleteAclsFilter {
+    fn default() -> Self {
+        Self {
+            resource_type_filter: 0,
+            resource_name_filter: None,
+            pattern_type_filter: 3,
+            principal_filter: None,
+            host_filter: None,
+            operation: 0,
+            permission_type: 0,
+        }
+    }
 }
 
 impl ApiRequest for DeleteAclsRequest {
@@ -130,7 +144,7 @@ impl KafkaCodec for DeleteAclsFilter {
         let pattern_type_filter = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            3
         };
         let principal_filter = KafkaCodec::decode(buf, version, is_flexible)?;
         let host_filter = KafkaCodec::decode(buf, version, is_flexible)?;

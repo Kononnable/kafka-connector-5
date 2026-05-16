@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // AssignReplicasToDirsRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AssignReplicasToDirsRequest {
     /// The ID of the requesting broker.
     pub broker_id: i32,
@@ -15,6 +16,15 @@ pub struct AssignReplicasToDirsRequest {
     pub broker_epoch: i64,
     /// The directories to which replicas should be assigned.
     pub directories: Vec<DirectoryData>,
+}
+impl Default for AssignReplicasToDirsRequest {
+    fn default() -> Self {
+        Self {
+            broker_id: 0,
+            broker_epoch: -1,
+            directories: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

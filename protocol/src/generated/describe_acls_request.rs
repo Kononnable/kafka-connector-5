@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeAclsRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeAclsRequest {
     /// The resource type.
     pub resource_type_filter: i8,
@@ -24,6 +25,19 @@ pub struct DescribeAclsRequest {
     pub operation: i8,
     /// The permission type to match.
     pub permission_type: i8,
+}
+impl Default for DescribeAclsRequest {
+    fn default() -> Self {
+        Self {
+            resource_type_filter: 0,
+            resource_name_filter: None,
+            pattern_type_filter: 3,
+            principal_filter: None,
+            host_filter: None,
+            operation: 0,
+            permission_type: 0,
+        }
+    }
 }
 
 impl ApiRequest for DescribeAclsRequest {
@@ -54,7 +68,7 @@ impl ApiRequest for DescribeAclsRequest {
             .encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
             self.pattern_type_filter.encode(buf, version, is_flexible)?;
-        } else if self.pattern_type_filter != 0 {
+        } else if self.pattern_type_filter != 3 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "PatternTypeFilter",
                 version,
@@ -77,7 +91,7 @@ impl ApiRequest for DescribeAclsRequest {
         let pattern_type_filter = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            3
         };
         let principal_filter = KafkaCodec::decode(buf, version, is_flexible)?;
         let host_filter = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -131,7 +145,7 @@ impl KafkaCodec for DescribeAclsRequest {
         let pattern_type_filter = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            3
         };
         let principal_filter = KafkaCodec::decode(buf, version, is_flexible)?;
         let host_filter = KafkaCodec::decode(buf, version, is_flexible)?;

@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // BeginQuorumEpochRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BeginQuorumEpochRequest {
     /// The cluster id.
     pub cluster_id: Option<String>,
@@ -20,6 +21,16 @@ pub struct BeginQuorumEpochRequest {
     /// IndexMap key `Name` (string): The name of the endpoint.
     /// Available in version 1+.
     pub leader_endpoints: IndexMap<String, LeaderEndpoint>,
+}
+impl Default for BeginQuorumEpochRequest {
+    fn default() -> Self {
+        Self {
+            cluster_id: None,
+            voter_id: -1,
+            topics: Vec::new(),
+            leader_endpoints: IndexMap::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -78,7 +89,7 @@ impl ApiRequest for BeginQuorumEpochRequest {
         self.cluster_id.encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
             self.voter_id.encode(buf, version, is_flexible)?;
-        } else if self.voter_id != 0 {
+        } else if self.voter_id != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "VoterId",
                 version,
@@ -106,13 +117,13 @@ impl ApiRequest for BeginQuorumEpochRequest {
         let voter_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let leader_endpoints = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -155,13 +166,13 @@ impl KafkaCodec for BeginQuorumEpochRequest {
         let voter_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let leader_endpoints = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -202,12 +213,12 @@ impl KafkaCodec for LeaderEndpoint {
         let host = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let port = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -244,7 +255,7 @@ impl KafkaCodec for PartitionData {
         let voter_directory_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let leader_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let leader_epoch = KafkaCodec::decode(buf, version, is_flexible)?;

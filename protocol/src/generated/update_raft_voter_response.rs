@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // UpdateRaftVoterResponse
@@ -17,7 +18,7 @@ pub struct UpdateRaftVoterResponse {
     pub current_leader: CurrentLeader,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CurrentLeader {
     /// The replica id of the current leader or -1 if the leader is unknown.
     pub leader_id: i32,
@@ -27,6 +28,16 @@ pub struct CurrentLeader {
     pub host: String,
     /// The node's port.
     pub port: i32,
+}
+impl Default for CurrentLeader {
+    fn default() -> Self {
+        Self {
+            leader_id: -1,
+            leader_epoch: -1,
+            host: String::new(),
+            port: 0,
+        }
+    }
 }
 
 impl ApiResponse for UpdateRaftVoterResponse {

@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ElectLeadersRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ElectLeadersRequest {
     /// Type of elections to conduct for the partition. A value of '0' elects the preferred replica. A value of '1' elects the first live replica if there are no in-sync replica.
     /// Available in version 1+.
@@ -17,6 +18,15 @@ pub struct ElectLeadersRequest {
     pub topic_partitions: Option<IndexMap<String, TopicPartitions>>,
     /// The time in ms to wait for the election to complete.
     pub timeout_ms: i32,
+}
+impl Default for ElectLeadersRequest {
+    fn default() -> Self {
+        Self {
+            election_type: 0,
+            topic_partitions: None,
+            timeout_ms: 60000,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -68,7 +78,7 @@ impl ApiRequest for ElectLeadersRequest {
         let election_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topic_partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -108,7 +118,7 @@ impl KafkaCodec for ElectLeadersRequest {
         let election_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topic_partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;

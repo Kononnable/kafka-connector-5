@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeClusterResponse
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeClusterResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
@@ -27,6 +28,20 @@ pub struct DescribeClusterResponse {
     pub brokers: IndexMap<i32, DescribeClusterBroker>,
     /// 32-bit bitfield to represent authorized operations for this cluster.
     pub cluster_authorized_operations: i32,
+}
+impl Default for DescribeClusterResponse {
+    fn default() -> Self {
+        Self {
+            throttle_time_ms: 0,
+            error_code: 0,
+            error_message: None,
+            endpoint_type: 1,
+            cluster_id: String::new(),
+            controller_id: -1,
+            brokers: IndexMap::new(),
+            cluster_authorized_operations: -2147483648,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -69,7 +84,7 @@ impl ApiResponse for DescribeClusterResponse {
         self.error_message.encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
-        } else if self.endpoint_type != 0 {
+        } else if self.endpoint_type != 1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "EndpointType",
                 version,
@@ -94,7 +109,7 @@ impl ApiResponse for DescribeClusterResponse {
         let endpoint_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            1
         };
         let cluster_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let controller_id = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -150,7 +165,7 @@ impl KafkaCodec for DescribeClusterResponse {
         let endpoint_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            1
         };
         let cluster_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let controller_id = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -202,7 +217,7 @@ impl KafkaCodec for DescribeClusterBroker {
         let is_fenced = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

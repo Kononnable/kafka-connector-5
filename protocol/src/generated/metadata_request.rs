@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // MetadataRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MetadataRequest {
     /// The topics to fetch metadata for.
     pub topics: Option<Vec<MetadataRequestTopic>>,
@@ -20,6 +21,16 @@ pub struct MetadataRequest {
     /// Whether to include topic authorized operations.
     /// Available in version 8+.
     pub include_topic_authorized_operations: bool,
+}
+impl Default for MetadataRequest {
+    fn default() -> Self {
+        Self {
+            topics: None,
+            allow_auto_topic_creation: true,
+            include_cluster_authorized_operations: false,
+            include_topic_authorized_operations: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -57,7 +68,7 @@ impl ApiRequest for MetadataRequest {
         if 4 <= version.0 {
             self.allow_auto_topic_creation
                 .encode(buf, version, is_flexible)?;
-        } else if self.allow_auto_topic_creation {
+        } else if !self.allow_auto_topic_creation {
             return Err(SerializationError::FieldNotAvailable {
                 field: "AllowAutoTopicCreation",
                 version,
@@ -95,17 +106,17 @@ impl ApiRequest for MetadataRequest {
         let allow_auto_topic_creation = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            true
         };
         let include_cluster_authorized_operations = if 8 <= version.0 && version.0 <= 10 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let include_topic_authorized_operations = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -153,17 +164,17 @@ impl KafkaCodec for MetadataRequest {
         let allow_auto_topic_creation = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            true
         };
         let include_cluster_authorized_operations = if 8 <= version.0 && version.0 <= 10 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let include_topic_authorized_operations = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -202,7 +213,7 @@ impl KafkaCodec for MetadataRequestTopic {
         let topic_id = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let name = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

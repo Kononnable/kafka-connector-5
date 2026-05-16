@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // OffsetFetchRequest
@@ -23,7 +24,7 @@ pub struct OffsetFetchRequest {
     pub require_stable: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OffsetFetchRequestGroup {
     /// The group ID.
     /// Available in version 8+.
@@ -37,6 +38,16 @@ pub struct OffsetFetchRequestGroup {
     /// Each topic we would like to fetch offsets for, or null to fetch offsets for all topics.
     /// Available in version 8+.
     pub topics: Option<Vec<OffsetFetchRequestTopics>>,
+}
+impl Default for OffsetFetchRequestGroup {
+    fn default() -> Self {
+        Self {
+            group_id: String::new(),
+            member_id: None,
+            member_epoch: -1,
+            topics: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -130,22 +141,22 @@ impl ApiRequest for OffsetFetchRequest {
         let group_id = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topics = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let groups = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let require_stable = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -191,22 +202,22 @@ impl KafkaCodec for OffsetFetchRequest {
         let group_id = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topics = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let groups = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let require_stable = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -253,22 +264,22 @@ impl KafkaCodec for OffsetFetchRequestGroup {
         let group_id = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let member_id = if 9 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let member_epoch = if 9 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -309,12 +320,12 @@ impl KafkaCodec for OffsetFetchRequestTopic {
         let name = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let partition_indexes = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -356,17 +367,17 @@ impl KafkaCodec for OffsetFetchRequestTopics {
         let name = if 8 <= version.0 && version.0 <= 9 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partition_indexes = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

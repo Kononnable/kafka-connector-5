@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
-use super::structs::{Field, MessageStruct, MessageType};
+use super::structs::{Field, FieldDefault, MessageStruct, MessageType};
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -109,8 +109,8 @@ pub fn generate_all() -> GeneratedFiles {
     mod_rs.push('\n');
 
     // Generate is_flexible_api dispatch function
-    mod_rs.push_str("use crate::traits::{ApiRequest, ApiResponse, ApiVersion as ApiVer};\n");
     mod_rs.push_str("use bytes::Bytes;\n");
+    mod_rs.push_str("use crate::traits::{ApiRequest, ApiResponse, ApiVersion as ApiVer};\n");
     mod_rs.push_str(
         "/// Look up whether a given API key + version uses flexible (compact) wire encoding.\n",
     );
@@ -229,12 +229,12 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
     // Module-level allow for unused imports (not all traits are used in every file).
     code.push_str("#![allow(unused_imports, unused_variables)]\n");
+    code.push_str("use bytes::{Buf, BufMut, Bytes, BytesMut};\n");
+    code.push_str("use indexmap::IndexMap;\n");
     code.push_str("use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};\n");
     code.push_str(
         "use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};\n",
     );
-    code.push_str("use bytes::{Buf, BufMut, Bytes, BytesMut};\n");
-    code.push_str("use indexmap::IndexMap;\n");
     code.push('\n');
 
     // Collect all nested structs that need to be emitted.
@@ -686,26 +686,120 @@ fn generate_tagged_decode_body(fields: &[Field]) -> String {
 }
 
 /// Return a boolean expression that tests whether a field has a non-default value.
+/// Return the Rust expression for what `#[derive(Default)]` would produce.
+fn rust_fallback_default(field: &Field) -> String {
+    let ft = &field.field_type;
+    let rust_type = map_field_type(field);
+    if field.nullable_versions.is_some() {
+        return "None".to_string();
+    }
+    match ft.as_str() {
+        "string" => "String::new()".to_string(),
+        "bytes" | "records" if !rust_type.starts_with("Option") => "Vec::new()".to_string(),
+        "bool" => "false".to_string(),
+        t if t.starts_with("[]") => {
+            if rust_type.starts_with("Option<IndexMap") || rust_type.starts_with("Option") {
+                "None".to_string()
+            } else if rust_type.starts_with("IndexMap") {
+                "IndexMap::new()".to_string()
+            } else {
+                "Vec::new()".to_string()
+            }
+        }
+        "uuid" => "[0u8; 16]".to_string(),
+        "int8" | "int16" | "int32" | "int64" | "uint16" | "float64" => "0".to_string(),
+        _ => "Default::default()".to_string(),
+    }
+}
+
+/// Return the Rust expression for a field's default value, respecting JSON-specified
+/// `default` when present.  Falls back to the Rust type default otherwise.
+fn rust_default_expr(field: &Field) -> String {
+    let ft = &field.field_type;
+    let is_nullable = field.nullable_versions.is_some();
+    let default_is_null = field
+        .default
+        .as_ref()
+        .map(|d| matches!(d, FieldDefault::Str(s) if s == "null"))
+        .unwrap_or(false);
+
+    // JSON default "null" for a nullable field means None
+    if is_nullable && default_is_null {
+        return "None".to_string();
+    }
+
+    let inner_expr = match &field.default {
+        Some(FieldDefault::Str(s)) if !s.is_empty() && s != "null" => {
+            if ft.starts_with("[]") || ft == "bytes" || ft == "records" {
+                let rust_type = map_field_type(field);
+                if rust_type.starts_with("IndexMap") {
+                    "IndexMap::new()".to_string()
+                } else {
+                    "Vec::new()".to_string()
+                }
+            } else if ["int8", "int16", "int32", "int64", "uint16"].contains(&ft.as_str()) {
+                if let Some(hex) = s.strip_prefix("0x") {
+                    format!("{}", i64::from_str_radix(hex, 16).unwrap_or(0))
+                } else {
+                    s.clone()
+                }
+            } else if ft == "float64" {
+                s.clone()
+            } else if ft == "bool" {
+                s.to_lowercase()
+            } else {
+                format!("\"{}\".to_string()", s)
+            }
+        }
+        Some(FieldDefault::Str(_)) => {
+            // Empty string or "null" for non-nullable
+            match ft.as_str() {
+                "string" => "String::new()".to_string(),
+                _ => "Default::default()".to_string(),
+            }
+        }
+        Some(FieldDefault::Int(i)) => i.to_string(),
+        Some(FieldDefault::Bool(b)) => b.to_string(),
+        None => rust_fallback_default(field),
+    };
+
+    if is_nullable {
+        // Only wrap in Some when there's an actual JSON default value.
+        // Nullable fields without explicit defaults should be None.
+        if field.default.is_some() && !default_is_null {
+            format!("Some({})", inner_expr)
+        } else {
+            "None".to_string()
+        }
+    } else {
+        inner_expr
+    }
+}
+
 fn non_default_check(rust_name: &str, field: &Field) -> Option<String> {
     let ft = &field.field_type;
     if field.nullable_versions.is_some() {
-        // All nullable fields become Option<T> — check Some
         Some(format!("self.{}.is_some()", rust_name))
-    } else if ft == "string" {
-        Some(format!("!self.{}.is_empty()", rust_name))
-    } else if ft == "bytes" || ft == "records" || ft.starts_with("[]") {
-        // Vec<T> — is_empty works for any T without type inference issues
+    } else if field.default.is_some() {
+        // Field has a JSON default — compare against it
+        let def_expr = rust_default_expr(field);
+        if ft == "bool" {
+            Some(match def_expr.as_str() {
+                "true" => format!("!self.{}", rust_name),
+                _ => format!("self.{}", rust_name),
+            })
+        } else {
+            Some(format!("self.{} != {}", rust_name, def_expr))
+        }
+    } else if ft == "string" || ft == "bytes" || ft == "records" || ft.starts_with("[]") {
         Some(format!("!self.{}.is_empty()", rust_name))
     } else if ft == "bool" {
         Some(format!("self.{}", rust_name))
     } else if ft == "uuid" {
-        // [u8; 16] — compare to zeroed array
         Some(format!("self.{} != [0u8; 16]", rust_name))
     } else if ["int8", "int16", "int32", "int64", "uint16", "float64"].contains(&ft.as_str()) {
-        // Numeric types: != 0 works with type inference
         Some(format!("self.{} != 0", rust_name))
     } else {
-        // Custom struct type — struct derives Default + PartialEq
         Some(format!("self.{} != Default::default()", rust_name))
     }
 }
@@ -771,6 +865,7 @@ fn generate_deserialize_field(field: &Field) -> String {
     let cond = field_version_condition(field);
     let mut code = String::new();
     let needs_presence = field.nullable_versions.is_some() && !nullable_has_builtin_flex(field);
+    let _field_default = rust_default_expr(field);
     if needs_presence {
         let _inner_type = strip_option_wrapper(&rust_type);
         let decode_expr = |guard: &str| -> String {
@@ -800,7 +895,7 @@ fn generate_deserialize_field(field: &Field) -> String {
             code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
             code.push_str(&decode_expr("            "));
             code.push_str("        } else {\n");
-            code.push_str("            Default::default()\n");
+            code.push_str(&format!("            {}\n", _field_default));
             code.push_str("        };\n");
         } else {
             code.push_str(&format!("        let {} = \n", rust_name));
@@ -814,20 +909,23 @@ fn generate_deserialize_field(field: &Field) -> String {
             code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
         }
         if field.tag.is_some() {
-            code.push_str("            if is_flexible { Default::default() } else {\n");
+            code.push_str(&format!(
+                "            if is_flexible {{ {} }} else {{\n",
+                _field_default
+            ));
             code.push_str("                KafkaCodec::decode(buf, version, is_flexible)?\n");
             code.push_str("            }\n");
         } else {
             code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
         }
         code.push_str("        } else {\n");
-        code.push_str("            Default::default()\n");
+        code.push_str(&format!("            {}\n", _field_default));
         code.push_str("        };\n");
     } else {
         if field.tag.is_some() {
             code.push_str(&format!(
-                "        let mut {} = if is_flexible {{ Default::default() }} else {{\n",
-                rust_name
+                "        let mut {} = if is_flexible {{ {} }} else {{\n",
+                rust_name, _field_default
             ));
             code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
             code.push_str("        };\n");
@@ -913,6 +1011,7 @@ fn decode_impl_body(_struct_name: &str, fields: &[Field]) -> String {
         let has_version_gate = cond.is_some();
         let needs_presence = f.nullable_versions.is_some() && !nullable_has_builtin_flex(f);
         let is_tagged = f.tag.is_some();
+        let _f_default = rust_default_expr(f);
         let _inner_type = if needs_presence {
             strip_option_wrapper(&rust_type)
         } else {
@@ -935,7 +1034,7 @@ fn decode_impl_body(_struct_name: &str, fields: &[Field]) -> String {
             code.push_str("        };\n");
             if has_version_gate {
                 code.push_str("        } else {\n");
-                code.push_str("            Default::default()\n");
+                code.push_str(&format!("            {}\n", _f_default));
                 code.push_str("        };\n");
             }
         } else if let Some(ref c) = cond {
@@ -946,20 +1045,23 @@ fn decode_impl_body(_struct_name: &str, fields: &[Field]) -> String {
                 code.push_str(&format!("        let {} = if {} {{\n", rust_name, c));
             }
             if is_tagged {
-                code.push_str("            if is_flexible { Default::default() } else {\n");
+                code.push_str(&format!(
+                    "            if is_flexible {{ {} }} else {{\n",
+                    _f_default
+                ));
                 code.push_str("                KafkaCodec::decode(buf, version, is_flexible)?\n");
                 code.push_str("            }\n");
             } else {
                 code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
             }
             code.push_str("        } else {\n");
-            code.push_str("            Default::default()\n");
+            code.push_str(&format!("            {}\n", _f_default));
             code.push_str("        };\n");
         } else if is_tagged {
             // Tagged field: skip when flexible
             code.push_str(&format!(
-                "        let mut {} = if is_flexible {{ Default::default() }} else {{\n",
-                rust_name
+                "        let mut {} = if is_flexible {{ {} }} else {{\n",
+                rust_name, _f_default
             ));
             code.push_str("            KafkaCodec::decode(buf, version, is_flexible)?\n");
             code.push_str("        };\n");
@@ -1112,24 +1214,28 @@ fn collect_nested_structs(fields: &[Field], out: &mut BTreeMap<String, Vec<Field
 fn generate_struct(struct_name: &str, fields: &[Field], _versions: &str) -> String {
     let mut code = String::new();
 
-    code.push_str("#[derive(Clone, Debug, Default, PartialEq)]\n");
-    code.push_str(&format!("pub struct {} {{\n", struct_name));
+    // Check if any field has a JSON default that differs from the Rust type default
+    let needs_manual_default = fields.iter().any(|f| {
+        let default_expr = rust_default_expr(f);
+        let fallback = rust_fallback_default(f);
+        default_expr != fallback
+    });
 
+    if needs_manual_default {
+        code.push_str("#[derive(Clone, Debug, PartialEq)]\n");
+    } else {
+        code.push_str("#[derive(Clone, Debug, Default, PartialEq)]\n");
+    }
+    code.push_str(&format!("pub struct {} {{\n", struct_name));
     for field in fields {
-        // Doc comment from the `about` field
         if let Some(about) = &field.about {
             code.push_str(&format!("    /// {}\n", about));
         } else {
-            // Fallback doc: show name + type
             code.push_str(&format!(
                 "    /// {}. Type: {}.\n",
                 field.name, field.field_type
             ));
         }
-
-        // For arrays with mapKey inner fields, document the key fields.
-        // Only emit when the field will actually become IndexMap (skip
-        // non-overlapping composite keys that fall back to Vec).
         let inner_ft = field.field_type.strip_prefix("[]");
         if inner_ft.is_some() && !field.fields.is_empty() {
             let key_fields: Vec<&Field> = field.fields.iter().filter(|f| f.map_key).collect();
@@ -1153,21 +1259,32 @@ fn generate_struct(struct_name: &str, fields: &[Field], _versions: &str) -> Stri
                 }
             }
         }
-
-        // Optional version note
         if !field.versions.is_empty() && field.versions != "0+" {
             code.push_str(&format!(
                 "    /// Available in version {}.\n",
                 field.versions
             ));
         }
-
         let rust_name = escape_field_name(&camel_to_snake(&field.name));
         let rust_type = map_field_type(field);
         code.push_str(&format!("    pub {}: {},\n", rust_name, rust_type));
     }
-
     code.push_str("}\n");
+
+    if needs_manual_default {
+        code.push_str(&format!("impl Default for {} {{\n", struct_name));
+        code.push_str("    fn default() -> Self {\n");
+        code.push_str("        Self {\n");
+        for field in fields {
+            let rust_name = escape_field_name(&camel_to_snake(&field.name));
+            let def_expr = rust_default_expr(field);
+            code.push_str(&format!("            {}: {},\n", rust_name, def_expr));
+        }
+        code.push_str("        }\n");
+        code.push_str("    }\n");
+        code.push_str("}\n");
+    }
+
     code
 }
 

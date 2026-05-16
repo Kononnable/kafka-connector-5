@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DeleteTopicsRequest
@@ -80,12 +81,12 @@ impl ApiRequest for DeleteTopicsRequest {
         let topics = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let topic_names = if 0 <= version.0 && version.0 <= 5 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -126,12 +127,12 @@ impl KafkaCodec for DeleteTopicsRequest {
         let topics = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let topic_names = if 0 <= version.0 && version.0 <= 5 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -172,12 +173,12 @@ impl KafkaCodec for DeleteTopicState {
         let name = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let topic_id = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

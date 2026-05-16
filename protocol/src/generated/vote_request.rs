@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // VoteRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct VoteRequest {
     /// The cluster id.
     pub cluster_id: Option<String>,
@@ -16,6 +17,15 @@ pub struct VoteRequest {
     pub voter_id: i32,
     /// The topic data.
     pub topics: Vec<TopicData>,
+}
+impl Default for VoteRequest {
+    fn default() -> Self {
+        Self {
+            cluster_id: None,
+            voter_id: -1,
+            topics: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -74,7 +84,7 @@ impl ApiRequest for VoteRequest {
         self.cluster_id.encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
             self.voter_id.encode(buf, version, is_flexible)?;
-        } else if self.voter_id != 0 {
+        } else if self.voter_id != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "VoterId",
                 version,
@@ -93,7 +103,7 @@ impl ApiRequest for VoteRequest {
         let voter_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -133,7 +143,7 @@ impl KafkaCodec for VoteRequest {
         let voter_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -186,19 +196,19 @@ impl KafkaCodec for PartitionData {
         let replica_directory_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let voter_directory_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let last_offset_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
         let last_offset = KafkaCodec::decode(buf, version, is_flexible)?;
         let pre_vote = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

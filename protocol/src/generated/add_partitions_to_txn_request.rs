@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // AddPartitionsToTxnRequest
@@ -131,27 +132,27 @@ impl ApiRequest for AddPartitionsToTxnRequest {
         let transactions = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         let v3_and_below_transactional_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let v3_and_below_producer_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let v3_and_below_producer_epoch = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let v3_and_below_topics = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -204,27 +205,27 @@ impl KafkaCodec for AddPartitionsToTxnRequest {
         let transactions = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         let v3_and_below_transactional_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let v3_and_below_producer_id = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let v3_and_below_producer_epoch = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let v3_and_below_topics = if 0 <= version.0 && version.0 <= 3 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -301,22 +302,22 @@ impl KafkaCodec for AddPartitionsToTxnTransaction {
         let producer_id = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let producer_epoch = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let verify_only = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let topics = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

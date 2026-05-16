@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeClusterRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeClusterRequest {
     /// Whether to include cluster authorized operations.
     pub include_cluster_authorized_operations: bool,
@@ -17,6 +18,15 @@ pub struct DescribeClusterRequest {
     /// Whether to include fenced brokers when listing brokers.
     /// Available in version 2+.
     pub include_fenced_brokers: bool,
+}
+impl Default for DescribeClusterRequest {
+    fn default() -> Self {
+        Self {
+            include_cluster_authorized_operations: false,
+            endpoint_type: 1,
+            include_fenced_brokers: false,
+        }
+    }
 }
 
 impl ApiRequest for DescribeClusterRequest {
@@ -45,7 +55,7 @@ impl ApiRequest for DescribeClusterRequest {
             .encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
-        } else if self.endpoint_type != 0 {
+        } else if self.endpoint_type != 1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "EndpointType",
                 version,
@@ -73,12 +83,12 @@ impl ApiRequest for DescribeClusterRequest {
         let endpoint_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            1
         };
         let include_fenced_brokers = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -121,12 +131,12 @@ impl KafkaCodec for DescribeClusterRequest {
         let endpoint_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            1
         };
         let include_fenced_brokers = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

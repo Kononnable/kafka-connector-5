@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ListOffsetsRequest
@@ -21,7 +22,7 @@ pub struct ListOffsetsRequest {
     pub timeout_ms: i32,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ListOffsetsPartition {
     /// The partition index.
     pub partition_index: i32,
@@ -30,6 +31,15 @@ pub struct ListOffsetsPartition {
     pub current_leader_epoch: i32,
     /// The current timestamp.
     pub timestamp: i64,
+}
+impl Default for ListOffsetsPartition {
+    fn default() -> Self {
+        Self {
+            partition_index: 0,
+            current_leader_epoch: -1,
+            timestamp: 0,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -93,13 +103,13 @@ impl ApiRequest for ListOffsetsRequest {
         let isolation_level = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -142,13 +152,13 @@ impl KafkaCodec for ListOffsetsRequest {
         let isolation_level = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -190,7 +200,7 @@ impl KafkaCodec for ListOffsetsPartition {
         let current_leader_epoch = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let timestamp = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

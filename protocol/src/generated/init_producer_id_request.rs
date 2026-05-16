@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // InitProducerIdRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct InitProducerIdRequest {
     /// The transactional id, or null if the producer is not transactional.
     pub transactional_id: Option<String>,
@@ -25,6 +26,18 @@ pub struct InitProducerIdRequest {
     /// True if the client wants to keep the currently ongoing transaction instead of aborting it.
     /// Available in version 6+.
     pub keep_prepared_txn: bool,
+}
+impl Default for InitProducerIdRequest {
+    fn default() -> Self {
+        Self {
+            transactional_id: None,
+            transaction_timeout_ms: 0,
+            producer_id: -1,
+            producer_epoch: -1,
+            enable2_pc: false,
+            keep_prepared_txn: false,
+        }
+    }
 }
 
 impl ApiRequest for InitProducerIdRequest {
@@ -54,7 +67,7 @@ impl ApiRequest for InitProducerIdRequest {
             .encode(buf, version, is_flexible)?;
         if 3 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
-        } else if self.producer_id != 0 {
+        } else if self.producer_id != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ProducerId",
                 version,
@@ -63,7 +76,7 @@ impl ApiRequest for InitProducerIdRequest {
         }
         if 3 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
-        } else if self.producer_epoch != 0 {
+        } else if self.producer_epoch != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ProducerEpoch",
                 version,
@@ -100,22 +113,22 @@ impl ApiRequest for InitProducerIdRequest {
         let producer_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let producer_epoch = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let enable2_pc = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let keep_prepared_txn = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -168,22 +181,22 @@ impl KafkaCodec for InitProducerIdRequest {
         let producer_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let producer_epoch = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let enable2_pc = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let keep_prepared_txn = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

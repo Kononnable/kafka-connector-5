@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // BrokerRegistrationResponse
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BrokerRegistrationResponse {
     /// Duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
@@ -15,6 +16,15 @@ pub struct BrokerRegistrationResponse {
     pub error_code: i16,
     /// The broker's assigned epoch, or -1 if none was assigned.
     pub broker_epoch: i64,
+}
+impl Default for BrokerRegistrationResponse {
+    fn default() -> Self {
+        Self {
+            throttle_time_ms: 0,
+            error_code: 0,
+            broker_epoch: -1,
+        }
+    }
 }
 
 impl ApiResponse for BrokerRegistrationResponse {

@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ListOffsetsResponse
@@ -16,7 +17,7 @@ pub struct ListOffsetsResponse {
     pub topics: Vec<ListOffsetsTopicResponse>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ListOffsetsPartitionResponse {
     /// The partition index.
     pub partition_index: i32,
@@ -31,6 +32,17 @@ pub struct ListOffsetsPartitionResponse {
     /// The leader epoch associated with the returned offset.
     /// Available in version 4+.
     pub leader_epoch: i32,
+}
+impl Default for ListOffsetsPartitionResponse {
+    fn default() -> Self {
+        Self {
+            partition_index: 0,
+            error_code: 0,
+            timestamp: -1,
+            offset: -1,
+            leader_epoch: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -83,7 +95,7 @@ impl ApiResponse for ListOffsetsResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -120,7 +132,7 @@ impl KafkaCodec for ListOffsetsResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -167,17 +179,17 @@ impl KafkaCodec for ListOffsetsPartitionResponse {
         let timestamp = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let offset = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let leader_epoch = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

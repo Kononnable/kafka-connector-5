@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ElectLeadersResponse
@@ -81,7 +82,7 @@ impl ApiResponse for ElectLeadersResponse {
         let error_code = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let replica_election_results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -122,7 +123,7 @@ impl KafkaCodec for ElectLeadersResponse {
         let error_code = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let replica_election_results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

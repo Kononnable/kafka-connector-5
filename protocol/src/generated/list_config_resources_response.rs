@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ListConfigResourcesResponse
@@ -17,13 +18,21 @@ pub struct ListConfigResourcesResponse {
     pub config_resources: Vec<ConfigResource>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConfigResource {
     /// The resource name.
     pub resource_name: String,
     /// The resource type.
     /// Available in version 1+.
     pub resource_type: i8,
+}
+impl Default for ConfigResource {
+    fn default() -> Self {
+        Self {
+            resource_name: String::new(),
+            resource_type: 16,
+        }
+    }
 }
 
 impl ApiResponse for ListConfigResourcesResponse {
@@ -132,7 +141,7 @@ impl KafkaCodec for ConfigResource {
         let resource_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            16
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // AlterPartitionReassignmentsResponse
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AlterPartitionReassignmentsResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
@@ -20,6 +21,17 @@ pub struct AlterPartitionReassignmentsResponse {
     pub error_message: Option<String>,
     /// The responses to topics to reassign.
     pub responses: Vec<ReassignableTopicResponse>,
+}
+impl Default for AlterPartitionReassignmentsResponse {
+    fn default() -> Self {
+        Self {
+            throttle_time_ms: 0,
+            allow_replication_factor_change: true,
+            error_code: 0,
+            error_message: None,
+            responses: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -66,7 +78,7 @@ impl ApiResponse for AlterPartitionReassignmentsResponse {
         if 1 <= version.0 {
             self.allow_replication_factor_change
                 .encode(buf, version, is_flexible)?;
-        } else if self.allow_replication_factor_change {
+        } else if !self.allow_replication_factor_change {
             return Err(SerializationError::FieldNotAvailable {
                 field: "AllowReplicationFactorChange",
                 version,
@@ -87,7 +99,7 @@ impl ApiResponse for AlterPartitionReassignmentsResponse {
         let allow_replication_factor_change = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            true
         };
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_message = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -134,7 +146,7 @@ impl KafkaCodec for AlterPartitionReassignmentsResponse {
         let allow_replication_factor_change = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            true
         };
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_message = KafkaCodec::decode(buf, version, is_flexible)?;

@@ -1,18 +1,27 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // AllocateProducerIdsRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AllocateProducerIdsRequest {
     /// The ID of the requesting broker.
     pub broker_id: i32,
     /// The epoch of the requesting broker.
     pub broker_epoch: i64,
+}
+impl Default for AllocateProducerIdsRequest {
+    fn default() -> Self {
+        Self {
+            broker_id: 0,
+            broker_epoch: -1,
+        }
+    }
 }
 
 impl ApiRequest for AllocateProducerIdsRequest {

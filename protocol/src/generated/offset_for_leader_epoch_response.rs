@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // OffsetForLeaderEpochResponse
@@ -17,7 +18,7 @@ pub struct OffsetForLeaderEpochResponse {
     pub topics: IndexMap<String, OffsetForLeaderTopicResult>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EpochEndOffset {
     /// The error code 0, or if there was no error.
     pub error_code: i16,
@@ -28,6 +29,16 @@ pub struct EpochEndOffset {
     pub leader_epoch: i32,
     /// The end offset of the epoch.
     pub end_offset: i64,
+}
+impl Default for EpochEndOffset {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            partition: 0,
+            leader_epoch: -1,
+            end_offset: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -78,7 +89,7 @@ impl ApiResponse for OffsetForLeaderEpochResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -115,7 +126,7 @@ impl KafkaCodec for OffsetForLeaderEpochResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -157,7 +168,7 @@ impl KafkaCodec for EpochEndOffset {
         let leader_epoch = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let end_offset = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

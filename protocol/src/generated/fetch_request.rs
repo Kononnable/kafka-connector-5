@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // FetchRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FetchRequest {
     /// The clusterId if known. This is used to validate metadata fetches prior to broker registration.
     /// Available in version 12+.
@@ -43,8 +44,26 @@ pub struct FetchRequest {
     /// Available in version 11+.
     pub rack_id: String,
 }
+impl Default for FetchRequest {
+    fn default() -> Self {
+        Self {
+            cluster_id: None,
+            replica_id: -1,
+            replica_state: Default::default(),
+            max_wait_ms: 0,
+            min_bytes: 0,
+            max_bytes: 2147483647,
+            isolation_level: 0,
+            session_id: 0,
+            session_epoch: -1,
+            topics: Vec::new(),
+            forgotten_topics_data: Vec::new(),
+            rack_id: String::new(),
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FetchPartition {
     /// The partition index.
     pub partition: i32,
@@ -67,6 +86,20 @@ pub struct FetchPartition {
     /// The high-watermark known by the replica. -1 if the high-watermark is not known and 9223372036854775807 if the feature is not supported.
     /// Available in version 18+.
     pub high_watermark: i64,
+}
+impl Default for FetchPartition {
+    fn default() -> Self {
+        Self {
+            partition: 0,
+            current_leader_epoch: -1,
+            fetch_offset: 0,
+            last_fetched_epoch: -1,
+            log_start_offset: -1,
+            partition_max_bytes: 0,
+            replica_directory_id: [0u8; 16],
+            high_watermark: 9223372036854775807,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -94,7 +127,7 @@ pub struct ForgottenTopic {
     pub partitions: Vec<i32>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ReplicaState {
     /// The replica ID of the follower, or -1 if this request is from a consumer.
     /// Available in version 15+.
@@ -102,6 +135,14 @@ pub struct ReplicaState {
     /// The epoch of this follower, or -1 if not available.
     /// Available in version 15+.
     pub replica_epoch: i64,
+}
+impl Default for ReplicaState {
+    fn default() -> Self {
+        Self {
+            replica_id: -1,
+            replica_epoch: -1,
+        }
+    }
 }
 
 impl ApiRequest for FetchRequest {
@@ -137,7 +178,7 @@ impl ApiRequest for FetchRequest {
         }
         if 0 <= version.0 && version.0 <= 14 {
             self.replica_id.encode(buf, version, is_flexible)?;
-        } else if self.replica_id != 0 {
+        } else if self.replica_id != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ReplicaId",
                 version,
@@ -157,7 +198,7 @@ impl ApiRequest for FetchRequest {
         self.min_bytes.encode(buf, version, is_flexible)?;
         if 3 <= version.0 {
             self.max_bytes.encode(buf, version, is_flexible)?;
-        } else if self.max_bytes != 0 {
+        } else if self.max_bytes != 2147483647 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "MaxBytes",
                 version,
@@ -184,7 +225,7 @@ impl ApiRequest for FetchRequest {
         }
         if 7 <= version.0 {
             self.session_epoch.encode(buf, version, is_flexible)?;
-        } else if self.session_epoch != 0 {
+        } else if self.session_epoch != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "SessionEpoch",
                 version,
@@ -204,7 +245,7 @@ impl ApiRequest for FetchRequest {
         }
         if 11 <= version.0 {
             self.rack_id.encode(buf, version, is_flexible)?;
-        } else if !self.rack_id.is_empty() {
+        } else if self.rack_id != String::new() {
             return Err(SerializationError::FieldNotAvailable {
                 field: "RackId",
                 version,
@@ -241,17 +282,17 @@ impl ApiRequest for FetchRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let mut cluster_id = if 12 <= version.0 {
             if is_flexible {
-                Default::default()
+                None
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            None
         };
         let replica_id = if 0 <= version.0 && version.0 <= 14 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let mut replica_state = if 15 <= version.0 {
             if is_flexible {
@@ -267,33 +308,33 @@ impl ApiRequest for FetchRequest {
         let max_bytes = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            2147483647
         };
         let isolation_level = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let session_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let session_epoch = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let rack_id = if 11 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -401,17 +442,17 @@ impl KafkaCodec for FetchRequest {
     ) -> Result<Self, SerializationError> {
         let mut cluster_id = if 12 <= version.0 {
             if is_flexible {
-                Default::default()
+                None
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            None
         };
         let replica_id = if 0 <= version.0 && version.0 <= 14 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let mut replica_state = if 15 <= version.0 {
             if is_flexible {
@@ -427,33 +468,33 @@ impl KafkaCodec for FetchRequest {
         let max_bytes = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            2147483647
         };
         let isolation_level = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let session_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let session_epoch = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let rack_id = if 11 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -522,7 +563,7 @@ impl KafkaCodec for FetchPartition {
             if self.replica_directory_id != [0u8; 16] {
                 tag_count += 1;
             }
-            if self.high_watermark != 0 {
+            if self.high_watermark != 9223372036854775807 {
                 tag_count += 1;
             }
             encode_unsigned_varint(tag_count, buf);
@@ -534,7 +575,7 @@ impl KafkaCodec for FetchPartition {
                 encode_unsigned_varint(tmp_buf.len() as u64, buf);
                 buf.put_slice(&tmp_buf);
             }
-            if self.high_watermark != 0 {
+            if self.high_watermark != 9223372036854775807 {
                 encode_unsigned_varint(1u64, buf);
                 let mut tmp_buf = bytes::BytesMut::new();
                 self.high_watermark.encode(&mut tmp_buf, version, true)?;
@@ -554,37 +595,37 @@ impl KafkaCodec for FetchPartition {
         let current_leader_epoch = if 9 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let fetch_offset = KafkaCodec::decode(buf, version, is_flexible)?;
         let last_fetched_epoch = if 12 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let log_start_offset = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let partition_max_bytes = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut replica_directory_id = if 17 <= version.0 {
             if is_flexible {
-                Default::default()
+                [0u8; 16]
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let mut high_watermark = if 18 <= version.0 {
             if is_flexible {
-                Default::default()
+                9223372036854775807
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            9223372036854775807
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -645,12 +686,12 @@ impl KafkaCodec for FetchTopic {
         let topic = if 0 <= version.0 && version.0 <= 12 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 13 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -694,17 +735,17 @@ impl KafkaCodec for ForgottenTopic {
         let topic = if 7 <= version.0 && version.0 <= 12 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 13 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partitions = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -744,12 +785,12 @@ impl KafkaCodec for ReplicaState {
         let replica_id = if 15 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let replica_epoch = if 15 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

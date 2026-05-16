@@ -46,7 +46,7 @@ fn test_codegen_generated_structs() {
 
     // Run cargo fmt to fix formatting of the generated files.
     let fmt_status = std::process::Command::new("cargo")
-        .args(["fmt", "--package", "protocol"])
+        .args(["+nightly", "fmt", "--package", "protocol"])
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit())
         .status()

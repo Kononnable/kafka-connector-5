@@ -237,6 +237,7 @@ pub use broker_heartbeat_request::BrokerHeartbeatRequest;
 pub use broker_heartbeat_response::BrokerHeartbeatResponse;
 pub use broker_registration_request::BrokerRegistrationRequest;
 pub use broker_registration_response::BrokerRegistrationResponse;
+use bytes::Bytes;
 pub use consumer_group_describe_request::ConsumerGroupDescribeRequest;
 pub use consumer_group_describe_response::ConsumerGroupDescribeResponse;
 pub use consumer_group_heartbeat_request::ConsumerGroupHeartbeatRequest;
@@ -404,7 +405,6 @@ pub use write_txn_markers_request::WriteTxnMarkersRequest;
 pub use write_txn_markers_response::WriteTxnMarkersResponse;
 
 use crate::traits::{ApiRequest, ApiResponse, ApiVersion as ApiVer};
-use bytes::Bytes;
 /// Look up whether a given API key + version uses flexible (compact) wire encoding.
 /// Generated from each message's `flexibleVersions` field.
 pub fn is_flexible_api(api_key: i16, api_version: i16) -> bool {

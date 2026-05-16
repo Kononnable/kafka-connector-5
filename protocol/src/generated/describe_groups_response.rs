@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeGroupsResponse
@@ -16,7 +17,7 @@ pub struct DescribeGroupsResponse {
     pub groups: Vec<DescribedGroup>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribedGroup {
     /// The describe error, or 0 if there was no error.
     pub error_code: i16,
@@ -36,6 +37,20 @@ pub struct DescribedGroup {
     /// 32-bit bitfield to represent authorized operations for this group.
     /// Available in version 3+.
     pub authorized_operations: i32,
+}
+impl Default for DescribedGroup {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            error_message: None,
+            group_id: String::new(),
+            group_state: String::new(),
+            protocol_type: String::new(),
+            protocol_data: String::new(),
+            members: Vec::new(),
+            authorized_operations: -2147483648,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -97,7 +112,7 @@ impl ApiResponse for DescribeGroupsResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let groups = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -134,7 +149,7 @@ impl KafkaCodec for DescribeGroupsResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let groups = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -182,7 +197,7 @@ impl KafkaCodec for DescribedGroup {
         let error_message = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let group_state = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -192,7 +207,7 @@ impl KafkaCodec for DescribedGroup {
         let authorized_operations = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -2147483648
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -240,7 +255,7 @@ impl KafkaCodec for DescribedGroupMember {
         let group_instance_id = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let client_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let client_host = KafkaCodec::decode(buf, version, is_flexible)?;

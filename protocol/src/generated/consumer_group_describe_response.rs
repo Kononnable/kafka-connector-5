@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ConsumerGroupDescribeResponse
@@ -21,7 +22,7 @@ pub struct Assignment {
     pub topic_partitions: Vec<TopicPartitions>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribedGroup {
     /// The describe error, or 0 if there was no error.
     pub error_code: i16,
@@ -42,8 +43,23 @@ pub struct DescribedGroup {
     /// 32-bit bitfield to represent authorized operations for this group.
     pub authorized_operations: i32,
 }
+impl Default for DescribedGroup {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            error_message: None,
+            group_id: String::new(),
+            group_state: String::new(),
+            group_epoch: 0,
+            assignment_epoch: 0,
+            assignor_name: String::new(),
+            members: Vec::new(),
+            authorized_operations: -2147483648,
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Member {
     /// The member ID.
     pub member_id: String,
@@ -68,6 +84,23 @@ pub struct Member {
     /// -1 for unknown. 0 for classic member. +1 for consumer member.
     /// Available in version 1+.
     pub member_type: i8,
+}
+impl Default for Member {
+    fn default() -> Self {
+        Self {
+            member_id: String::new(),
+            instance_id: None,
+            rack_id: None,
+            member_epoch: 0,
+            client_id: String::new(),
+            client_host: String::new(),
+            subscribed_topic_names: Vec::new(),
+            subscribed_topic_regex: None,
+            assignment: Default::default(),
+            target_assignment: Default::default(),
+            member_type: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -281,7 +314,7 @@ impl KafkaCodec for Member {
         let member_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

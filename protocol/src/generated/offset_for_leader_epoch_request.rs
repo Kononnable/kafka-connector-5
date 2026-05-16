@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // OffsetForLeaderEpochRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OffsetForLeaderEpochRequest {
     /// The broker ID of the follower, of -1 if this request is from a consumer.
     /// Available in version 3+.
@@ -16,8 +17,16 @@ pub struct OffsetForLeaderEpochRequest {
     /// IndexMap key `Topic` (string): The topic name.
     pub topics: IndexMap<String, OffsetForLeaderTopic>,
 }
+impl Default for OffsetForLeaderEpochRequest {
+    fn default() -> Self {
+        Self {
+            replica_id: -2,
+            topics: IndexMap::new(),
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OffsetForLeaderPartition {
     /// The partition index.
     pub partition: i32,
@@ -26,6 +35,15 @@ pub struct OffsetForLeaderPartition {
     pub current_leader_epoch: i32,
     /// The epoch to look up an offset for.
     pub leader_epoch: i32,
+}
+impl Default for OffsetForLeaderPartition {
+    fn default() -> Self {
+        Self {
+            partition: 0,
+            current_leader_epoch: -1,
+            leader_epoch: 0,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -58,7 +76,7 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         if 3 <= version.0 {
             self.replica_id.encode(buf, version, is_flexible)?;
-        } else if self.replica_id != 0 {
+        } else if self.replica_id != -2 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ReplicaId",
                 version,
@@ -76,7 +94,7 @@ impl ApiRequest for OffsetForLeaderEpochRequest {
         let replica_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -2
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -110,7 +128,7 @@ impl KafkaCodec for OffsetForLeaderEpochRequest {
         let replica_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -2
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -148,7 +166,7 @@ impl KafkaCodec for OffsetForLeaderPartition {
         let current_leader_epoch = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let leader_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

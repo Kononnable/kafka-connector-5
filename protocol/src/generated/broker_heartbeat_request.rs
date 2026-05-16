@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // BrokerHeartbeatRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BrokerHeartbeatRequest {
     /// The broker ID.
     pub broker_id: i32,
@@ -22,6 +23,18 @@ pub struct BrokerHeartbeatRequest {
     /// Log directories that failed and went offline.
     /// Available in version 1+.
     pub offline_log_dirs: Vec<[u8; 16]>,
+}
+impl Default for BrokerHeartbeatRequest {
+    fn default() -> Self {
+        Self {
+            broker_id: 0,
+            broker_epoch: -1,
+            current_metadata_offset: 0,
+            want_fence: false,
+            want_shut_down: false,
+            offline_log_dirs: Vec::new(),
+        }
+    }
 }
 
 impl ApiRequest for BrokerHeartbeatRequest {
@@ -86,12 +99,12 @@ impl ApiRequest for BrokerHeartbeatRequest {
         let want_shut_down = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut offline_log_dirs = if 1 <= version.0 {
             if is_flexible {
-                Default::default()
+                Vec::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -163,12 +176,12 @@ impl KafkaCodec for BrokerHeartbeatRequest {
         let want_shut_down = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut offline_log_dirs = if 1 <= version.0 {
             if is_flexible {
-                Default::default()
+                Vec::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;

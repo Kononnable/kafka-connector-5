@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // CreateTopicsResponse
@@ -17,7 +18,7 @@ pub struct CreateTopicsResponse {
     pub topics: IndexMap<String, CreatableTopicResult>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CreatableTopicConfigs {
     /// The configuration name.
     /// Available in version 5+.
@@ -35,8 +36,19 @@ pub struct CreatableTopicConfigs {
     /// Available in version 5+.
     pub is_sensitive: bool,
 }
+impl Default for CreatableTopicConfigs {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            value: None,
+            read_only: false,
+            config_source: -1,
+            is_sensitive: false,
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CreatableTopicResult {
     /// The unique topic ID.
     /// Available in version 7+.
@@ -58,6 +70,19 @@ pub struct CreatableTopicResult {
     /// Configuration of the topic.
     /// Available in version 5+.
     pub configs: Option<Vec<CreatableTopicConfigs>>,
+}
+impl Default for CreatableTopicResult {
+    fn default() -> Self {
+        Self {
+            topic_id: [0u8; 16],
+            error_code: 0,
+            error_message: None,
+            topic_config_error_code: 0,
+            num_partitions: -1,
+            replication_factor: -1,
+            configs: None,
+        }
+    }
 }
 
 impl ApiResponse for CreateTopicsResponse {
@@ -102,7 +127,7 @@ impl ApiResponse for CreateTopicsResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -139,7 +164,7 @@ impl KafkaCodec for CreateTopicsResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -188,27 +213,27 @@ impl KafkaCodec for CreatableTopicConfigs {
         let name = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let value = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let read_only = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let config_source = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let is_sensitive = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -276,37 +301,37 @@ impl KafkaCodec for CreatableTopicResult {
         let topic_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_message = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let mut topic_config_error_code = if 5 <= version.0 {
             if is_flexible {
-                Default::default()
+                0
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            0
         };
         let num_partitions = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let replication_factor = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let configs = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;

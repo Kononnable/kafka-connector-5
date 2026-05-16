@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // JoinGroupRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct JoinGroupRequest {
     /// The group identifier.
     pub group_id: String,
@@ -29,6 +30,20 @@ pub struct JoinGroupRequest {
     /// The reason why the member (re-)joins the group.
     /// Available in version 8+.
     pub reason: Option<String>,
+}
+impl Default for JoinGroupRequest {
+    fn default() -> Self {
+        Self {
+            group_id: String::new(),
+            session_timeout_ms: 0,
+            rebalance_timeout_ms: -1,
+            member_id: String::new(),
+            group_instance_id: None,
+            protocol_type: String::new(),
+            protocols: IndexMap::new(),
+            reason: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -64,7 +79,7 @@ impl ApiRequest for JoinGroupRequest {
         if 1 <= version.0 {
             self.rebalance_timeout_ms
                 .encode(buf, version, is_flexible)?;
-        } else if self.rebalance_timeout_ms != 0 {
+        } else if self.rebalance_timeout_ms != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "RebalanceTimeoutMs",
                 version,
@@ -104,20 +119,20 @@ impl ApiRequest for JoinGroupRequest {
         let rebalance_timeout_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let member_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let group_instance_id = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let protocol_type = KafkaCodec::decode(buf, version, is_flexible)?;
         let protocols = KafkaCodec::decode(buf, version, is_flexible)?;
         let reason = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -172,20 +187,20 @@ impl KafkaCodec for JoinGroupRequest {
         let rebalance_timeout_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let member_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let group_instance_id = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let protocol_type = KafkaCodec::decode(buf, version, is_flexible)?;
         let protocols = KafkaCodec::decode(buf, version, is_flexible)?;
         let reason = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // StreamsGroupDescribeResponse
@@ -25,7 +26,7 @@ pub struct Assignment {
     pub warmup_tasks: Vec<TaskIds>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribedGroup {
     /// The describe error, or 0 if there was no error.
     pub error_code: i16,
@@ -45,6 +46,21 @@ pub struct DescribedGroup {
     pub members: Vec<Member>,
     /// 32-bit bitfield to represent authorized operations for this group.
     pub authorized_operations: i32,
+}
+impl Default for DescribedGroup {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            error_message: None,
+            group_id: String::new(),
+            group_state: String::new(),
+            group_epoch: 0,
+            assignment_epoch: 0,
+            topology: None,
+            members: Vec::new(),
+            authorized_operations: -2147483648,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

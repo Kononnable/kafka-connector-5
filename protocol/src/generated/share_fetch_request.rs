@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ShareFetchRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ShareFetchRequest {
     /// The group identifier.
     pub group_id: Option<String>,
@@ -32,6 +33,22 @@ pub struct ShareFetchRequest {
     pub topics: IndexMap<[u8; 16], FetchTopic>,
     /// The partitions to remove from this share session.
     pub forgotten_topics_data: Vec<ForgottenTopic>,
+}
+impl Default for ShareFetchRequest {
+    fn default() -> Self {
+        Self {
+            group_id: None,
+            member_id: None,
+            share_session_epoch: 0,
+            max_wait_ms: 0,
+            min_bytes: 0,
+            max_bytes: 2147483647,
+            max_records: 0,
+            batch_size: 0,
+            topics: IndexMap::new(),
+            forgotten_topics_data: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -133,12 +150,12 @@ impl ApiRequest for ShareFetchRequest {
         let max_records = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let batch_size = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -201,12 +218,12 @@ impl KafkaCodec for ShareFetchRequest {
         let max_records = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let batch_size = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         let forgotten_topics_data = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -289,7 +306,7 @@ impl KafkaCodec for FetchPartition {
         let partition_max_bytes = if version.0 == 0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let acknowledgement_batches = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

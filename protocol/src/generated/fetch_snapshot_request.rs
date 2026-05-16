@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // FetchSnapshotRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FetchSnapshotRequest {
     /// The clusterId if known, this is used to validate metadata fetches prior to broker registration.
     pub cluster_id: Option<String>,
@@ -17,6 +18,16 @@ pub struct FetchSnapshotRequest {
     pub max_bytes: i32,
     /// The topics to fetch.
     pub topics: Vec<TopicSnapshot>,
+}
+impl Default for FetchSnapshotRequest {
+    fn default() -> Self {
+        Self {
+            cluster_id: None,
+            replica_id: -1,
+            max_bytes: 2147483647,
+            topics: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -95,7 +106,7 @@ impl ApiRequest for FetchSnapshotRequest {
     fn deserialize(version: ApiVer, buf: &mut Bytes) -> Result<Self, SerializationError> {
         let is_flexible = version.0 >= Self::get_min_flexible_version().0;
         let mut cluster_id = if is_flexible {
-            Default::default()
+            None
         } else {
             KafkaCodec::decode(buf, version, is_flexible)?
         };
@@ -161,7 +172,7 @@ impl KafkaCodec for FetchSnapshotRequest {
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         let mut cluster_id = if is_flexible {
-            Default::default()
+            None
         } else {
             KafkaCodec::decode(buf, version, is_flexible)?
         };
@@ -237,12 +248,12 @@ impl KafkaCodec for PartitionSnapshot {
         let position = KafkaCodec::decode(buf, version, is_flexible)?;
         let mut replica_directory_id = if 1 <= version.0 {
             if is_flexible {
-                Default::default()
+                [0u8; 16]
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            [0u8; 16]
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;

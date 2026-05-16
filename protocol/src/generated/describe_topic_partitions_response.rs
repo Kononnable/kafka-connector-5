@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeTopicPartitionsResponse
@@ -25,7 +26,7 @@ pub struct Cursor {
     pub partition_index: i32,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeTopicPartitionsResponsePartition {
     /// The partition error, or 0 if there was no error.
     pub error_code: i16,
@@ -46,8 +47,23 @@ pub struct DescribeTopicPartitionsResponsePartition {
     /// The set of offline replicas of this partition.
     pub offline_replicas: Vec<i32>,
 }
+impl Default for DescribeTopicPartitionsResponsePartition {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            partition_index: 0,
+            leader_id: 0,
+            leader_epoch: -1,
+            replica_nodes: Vec::new(),
+            isr_nodes: Vec::new(),
+            eligible_leader_replicas: None,
+            last_known_elr: None,
+            offline_replicas: Vec::new(),
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeTopicPartitionsResponseTopic {
     /// The topic error, or 0 if there was no error.
     pub error_code: i16,
@@ -61,6 +77,18 @@ pub struct DescribeTopicPartitionsResponseTopic {
     pub partitions: Vec<DescribeTopicPartitionsResponsePartition>,
     /// 32-bit bitfield to represent authorized operations for this topic.
     pub topic_authorized_operations: i32,
+}
+impl Default for DescribeTopicPartitionsResponseTopic {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            name: None,
+            topic_id: [0u8; 16],
+            is_internal: false,
+            partitions: Vec::new(),
+            topic_authorized_operations: -2147483648,
+        }
+    }
 }
 
 impl ApiResponse for DescribeTopicPartitionsResponse {

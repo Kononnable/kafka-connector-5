@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeTopicPartitionsRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeTopicPartitionsRequest {
     /// The topics to fetch details for.
     pub topics: Vec<TopicRequest>,
@@ -15,6 +16,15 @@ pub struct DescribeTopicPartitionsRequest {
     pub response_partition_limit: i32,
     /// The first topic and partition index to fetch details for.
     pub cursor: Option<Cursor>,
+}
+impl Default for DescribeTopicPartitionsRequest {
+    fn default() -> Self {
+        Self {
+            topics: Vec::new(),
+            response_partition_limit: 2000,
+            cursor: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

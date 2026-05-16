@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // EndTxnResponse
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EndTxnResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
@@ -19,6 +20,16 @@ pub struct EndTxnResponse {
     /// The current epoch associated with the producer.
     /// Available in version 5+.
     pub producer_epoch: i16,
+}
+impl Default for EndTxnResponse {
+    fn default() -> Self {
+        Self {
+            throttle_time_ms: 0,
+            error_code: 0,
+            producer_id: -1,
+            producer_epoch: -1,
+        }
+    }
 }
 
 impl ApiResponse for EndTxnResponse {
@@ -47,7 +58,7 @@ impl ApiResponse for EndTxnResponse {
         self.error_code.encode(buf, version, is_flexible)?;
         if 5 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
-        } else if self.producer_id != 0 {
+        } else if self.producer_id != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ProducerId",
                 version,
@@ -56,7 +67,7 @@ impl ApiResponse for EndTxnResponse {
         }
         if 5 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
-        } else if self.producer_epoch != 0 {
+        } else if self.producer_epoch != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "ProducerEpoch",
                 version,
@@ -75,12 +86,12 @@ impl ApiResponse for EndTxnResponse {
         let producer_id = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let producer_epoch = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -124,12 +135,12 @@ impl KafkaCodec for EndTxnResponse {
         let producer_id = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let producer_epoch = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

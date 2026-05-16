@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ShareFetchResponse
@@ -130,7 +131,7 @@ impl ApiResponse for ShareFetchResponse {
         let acquisition_lock_timeout_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let responses = KafkaCodec::decode(buf, version, is_flexible)?;
         let node_endpoints = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -180,7 +181,7 @@ impl KafkaCodec for ShareFetchResponse {
         let acquisition_lock_timeout_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let responses = KafkaCodec::decode(buf, version, is_flexible)?;
         let node_endpoints = KafkaCodec::decode(buf, version, is_flexible)?;

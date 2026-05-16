@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // OffsetCommitRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OffsetCommitRequest {
     /// The unique group identifier.
     pub group_id: String,
@@ -26,8 +27,20 @@ pub struct OffsetCommitRequest {
     /// The topics to commit offsets for.
     pub topics: Vec<OffsetCommitRequestTopic>,
 }
+impl Default for OffsetCommitRequest {
+    fn default() -> Self {
+        Self {
+            group_id: String::new(),
+            generation_id_or_member_epoch: -1,
+            member_id: String::new(),
+            group_instance_id: None,
+            retention_time_ms: -1,
+            topics: Vec::new(),
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OffsetCommitRequestPartition {
     /// The partition index.
     pub partition_index: i32,
@@ -38,6 +51,16 @@ pub struct OffsetCommitRequestPartition {
     pub committed_leader_epoch: i32,
     /// Any associated metadata the client wants to keep.
     pub committed_metadata: Option<String>,
+}
+impl Default for OffsetCommitRequestPartition {
+    fn default() -> Self {
+        Self {
+            partition_index: 0,
+            committed_offset: 0,
+            committed_leader_epoch: -1,
+            committed_metadata: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -78,7 +101,7 @@ impl ApiRequest for OffsetCommitRequest {
         if 1 <= version.0 {
             self.generation_id_or_member_epoch
                 .encode(buf, version, is_flexible)?;
-        } else if self.generation_id_or_member_epoch != 0 {
+        } else if self.generation_id_or_member_epoch != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "GenerationIdOrMemberEpoch",
                 version,
@@ -105,7 +128,7 @@ impl ApiRequest for OffsetCommitRequest {
         }
         if 2 <= version.0 && version.0 <= 4 {
             self.retention_time_ms.encode(buf, version, is_flexible)?;
-        } else if self.retention_time_ms != 0 {
+        } else if self.retention_time_ms != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "RetentionTimeMs",
                 version,
@@ -124,22 +147,22 @@ impl ApiRequest for OffsetCommitRequest {
         let generation_id_or_member_epoch = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let member_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let group_instance_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let retention_time_ms = if 2 <= version.0 && version.0 <= 4 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -192,22 +215,22 @@ impl KafkaCodec for OffsetCommitRequest {
         let generation_id_or_member_epoch = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let member_id = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let group_instance_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let retention_time_ms = if 2 <= version.0 && version.0 <= 4 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -254,7 +277,7 @@ impl KafkaCodec for OffsetCommitRequestPartition {
         let committed_leader_epoch = if 6 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let committed_metadata = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -297,12 +320,12 @@ impl KafkaCodec for OffsetCommitRequestTopic {
         let name = if 0 <= version.0 && version.0 <= 9 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

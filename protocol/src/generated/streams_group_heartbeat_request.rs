@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // StreamsGroupHeartbeatRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct StreamsGroupHeartbeatRequest {
     /// The group identifier.
     pub group_id: String,
@@ -43,6 +44,29 @@ pub struct StreamsGroupHeartbeatRequest {
     pub task_end_offsets: Option<Vec<TaskOffset>>,
     /// Whether all Streams clients in the group should shut down.
     pub shutdown_application: bool,
+}
+impl Default for StreamsGroupHeartbeatRequest {
+    fn default() -> Self {
+        Self {
+            group_id: String::new(),
+            member_id: String::new(),
+            member_epoch: 0,
+            endpoint_information_epoch: 0,
+            instance_id: None,
+            rack_id: None,
+            rebalance_timeout_ms: -1,
+            topology: None,
+            active_tasks: None,
+            standby_tasks: None,
+            warmup_tasks: None,
+            process_id: None,
+            user_endpoint: None,
+            client_tags: None,
+            task_offsets: None,
+            task_end_offsets: None,
+            shutdown_application: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

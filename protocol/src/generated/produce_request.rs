@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ProduceRequest
@@ -84,7 +85,7 @@ impl ApiRequest for ProduceRequest {
         let transactional_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let acks = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -127,7 +128,7 @@ impl KafkaCodec for ProduceRequest {
         let transactional_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let acks = KafkaCodec::decode(buf, version, is_flexible)?;
         let timeout_ms = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -201,12 +202,12 @@ impl KafkaCodec for TopicProduceData {
         let name = if 0 <= version.0 && version.0 <= 12 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 13 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partition_data = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

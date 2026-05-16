@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // UpdateFeaturesRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UpdateFeaturesRequest {
     /// How long to wait in milliseconds before timing out the request.
     pub timeout_ms: i32,
@@ -18,8 +19,17 @@ pub struct UpdateFeaturesRequest {
     /// Available in version 1+.
     pub validate_only: bool,
 }
+impl Default for UpdateFeaturesRequest {
+    fn default() -> Self {
+        Self {
+            timeout_ms: 60000,
+            feature_updates: IndexMap::new(),
+            validate_only: false,
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FeatureUpdateKey {
     /// The new maximum version level for the finalized feature. A value >= 1 is valid. A value < 1, is special, and can be used to request the deletion of the finalized feature.
     pub max_version_level: i16,
@@ -29,6 +39,15 @@ pub struct FeatureUpdateKey {
     /// Determine which type of upgrade will be performed: 1 will perform an upgrade only (default), 2 is safe downgrades only (lossless), 3 is unsafe downgrades (lossy).
     /// Available in version 1+.
     pub upgrade_type: i8,
+}
+impl Default for FeatureUpdateKey {
+    fn default() -> Self {
+        Self {
+            max_version_level: 0,
+            allow_downgrade: false,
+            upgrade_type: 1,
+        }
+    }
 }
 
 impl ApiRequest for UpdateFeaturesRequest {
@@ -76,7 +95,7 @@ impl ApiRequest for UpdateFeaturesRequest {
         let validate_only = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -116,7 +135,7 @@ impl KafkaCodec for UpdateFeaturesRequest {
         let validate_only = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -158,12 +177,12 @@ impl KafkaCodec for FeatureUpdateKey {
         let allow_downgrade = if version.0 == 0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let upgrade_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

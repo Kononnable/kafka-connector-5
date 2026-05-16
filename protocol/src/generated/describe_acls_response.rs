@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeAclsResponse
@@ -31,7 +32,7 @@ pub struct AclDescription {
     pub permission_type: i8,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeAclsResource {
     /// The resource type.
     pub resource_type: i8,
@@ -42,6 +43,16 @@ pub struct DescribeAclsResource {
     pub pattern_type: i8,
     /// The ACLs.
     pub acls: Vec<AclDescription>,
+}
+impl Default for DescribeAclsResource {
+    fn default() -> Self {
+        Self {
+            resource_type: 0,
+            resource_name: String::new(),
+            pattern_type: 3,
+            acls: Vec::new(),
+        }
+    }
 }
 
 impl ApiResponse for DescribeAclsResponse {
@@ -197,7 +208,7 @@ impl KafkaCodec for DescribeAclsResource {
         let pattern_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            3
         };
         let acls = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

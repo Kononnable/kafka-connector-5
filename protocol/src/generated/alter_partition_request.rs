@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // AlterPartitionRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AlterPartitionRequest {
     /// The ID of the requesting broker.
     pub broker_id: i32,
@@ -16,8 +17,17 @@ pub struct AlterPartitionRequest {
     /// The topics to alter ISRs for.
     pub topics: Vec<TopicData>,
 }
+impl Default for AlterPartitionRequest {
+    fn default() -> Self {
+        Self {
+            broker_id: 0,
+            broker_epoch: -1,
+            topics: Vec::new(),
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BrokerState {
     /// The ID of the broker.
     /// Available in version 3+.
@@ -25,6 +35,14 @@ pub struct BrokerState {
     /// The epoch of the broker. It will be -1 if the epoch check is not supported.
     /// Available in version 3+.
     pub broker_epoch: i64,
+}
+impl Default for BrokerState {
+    fn default() -> Self {
+        Self {
+            broker_id: 0,
+            broker_epoch: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -162,12 +180,12 @@ impl KafkaCodec for BrokerState {
         let broker_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let broker_epoch = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -215,17 +233,17 @@ impl KafkaCodec for PartitionData {
         let new_isr = if 0 <= version.0 && version.0 <= 2 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let new_isr_with_epochs = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let leader_recovery_state = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let partition_epoch = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -267,7 +285,7 @@ impl KafkaCodec for TopicData {
         let topic_id = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ConsumerProtocolSubscription
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConsumerProtocolSubscription {
     /// The topics that the member wants to consume.
     pub topics: Vec<String>,
@@ -23,6 +24,17 @@ pub struct ConsumerProtocolSubscription {
     /// The rack id of the member.
     /// Available in version 3+.
     pub rack_id: Option<String>,
+}
+impl Default for ConsumerProtocolSubscription {
+    fn default() -> Self {
+        Self {
+            topics: Vec::new(),
+            user_data: None,
+            owned_partitions: IndexMap::new(),
+            generation_id: -1,
+            rack_id: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -66,17 +78,17 @@ impl KafkaCodec for ConsumerProtocolSubscription {
         let owned_partitions = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            IndexMap::new()
         };
         let generation_id = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let rack_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -115,7 +127,7 @@ impl KafkaCodec for TopicPartition {
         let partitions = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

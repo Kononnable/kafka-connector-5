@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ListTransactionsRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ListTransactionsRequest {
     /// The transaction states to filter by: if empty, all transactions are returned; if non-empty, then only transactions matching one of the filtered states will be returned.
     pub state_filters: Vec<String>,
@@ -19,6 +20,16 @@ pub struct ListTransactionsRequest {
     /// The transactional ID regular expression pattern to filter by: if it is empty or null, all transactions are returned; Otherwise then only the transactions matching the given regular expression will be returned.
     /// Available in version 2+.
     pub transactional_id_pattern: Option<String>,
+}
+impl Default for ListTransactionsRequest {
+    fn default() -> Self {
+        Self {
+            state_filters: Vec::new(),
+            producer_id_filters: Vec::new(),
+            duration_filter: -1,
+            transactional_id_pattern: None,
+        }
+    }
 }
 
 impl ApiRequest for ListTransactionsRequest {
@@ -47,7 +58,7 @@ impl ApiRequest for ListTransactionsRequest {
         self.producer_id_filters.encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
             self.duration_filter.encode(buf, version, is_flexible)?;
-        } else if self.duration_filter != 0 {
+        } else if self.duration_filter != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "DurationFilter",
                 version,
@@ -76,12 +87,12 @@ impl ApiRequest for ListTransactionsRequest {
         let duration_filter = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let transactional_id_pattern = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -126,12 +137,12 @@ impl KafkaCodec for ListTransactionsRequest {
         let duration_filter = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let transactional_id_pattern = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

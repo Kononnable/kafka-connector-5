@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ApiVersionsResponse
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ApiVersionsResponse {
     /// The top-level error code.
     pub error_code: i16,
@@ -31,6 +32,19 @@ pub struct ApiVersionsResponse {
     /// Set by a KRaft controller if the required configurations for ZK migration are present.
     /// Available in version 3+.
     pub zk_migration_ready: bool,
+}
+impl Default for ApiVersionsResponse {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            api_keys: IndexMap::new(),
+            throttle_time_ms: 0,
+            supported_features: IndexMap::new(),
+            finalized_features_epoch: -1,
+            finalized_features: IndexMap::new(),
+            zk_migration_ready: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -106,7 +120,7 @@ impl ApiResponse for ApiVersionsResponse {
         if 3 <= version.0 {
             self.finalized_features_epoch
                 .encode(buf, version, is_flexible)?;
-        } else if self.finalized_features_epoch != 0 {
+        } else if self.finalized_features_epoch != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "FinalizedFeaturesEpoch",
                 version,
@@ -136,7 +150,7 @@ impl ApiResponse for ApiVersionsResponse {
             if !self.supported_features.is_empty() {
                 tag_count += 1;
             }
-            if self.finalized_features_epoch != 0 {
+            if self.finalized_features_epoch != -1 {
                 tag_count += 1;
             }
             if !self.finalized_features.is_empty() {
@@ -154,7 +168,7 @@ impl ApiResponse for ApiVersionsResponse {
                 encode_unsigned_varint(tmp_buf.len() as u64, buf);
                 buf.put_slice(&tmp_buf);
             }
-            if self.finalized_features_epoch != 0 {
+            if self.finalized_features_epoch != -1 {
                 encode_unsigned_varint(1u64, buf);
                 let mut tmp_buf = bytes::BytesMut::new();
                 self.finalized_features_epoch
@@ -188,43 +202,43 @@ impl ApiResponse for ApiVersionsResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let mut supported_features = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         let mut finalized_features_epoch = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                -1
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            -1
         };
         let mut finalized_features = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         let mut zk_migration_ready = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                false
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -291,7 +305,7 @@ impl KafkaCodec for ApiVersionsResponse {
             if !self.supported_features.is_empty() {
                 tag_count += 1;
             }
-            if self.finalized_features_epoch != 0 {
+            if self.finalized_features_epoch != -1 {
                 tag_count += 1;
             }
             if !self.finalized_features.is_empty() {
@@ -309,7 +323,7 @@ impl KafkaCodec for ApiVersionsResponse {
                 encode_unsigned_varint(tmp_buf.len() as u64, buf);
                 buf.put_slice(&tmp_buf);
             }
-            if self.finalized_features_epoch != 0 {
+            if self.finalized_features_epoch != -1 {
                 encode_unsigned_varint(1u64, buf);
                 let mut tmp_buf = bytes::BytesMut::new();
                 self.finalized_features_epoch
@@ -347,43 +361,43 @@ impl KafkaCodec for ApiVersionsResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let mut supported_features = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         let mut finalized_features_epoch = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                -1
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            -1
         };
         let mut finalized_features = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         let mut zk_migration_ready = if 3 <= version.0 {
             if is_flexible {
-                Default::default()
+                false
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            false
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -480,12 +494,12 @@ impl KafkaCodec for FinalizedFeatureKey {
         let max_version_level = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let min_version_level = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -524,12 +538,12 @@ impl KafkaCodec for SupportedFeatureKey {
         let min_version = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let max_version = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

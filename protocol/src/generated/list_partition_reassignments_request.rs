@@ -1,18 +1,27 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ListPartitionReassignmentsRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ListPartitionReassignmentsRequest {
     /// The time in ms to wait for the request to complete.
     pub timeout_ms: i32,
     /// The topics to list partition reassignments for, or null to list everything.
     pub topics: Option<Vec<ListPartitionReassignmentsTopics>>,
+}
+impl Default for ListPartitionReassignmentsRequest {
+    fn default() -> Self {
+        Self {
+            timeout_ms: 60000,
+            topics: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

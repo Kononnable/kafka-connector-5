@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeLogDirsResponse
@@ -30,7 +31,7 @@ pub struct DescribeLogDirsPartition {
     pub is_future_key: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DescribeLogDirsResult {
     /// The error code, or 0 if there was no error.
     pub error_code: i16,
@@ -44,6 +45,17 @@ pub struct DescribeLogDirsResult {
     /// The usable size in bytes of the volume the log directory is in.
     /// Available in version 4+.
     pub usable_bytes: i64,
+}
+impl Default for DescribeLogDirsResult {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            log_dir: String::new(),
+            topics: Vec::new(),
+            total_bytes: -1,
+            usable_bytes: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -98,7 +110,7 @@ impl ApiResponse for DescribeLogDirsResponse {
         let error_code = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -138,7 +150,7 @@ impl KafkaCodec for DescribeLogDirsResponse {
         let error_code = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let results = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -223,12 +235,12 @@ impl KafkaCodec for DescribeLogDirsResult {
         let total_bytes = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let usable_bytes = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

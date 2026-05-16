@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DeleteAclsResponse
@@ -25,7 +26,7 @@ pub struct DeleteAclsFilterResult {
     pub matching_acls: Vec<DeleteAclsMatchingAcl>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DeleteAclsMatchingAcl {
     /// The deletion error code, or 0 if the deletion succeeded.
     pub error_code: i16,
@@ -46,6 +47,21 @@ pub struct DeleteAclsMatchingAcl {
     pub operation: i8,
     /// The ACL permission type.
     pub permission_type: i8,
+}
+impl Default for DeleteAclsMatchingAcl {
+    fn default() -> Self {
+        Self {
+            error_code: 0,
+            error_message: None,
+            resource_type: 0,
+            resource_name: String::new(),
+            pattern_type: 3,
+            principal: String::new(),
+            host: String::new(),
+            operation: 0,
+            permission_type: 0,
+        }
+    }
 }
 
 impl ApiResponse for DeleteAclsResponse {
@@ -193,7 +209,7 @@ impl KafkaCodec for DeleteAclsMatchingAcl {
         let pattern_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            3
         };
         let principal = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;

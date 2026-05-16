@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // CreateAclsRequest
@@ -13,7 +14,7 @@ pub struct CreateAclsRequest {
     pub creations: Vec<AclCreation>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AclCreation {
     /// The type of the resource.
     pub resource_type: i8,
@@ -30,6 +31,19 @@ pub struct AclCreation {
     pub operation: i8,
     /// The permission type for the ACL (allow, deny, etc.).
     pub permission_type: i8,
+}
+impl Default for AclCreation {
+    fn default() -> Self {
+        Self {
+            resource_type: 0,
+            resource_name: String::new(),
+            resource_pattern_type: 3,
+            principal: String::new(),
+            host: String::new(),
+            operation: 0,
+            permission_type: 0,
+        }
+    }
 }
 
 impl ApiRequest for CreateAclsRequest {
@@ -129,7 +143,7 @@ impl KafkaCodec for AclCreation {
         let resource_pattern_type = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            3
         };
         let principal = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;

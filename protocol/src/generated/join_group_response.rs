@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // JoinGroupResponse
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct JoinGroupResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     /// Available in version 2+.
@@ -30,6 +31,21 @@ pub struct JoinGroupResponse {
     pub member_id: String,
     /// The group members.
     pub members: Vec<JoinGroupResponseMember>,
+}
+impl Default for JoinGroupResponse {
+    fn default() -> Self {
+        Self {
+            throttle_time_ms: 0,
+            error_code: 0,
+            generation_id: -1,
+            protocol_type: None,
+            protocol_name: None,
+            leader: String::new(),
+            skip_assignment: false,
+            member_id: String::new(),
+            members: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -108,21 +124,21 @@ impl ApiResponse for JoinGroupResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let generation_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let protocol_type = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let protocol_name = KafkaCodec::decode(buf, version, is_flexible)?;
         let leader = KafkaCodec::decode(buf, version, is_flexible)?;
         let skip_assignment = if 9 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let member_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let members = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -178,21 +194,21 @@ impl KafkaCodec for JoinGroupResponse {
         let throttle_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let generation_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let protocol_type = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let protocol_name = KafkaCodec::decode(buf, version, is_flexible)?;
         let leader = KafkaCodec::decode(buf, version, is_flexible)?;
         let skip_assignment = if 9 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let member_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let members = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -240,7 +256,7 @@ impl KafkaCodec for JoinGroupResponseMember {
         let group_instance_id = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let metadata = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

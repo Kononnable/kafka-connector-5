@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // BrokerRegistrationRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BrokerRegistrationRequest {
     /// The broker ID.
     pub broker_id: i32,
@@ -32,6 +33,21 @@ pub struct BrokerRegistrationRequest {
     /// The epoch before a clean shutdown.
     /// Available in version 3+.
     pub previous_broker_epoch: i64,
+}
+impl Default for BrokerRegistrationRequest {
+    fn default() -> Self {
+        Self {
+            broker_id: 0,
+            cluster_id: String::new(),
+            incarnation_id: [0u8; 16],
+            listeners: IndexMap::new(),
+            features: IndexMap::new(),
+            rack: None,
+            is_migrating_zk_broker: false,
+            log_dirs: Vec::new(),
+            previous_broker_epoch: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -102,7 +118,7 @@ impl ApiRequest for BrokerRegistrationRequest {
         if 3 <= version.0 {
             self.previous_broker_epoch
                 .encode(buf, version, is_flexible)?;
-        } else if self.previous_broker_epoch != 0 {
+        } else if self.previous_broker_epoch != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "PreviousBrokerEpoch",
                 version,
@@ -125,17 +141,17 @@ impl ApiRequest for BrokerRegistrationRequest {
         let is_migrating_zk_broker = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let log_dirs = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let previous_broker_epoch = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -197,17 +213,17 @@ impl KafkaCodec for BrokerRegistrationRequest {
         let is_migrating_zk_broker = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            false
         };
         let log_dirs = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let previous_broker_epoch = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

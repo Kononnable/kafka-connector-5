@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // DescribeProducersResponse
@@ -27,7 +28,7 @@ pub struct PartitionResponse {
     pub active_producers: Vec<ProducerState>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProducerState {
     /// The producer id.
     pub producer_id: i64,
@@ -41,6 +42,18 @@ pub struct ProducerState {
     pub coordinator_epoch: i32,
     /// The current transaction start offset of the producer.
     pub current_txn_start_offset: i64,
+}
+impl Default for ProducerState {
+    fn default() -> Self {
+        Self {
+            producer_id: 0,
+            producer_epoch: 0,
+            last_sequence: -1,
+            last_timestamp: -1,
+            coordinator_epoch: 0,
+            current_txn_start_offset: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

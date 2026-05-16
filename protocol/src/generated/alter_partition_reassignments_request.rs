@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // AlterPartitionReassignmentsRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AlterPartitionReassignmentsRequest {
     /// The time in ms to wait for the request to complete.
     pub timeout_ms: i32,
@@ -16,6 +17,15 @@ pub struct AlterPartitionReassignmentsRequest {
     pub allow_replication_factor_change: bool,
     /// The topics to reassign.
     pub topics: Vec<ReassignableTopic>,
+}
+impl Default for AlterPartitionReassignmentsRequest {
+    fn default() -> Self {
+        Self {
+            timeout_ms: 60000,
+            allow_replication_factor_change: true,
+            topics: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -60,7 +70,7 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
         if 1 <= version.0 {
             self.allow_replication_factor_change
                 .encode(buf, version, is_flexible)?;
-        } else if self.allow_replication_factor_change {
+        } else if !self.allow_replication_factor_change {
             return Err(SerializationError::FieldNotAvailable {
                 field: "AllowReplicationFactorChange",
                 version,
@@ -79,7 +89,7 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
         let allow_replication_factor_change = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            true
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -120,7 +130,7 @@ impl KafkaCodec for AlterPartitionReassignmentsRequest {
         let allow_replication_factor_change = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            true
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

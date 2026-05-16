@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ConsumerGroupHeartbeatRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConsumerGroupHeartbeatRequest {
     /// The group identifier.
     pub group_id: String,
@@ -30,6 +31,22 @@ pub struct ConsumerGroupHeartbeatRequest {
     pub server_assignor: Option<String>,
     /// null if it didn't change since the last heartbeat; the partitions owned by the member.
     pub topic_partitions: Option<Vec<TopicPartitions>>,
+}
+impl Default for ConsumerGroupHeartbeatRequest {
+    fn default() -> Self {
+        Self {
+            group_id: String::new(),
+            member_id: String::new(),
+            member_epoch: 0,
+            instance_id: None,
+            rack_id: None,
+            rebalance_timeout_ms: -1,
+            subscribed_topic_names: None,
+            subscribed_topic_regex: None,
+            server_assignor: None,
+            topic_partitions: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -100,7 +117,7 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
         let subscribed_topic_regex = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let server_assignor = KafkaCodec::decode(buf, version, is_flexible)?;
         let topic_partitions = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -164,7 +181,7 @@ impl KafkaCodec for ConsumerGroupHeartbeatRequest {
         let subscribed_topic_regex = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let server_assignor = KafkaCodec::decode(buf, version, is_flexible)?;
         let topic_partitions = KafkaCodec::decode(buf, version, is_flexible)?;

@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // OffsetFetchResponse
@@ -36,7 +37,7 @@ pub struct OffsetFetchResponseGroup {
     pub error_code: i16,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OffsetFetchResponsePartition {
     /// The partition index.
     /// Available in version 0-7.
@@ -54,8 +55,19 @@ pub struct OffsetFetchResponsePartition {
     /// Available in version 0-7.
     pub error_code: i16,
 }
+impl Default for OffsetFetchResponsePartition {
+    fn default() -> Self {
+        Self {
+            partition_index: 0,
+            committed_offset: 0,
+            committed_leader_epoch: -1,
+            metadata: None,
+            error_code: 0,
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OffsetFetchResponsePartitions {
     /// The partition index.
     /// Available in version 8+.
@@ -72,6 +84,17 @@ pub struct OffsetFetchResponsePartitions {
     /// The partition-level error code, or 0 if there was no error.
     /// Available in version 8+.
     pub error_code: i16,
+}
+impl Default for OffsetFetchResponsePartitions {
+    fn default() -> Self {
+        Self {
+            partition_index: 0,
+            committed_offset: 0,
+            committed_leader_epoch: -1,
+            metadata: None,
+            error_code: 0,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -165,22 +188,22 @@ impl ApiResponse for OffsetFetchResponse {
         let throttle_time_ms = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let error_code = if 2 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let groups = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -226,22 +249,22 @@ impl KafkaCodec for OffsetFetchResponse {
         let throttle_time_ms = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let topics = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let error_code = if 2 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let groups = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -285,17 +308,17 @@ impl KafkaCodec for OffsetFetchResponseGroup {
         let group_id = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topics = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let error_code = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -345,27 +368,27 @@ impl KafkaCodec for OffsetFetchResponsePartition {
         let partition_index = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let committed_offset = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let committed_leader_epoch = if 5 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let metadata = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let error_code = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -417,27 +440,27 @@ impl KafkaCodec for OffsetFetchResponsePartitions {
         let partition_index = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let committed_offset = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let committed_leader_epoch = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let metadata = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let error_code = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -479,12 +502,12 @@ impl KafkaCodec for OffsetFetchResponseTopic {
         let name = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let partitions = if 0 <= version.0 && version.0 <= 7 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -523,17 +546,17 @@ impl KafkaCodec for OffsetFetchResponseTopics {
         let name = if 8 <= version.0 && version.0 <= 9 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partitions = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;

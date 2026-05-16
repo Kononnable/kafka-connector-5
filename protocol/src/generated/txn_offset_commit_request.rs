@@ -1,13 +1,14 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // TxnOffsetCommitRequest
 // -------------------------------------------------------
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TxnOffsetCommitRequest {
     /// The ID of the transaction.
     pub transactional_id: String,
@@ -29,8 +30,22 @@ pub struct TxnOffsetCommitRequest {
     /// Each topic that we want to commit offsets for.
     pub topics: Vec<TxnOffsetCommitRequestTopic>,
 }
+impl Default for TxnOffsetCommitRequest {
+    fn default() -> Self {
+        Self {
+            transactional_id: String::new(),
+            group_id: String::new(),
+            producer_id: 0,
+            producer_epoch: 0,
+            generation_id: -1,
+            member_id: String::new(),
+            group_instance_id: None,
+            topics: Vec::new(),
+        }
+    }
+}
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TxnOffsetCommitRequestPartition {
     /// The index of the partition within the topic.
     pub partition_index: i32,
@@ -41,6 +56,16 @@ pub struct TxnOffsetCommitRequestPartition {
     pub committed_leader_epoch: i32,
     /// Any associated metadata the client wants to keep.
     pub committed_metadata: Option<String>,
+}
+impl Default for TxnOffsetCommitRequestPartition {
+    fn default() -> Self {
+        Self {
+            partition_index: 0,
+            committed_offset: 0,
+            committed_leader_epoch: -1,
+            committed_metadata: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -79,7 +104,7 @@ impl ApiRequest for TxnOffsetCommitRequest {
         self.producer_epoch.encode(buf, version, is_flexible)?;
         if 3 <= version.0 {
             self.generation_id.encode(buf, version, is_flexible)?;
-        } else if self.generation_id != 0 {
+        } else if self.generation_id != -1 {
             return Err(SerializationError::FieldNotAvailable {
                 field: "GenerationId",
                 version,
@@ -88,7 +113,7 @@ impl ApiRequest for TxnOffsetCommitRequest {
         }
         if 3 <= version.0 {
             self.member_id.encode(buf, version, is_flexible)?;
-        } else if !self.member_id.is_empty() {
+        } else if self.member_id != String::new() {
             return Err(SerializationError::FieldNotAvailable {
                 field: "MemberId",
                 version,
@@ -119,17 +144,17 @@ impl ApiRequest for TxnOffsetCommitRequest {
         let generation_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let member_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let group_instance_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -186,17 +211,17 @@ impl KafkaCodec for TxnOffsetCommitRequest {
         let generation_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let member_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let group_instance_id = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let topics = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
@@ -245,7 +270,7 @@ impl KafkaCodec for TxnOffsetCommitRequestPartition {
         let committed_leader_epoch = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let committed_metadata = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {

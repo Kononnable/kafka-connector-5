@@ -1,8 +1,9 @@
 #![allow(unused_imports, unused_variables)]
-use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
-use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
+
+use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
+use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
 
 // -------------------------------------------------------
 // ProduceResponse
@@ -30,7 +31,7 @@ pub struct BatchIndexAndErrorMessage {
     pub batch_index_error_message: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LeaderIdAndEpoch {
     /// The ID of the current leader or -1 if the leader is unknown.
     /// Available in version 10+.
@@ -38,6 +39,14 @@ pub struct LeaderIdAndEpoch {
     /// The latest known leader epoch.
     /// Available in version 10+.
     pub leader_epoch: i32,
+}
+impl Default for LeaderIdAndEpoch {
+    fn default() -> Self {
+        Self {
+            leader_id: -1,
+            leader_epoch: -1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -53,7 +62,7 @@ pub struct NodeEndpoint {
     pub rack: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PartitionProduceResponse {
     /// The partition index.
     pub index: i32,
@@ -76,6 +85,20 @@ pub struct PartitionProduceResponse {
     /// The leader broker that the producer should use for future requests.
     /// Available in version 10+.
     pub current_leader: LeaderIdAndEpoch,
+}
+impl Default for PartitionProduceResponse {
+    fn default() -> Self {
+        Self {
+            index: 0,
+            error_code: 0,
+            base_offset: 0,
+            log_append_time_ms: -1,
+            log_start_offset: -1,
+            record_errors: Vec::new(),
+            error_message: None,
+            current_leader: Default::default(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -153,16 +176,16 @@ impl ApiResponse for ProduceResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let mut node_endpoints = if 10 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -226,16 +249,16 @@ impl KafkaCodec for ProduceResponse {
         let throttle_time_ms = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let mut node_endpoints = if 10 <= version.0 {
             if is_flexible {
-                Default::default()
+                IndexMap::new()
             } else {
                 KafkaCodec::decode(buf, version, is_flexible)?
             }
         } else {
-            Default::default()
+            IndexMap::new()
         };
         if is_flexible {
             let (tag_count, _) = decode_unsigned_varint(buf)?;
@@ -288,12 +311,12 @@ impl KafkaCodec for BatchIndexAndErrorMessage {
         let batch_index = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let batch_index_error_message = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -332,12 +355,12 @@ impl KafkaCodec for LeaderIdAndEpoch {
         let leader_id = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let leader_epoch = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -379,17 +402,17 @@ impl KafkaCodec for NodeEndpoint {
         let host = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let port = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            0
         };
         let rack = if 10 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
@@ -451,22 +474,22 @@ impl KafkaCodec for PartitionProduceResponse {
         let log_append_time_ms = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let log_start_offset = if 5 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            -1
         };
         let record_errors = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            Vec::new()
         };
         let error_message = if 8 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            None
         };
         let mut current_leader = if 10 <= version.0 {
             if is_flexible {
@@ -533,12 +556,12 @@ impl KafkaCodec for TopicProduceResponse {
         let name = if 0 <= version.0 && version.0 <= 12 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            String::new()
         };
         let topic_id = if 13 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
-            Default::default()
+            [0u8; 16]
         };
         let partition_responses = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
