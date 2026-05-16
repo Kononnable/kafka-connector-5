@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ShareAcknowledgeResponse
@@ -16,9 +16,11 @@ pub struct ShareAcknowledgeResponse {
     /// The top-level error message, or null if there was no error.
     pub error_message: Option<String>,
     /// The response topics.
-    pub responses: Vec<ShareAcknowledgeTopicResponse>,
+    /// IndexMap key `TopicId` (uuid): The unique topic ID.
+    pub responses: IndexMap<[u8; 16], ShareAcknowledgeTopicResponse>,
     /// Endpoints for all current leaders enumerated in PartitionData with error NOT_LEADER_OR_FOLLOWER.
-    pub node_endpoints: Vec<NodeEndpoint>,
+    /// IndexMap key `NodeId` (int32): The ID of the associated node.
+    pub node_endpoints: IndexMap<i32, NodeEndpoint>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -31,8 +33,6 @@ pub struct LeaderIdAndEpoch {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct NodeEndpoint {
-    /// The ID of the associated node.
-    pub node_id: i32,
     /// The node's hostname.
     pub host: String,
     /// The node's port.
@@ -55,8 +55,6 @@ pub struct PartitionData {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ShareAcknowledgeTopicResponse {
-    /// The unique topic ID.
-    pub topic_id: [u8; 16],
     /// The topic partitions.
     pub partitions: Vec<PartitionData>,
 }
@@ -192,7 +190,6 @@ impl KafkaCodec for NodeEndpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.node_id.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         self.rack.encode(buf, version, is_flexible)?;
@@ -207,19 +204,13 @@ impl KafkaCodec for NodeEndpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let node_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;
         let port = KafkaCodec::decode(buf, version, is_flexible)?;
         let rack = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            node_id,
-            host,
-            port,
-            rack,
-        })
+        Ok(Self { host, port, rack })
     }
 }
 
@@ -268,7 +259,6 @@ impl KafkaCodec for ShareAcknowledgeTopicResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -281,14 +271,10 @@ impl KafkaCodec for ShareAcknowledgeTopicResponse {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            topic_id,
-            partitions,
-        })
+        Ok(Self { partitions })
     }
 }

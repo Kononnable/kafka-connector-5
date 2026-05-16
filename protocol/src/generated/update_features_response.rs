@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // UpdateFeaturesResponse
@@ -16,14 +16,13 @@ pub struct UpdateFeaturesResponse {
     /// The top-level error message, or `null` if there was no top-level error.
     pub error_message: Option<String>,
     /// Results for each feature update.
+    /// IndexMap key `Feature` (string): The name of the finalized feature.
     /// Available in version 0-1.
-    pub results: Vec<UpdatableFeatureResult>,
+    pub results: IndexMap<String, UpdatableFeatureResult>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct UpdatableFeatureResult {
-    /// The name of the finalized feature.
-    pub feature: String,
     /// The feature update error code or `0` if the feature update succeeded.
     pub error_code: i16,
     /// The feature update error, or `null` if the feature update succeeded.
@@ -58,9 +57,11 @@ impl ApiResponse for UpdateFeaturesResponse {
         if 0 <= version.0 && version.0 <= 1 {
             self.results.encode(buf, version, is_flexible)?;
         } else if !self.results.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Results' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Results",
+                version,
+                api_name: "UpdateFeaturesResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -139,7 +140,6 @@ impl KafkaCodec for UpdatableFeatureResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.feature.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         self.error_message.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -153,14 +153,12 @@ impl KafkaCodec for UpdatableFeatureResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let feature = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_message = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            feature,
             error_code,
             error_message,
         })

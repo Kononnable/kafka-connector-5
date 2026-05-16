@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // UpdateFeaturesRequest
@@ -12,7 +12,8 @@ pub struct UpdateFeaturesRequest {
     /// How long to wait in milliseconds before timing out the request.
     pub timeout_ms: i32,
     /// The list of updates to finalized features.
-    pub feature_updates: Vec<FeatureUpdateKey>,
+    /// IndexMap key `Feature` (string): The name of the finalized feature to be updated.
+    pub feature_updates: IndexMap<String, FeatureUpdateKey>,
     /// True if we should validate the request, but not perform the upgrade or downgrade.
     /// Available in version 1+.
     pub validate_only: bool,
@@ -20,8 +21,6 @@ pub struct UpdateFeaturesRequest {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FeatureUpdateKey {
-    /// The name of the finalized feature to be updated.
-    pub feature: String,
     /// The new maximum version level for the finalized feature. A value >= 1 is valid. A value < 1, is special, and can be used to request the deletion of the finalized feature.
     pub max_version_level: i16,
     /// DEPRECATED in version 1 (see DowngradeType). When set to true, the finalized feature version level is allowed to be downgraded/deleted. The downgrade request will fail if the new maximum version level is a value that's not lower than the existing maximum finalized version level.
@@ -59,9 +58,11 @@ impl ApiRequest for UpdateFeaturesRequest {
         if 1 <= version.0 {
             self.validate_only.encode(buf, version, is_flexible)?;
         } else if self.validate_only {
-            return Err(SerializationError::Encode(
-                "field 'ValidateOnly' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ValidateOnly",
+                version,
+                api_name: "UpdateFeaturesRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -135,7 +136,6 @@ impl KafkaCodec for FeatureUpdateKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.feature.encode(buf, version, is_flexible)?;
         self.max_version_level.encode(buf, version, is_flexible)?;
         if version.0 == 0 {
             self.allow_downgrade.encode(buf, version, is_flexible)?;
@@ -154,7 +154,6 @@ impl KafkaCodec for FeatureUpdateKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let feature = KafkaCodec::decode(buf, version, is_flexible)?;
         let max_version_level = KafkaCodec::decode(buf, version, is_flexible)?;
         let allow_downgrade = if version.0 == 0 {
             KafkaCodec::decode(buf, version, is_flexible)?
@@ -170,7 +169,6 @@ impl KafkaCodec for FeatureUpdateKey {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            feature,
             max_version_level,
             allow_downgrade,
             upgrade_type,

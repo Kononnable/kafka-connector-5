@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DescribeQuorumResponse
@@ -17,15 +17,13 @@ pub struct DescribeQuorumResponse {
     /// The response from the describe quorum API.
     pub topics: Vec<TopicData>,
     /// The nodes in the quorum.
+    /// IndexMap key `NodeId` (int32): The ID of the associated node.
     /// Available in version 2+.
-    pub nodes: Vec<Node>,
+    pub nodes: IndexMap<i32, Node>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Listener {
-    /// The name of the endpoint.
-    /// Available in version 2+.
-    pub name: String,
     /// The hostname.
     /// Available in version 2+.
     pub host: String,
@@ -36,12 +34,10 @@ pub struct Listener {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Node {
-    /// The ID of the associated node.
-    /// Available in version 2+.
-    pub node_id: i32,
     /// The listeners of this controller.
+    /// IndexMap key `Name` (string): The name of the endpoint.
     /// Available in version 2+.
-    pub listeners: Vec<Listener>,
+    pub listeners: IndexMap<String, Listener>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -116,17 +112,21 @@ impl ApiResponse for DescribeQuorumResponse {
         if 2 <= version.0 {
             self.error_message.encode(buf, version, is_flexible)?;
         } else if self.error_message.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'ErrorMessage' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ErrorMessage",
+                version,
+                api_name: "DescribeQuorumResponse",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if 2 <= version.0 {
             self.nodes.encode(buf, version, is_flexible)?;
         } else if !self.nodes.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Nodes' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Nodes",
+                version,
+                api_name: "DescribeQuorumResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -216,9 +216,6 @@ impl KafkaCodec for Listener {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if 2 <= version.0 {
-            self.name.encode(buf, version, is_flexible)?;
-        }
-        if 2 <= version.0 {
             self.host.encode(buf, version, is_flexible)?;
         }
         if 2 <= version.0 {
@@ -235,11 +232,6 @@ impl KafkaCodec for Listener {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if 2 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let host = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -253,7 +245,7 @@ impl KafkaCodec for Listener {
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, host, port })
+        Ok(Self { host, port })
     }
 }
 
@@ -264,9 +256,6 @@ impl KafkaCodec for Node {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if 2 <= version.0 {
-            self.node_id.encode(buf, version, is_flexible)?;
-        }
         if 2 <= version.0 {
             self.listeners.encode(buf, version, is_flexible)?;
         }
@@ -281,11 +270,6 @@ impl KafkaCodec for Node {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let node_id = if 2 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let listeners = if 2 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -294,7 +278,7 @@ impl KafkaCodec for Node {
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { node_id, listeners })
+        Ok(Self { listeners })
     }
 }
 

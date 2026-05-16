@@ -229,11 +229,12 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
 
     // Module-level allow for unused imports (not all traits are used in every file).
     code.push_str("#![allow(unused_imports, unused_variables)]\n");
-    code.push_str("use crate::protocol::serialization::{KafkaCodec, KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};\n");
+    code.push_str("use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};\n");
     code.push_str(
         "use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};\n",
     );
     code.push_str("use bytes::{Buf, BufMut, Bytes, BytesMut};\n");
+    code.push_str("use indexmap::IndexMap;\n");
     code.push('\n');
 
     // Collect all nested structs that need to be emitted.
@@ -262,8 +263,66 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
     ));
     code.push('\n');
 
-    // Nested structs
+    // Helper: check whether any parent field referencing a given struct
+    // uses overlapping composite mapKey fields (i.e. will become IndexMap).
+    let should_strip = |struct_name: &str| -> bool {
+        // Scan msg.fields recursively, plus common structs fields.
+        let mut all_fields: Vec<&Field> = Vec::new();
+        all_fields.extend(&msg.fields);
+        for cs in &msg.common_structs {
+            all_fields.push(cs);
+        }
+        while let Some(f) = all_fields.pop() {
+            let inner = f.field_type.strip_prefix("[]");
+            if inner == Some(struct_name) && !f.fields.is_empty() {
+                let key_fields: Vec<&Field> = f.fields.iter().filter(|sf| sf.map_key).collect();
+                if !key_fields.is_empty()
+                    && key_fields.iter().all(|kf| !key_has_nullable(kf))
+                    && (key_fields.len() == 1 || composite_key_versions_overlap(&key_fields))
+                {
+                    return true;
+                }
+            }
+            all_fields.extend(&f.fields);
+        }
+        false
+    };
+
+    // For nested structs with composite mapKeys (2+ overlapping keys),
+    // generate a dedicated key struct: `{StructName}Key`.
+    // This replaces bare tuple types with named fields (e.g.
+    // `IndexMap<AlterConfigsResourceKey, AlterConfigsResource>`).
+    let mut composite_key_structs: BTreeMap<String, Vec<Field>> = BTreeMap::new();
     for (struct_name, struct_fields) in &nested {
+        let key_fields: Vec<&Field> = struct_fields.iter().filter(|f| f.map_key).collect();
+        if key_fields.len() > 1 && should_strip(struct_name) {
+            let key_name = format!("{}Key", struct_name);
+            composite_key_structs.insert(key_name, key_fields.into_iter().cloned().collect());
+        }
+    }
+    // Emit composite key structs first (they have no dependencies).
+    for (key_name, key_fields) in &composite_key_structs {
+        code.push_str(&generate_key_struct(key_name, key_fields));
+        code.push('\n');
+    }
+
+    // Nested structs -- strip mapKey fields from inner structs
+    // that will become IndexMap values (key is stored separately).
+    let mut nested_no_map_keys = BTreeMap::new();
+    for (struct_name, struct_fields) in &nested {
+        if should_strip(struct_name) {
+            let mut stripped = Vec::new();
+            for f in struct_fields {
+                if !f.map_key {
+                    stripped.push(f.clone());
+                }
+            }
+            nested_no_map_keys.insert(struct_name.clone(), stripped);
+        } else {
+            nested_no_map_keys.insert(struct_name.clone(), struct_fields.clone());
+        }
+    }
+    for (struct_name, struct_fields) in &nested_no_map_keys {
         code.push_str(&generate_struct(struct_name, struct_fields, ""));
         code.push('\n');
     }
@@ -318,7 +377,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 );
 
                 for field in &msg.fields {
-                    code.push_str(&generate_serialize_field(field, field));
+                    code.push_str(&generate_serialize_field(field, field, &msg.name));
                 }
                 code.push_str("        if is_flexible {\n");
                 code.push_str(&generate_tagged_encode_body(&msg.fields));
@@ -393,7 +452,7 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
                 );
 
                 for field in &msg.fields {
-                    code.push_str(&generate_serialize_field(field, field));
+                    code.push_str(&generate_serialize_field(field, field, &msg.name));
                 }
                 code.push_str("        if is_flexible {\n");
                 code.push_str(&generate_tagged_encode_body(&msg.fields));
@@ -434,9 +493,14 @@ fn generate_file(msg: &MessageStruct, pair_names: Option<&(String, String)>) -> 
         code.push_str(&generate_kafka_codec_impl(&msg.name, &msg.fields));
     }
     code.push('\n');
-    // And for nested structs.
-    for (struct_name, struct_fields) in &nested {
+    // And for nested structs (using stripped versions without mapKey fields).
+    for (struct_name, struct_fields) in &nested_no_map_keys {
         code.push_str(&generate_kafka_codec_impl(struct_name, struct_fields));
+        code.push('\n');
+    }
+    // KafkaCodec impls for composite key structs.
+    for (key_name, key_fields) in &composite_key_structs {
+        code.push_str(&generate_kafka_codec_impl(key_name, key_fields));
         code.push('\n');
     }
 
@@ -647,7 +711,7 @@ fn non_default_check(rust_name: &str, field: &Field) -> Option<String> {
 }
 
 /// Generate one field's serialization code.
-fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
+fn generate_serialize_field(field: &Field, _parent: &Field, msg_name: &str) -> String {
     let rust_name = escape_field_name(&camel_to_snake(&field.name));
     let cond = field_version_condition(field);
     let mut code = String::new();
@@ -688,8 +752,8 @@ fn generate_serialize_field(field: &Field, _parent: &Field) -> String {
         let check = non_default_check(&rust_name, field);
         if let Some(check_expr) = check {
             code.push_str(&format!(
-                "        }} else if {} {{\n            return Err(SerializationError::Encode(\"field '{}' is not available in this version\"));\n        }}\n",
-                check_expr, field.name
+                "        }} else if {} {{\n            return Err(SerializationError::FieldNotAvailable {{\n                field: \"{}\",\n                version,\n                api_name: \"{}\",\n            }});\n        }}\n",
+                check_expr, field.name, msg_name
             ));
         } else {
             code.push_str("        }\n");
@@ -1063,6 +1127,33 @@ fn generate_struct(struct_name: &str, fields: &[Field], _versions: &str) -> Stri
             ));
         }
 
+        // For arrays with mapKey inner fields, document the key fields.
+        // Only emit when the field will actually become IndexMap (skip
+        // non-overlapping composite keys that fall back to Vec).
+        let inner_ft = field.field_type.strip_prefix("[]");
+        if inner_ft.is_some() && !field.fields.is_empty() {
+            let key_fields: Vec<&Field> = field.fields.iter().filter(|f| f.map_key).collect();
+            let will_be_indexmap = !key_fields.is_empty()
+                && key_fields.iter().all(|kf| !key_has_nullable(kf))
+                && (key_fields.len() == 1 || composite_key_versions_overlap(&key_fields));
+            if will_be_indexmap {
+                for kf in &key_fields {
+                    let key_about = kf.about.as_deref().unwrap_or("");
+                    if !key_about.is_empty() {
+                        code.push_str(&format!(
+                            "    /// IndexMap key `{}` ({}): {}\n",
+                            kf.name, kf.field_type, key_about
+                        ));
+                    } else {
+                        code.push_str(&format!(
+                            "    /// IndexMap key `{}` ({})\n",
+                            kf.name, kf.field_type,
+                        ));
+                    }
+                }
+            }
+        }
+
         // Optional version note
         if !field.versions.is_empty() && field.versions != "0+" {
             code.push_str(&format!(
@@ -1076,6 +1167,30 @@ fn generate_struct(struct_name: &str, fields: &[Field], _versions: &str) -> Stri
         code.push_str(&format!("    pub {}: {},\n", rust_name, rust_type));
     }
 
+    code.push_str("}\n");
+    code
+}
+
+/// Generate a key struct for composite IndexMap keys (multiple mapKey fields).
+/// Uses `Hash` + `Eq` derives so it works as an IndexMap key.
+fn generate_key_struct(struct_name: &str, fields: &[Field]) -> String {
+    let mut code = String::new();
+    code.push_str("#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]\n");
+    code.push_str(&format!("pub struct {} {{\n", struct_name));
+    for field in fields {
+        if let Some(about) = &field.about {
+            code.push_str(&format!("    /// {}\n", about));
+        }
+        if !field.versions.is_empty() && field.versions != "0+" {
+            code.push_str(&format!(
+                "    /// Available in version {}.\n",
+                field.versions
+            ));
+        }
+        let rust_name = escape_field_name(&camel_to_snake(&field.name));
+        let rust_type = resolve_type(&field.field_type);
+        code.push_str(&format!("    pub {}: {},\n", rust_name, rust_type));
+    }
     code.push_str("}\n");
     code
 }
@@ -1094,14 +1209,88 @@ fn strip_option_wrapper(ty: &str) -> String {
     }
 }
 
-/// Map a Kafka field definition to a Rust type string.
-fn map_field_type(field: &Field) -> String {
-    let base_type = resolve_type(&field.field_type);
-    let is_nullable = field.nullable_versions.is_some();
-    if is_nullable {
-        format!("Option<{}>", base_type)
+/// Check whether a field's nullableVersions covers any of its supported versions.
+/// If so, the field can be null on the wire and cannot be an IndexMap key.
+fn key_has_nullable(field: &Field) -> bool {
+    if let Some(ref nv) = field.nullable_versions {
+        let field_range = parse_version_range(&field.versions);
+        let nullable_range = parse_version_range(nv);
+        // The field is nullable if the nullable range overlaps the field's version range.
+        nullable_range.0 <= field_range.1 && field_range.0 <= nullable_range.1
     } else {
-        base_type
+        false
+    }
+}
+
+/// Check whether all mapKey fields in a composite key share overlapping
+/// version ranges.  Non-overlapping keys (e.g. `Name` 0-12 + `TopicId` 13+)
+/// cannot share a single tuple key type and fall back to `Vec`.
+fn composite_key_versions_overlap(key_fields: &[&Field]) -> bool {
+    if key_fields.len() <= 1 {
+        return true;
+    }
+    let ranges: Vec<(i16, i16)> = key_fields
+        .iter()
+        .map(|f| parse_version_range(&f.versions))
+        .collect();
+    for i in 1..ranges.len() {
+        if ranges[i].0 > ranges[0].1 || ranges[0].0 > ranges[i].1 {
+            return false;
+        }
+    }
+    true
+}
+
+/// Map a Kafka field definition to a Rust type string.
+///
+/// Arrays whose inner struct has `mapKey` fields become `IndexMap<K, V>`
+/// where K is the key type and V is the struct (with the key field stripped).
+/// Single mapKey produces `IndexMap<KeyType, StructName>`.
+/// Multiple mapKey fields with overlapping version ranges produce a key struct:
+/// `IndexMap<{StructName}Key, V>` (e.g. `IndexMap<AlterConfigsResourceKey, AlterConfigsResource>`).
+/// Fields with non-overlapping composite keys fall back to `Vec`.
+fn map_field_type(field: &Field) -> String {
+    let inner = field.field_type.strip_prefix("[]");
+    let is_map =
+        inner.is_some() && !field.fields.is_empty() && field.fields.iter().any(|f| f.map_key);
+
+    if is_map {
+        let key_fields: Vec<&Field> = field.fields.iter().filter(|f| f.map_key).collect();
+        let inner_name = inner.unwrap();
+        let is_nullable = field.nullable_versions.is_some();
+
+        // Non-overlapping composite keys, or any nullable mapKey, fall back to Vec
+        if key_fields.iter().any(|kf| key_has_nullable(kf))
+            || (key_fields.len() > 1 && !composite_key_versions_overlap(&key_fields))
+        {
+            let inner_rust = resolve_type(inner_name);
+            let base = format!("Vec<{}>", inner_rust);
+            return if is_nullable {
+                format!("Option<{}>", base)
+            } else {
+                base
+            };
+        }
+
+        let key_type = if key_fields.len() == 1 {
+            resolve_type(&key_fields[0].field_type)
+        } else {
+            format!("{}Key", inner_name)
+        };
+        let base = format!("IndexMap<{}, {}>", key_type, inner_name);
+        if is_nullable {
+            format!("Option<{}>", base)
+        } else {
+            base
+        }
+    } else {
+        let base_type = resolve_type(&field.field_type);
+        let is_nullable = field.nullable_versions.is_some();
+        if is_nullable {
+            format!("Option<{}>", base_type)
+        } else {
+            base_type
+        }
     }
 }
 

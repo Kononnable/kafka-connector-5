@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // CreateTopicsResponse
@@ -13,7 +13,8 @@ pub struct CreateTopicsResponse {
     /// Available in version 2+.
     pub throttle_time_ms: i32,
     /// Results for each topic we tried to create.
-    pub topics: Vec<CreatableTopicResult>,
+    /// IndexMap key `Name` (string): The topic name.
+    pub topics: IndexMap<String, CreatableTopicResult>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -37,8 +38,6 @@ pub struct CreatableTopicConfigs {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreatableTopicResult {
-    /// The topic name.
-    pub name: String,
     /// The unique topic ID.
     /// Available in version 7+.
     pub topic_id: [u8; 16],
@@ -86,9 +85,11 @@ impl ApiResponse for CreateTopicsResponse {
         if 2 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "CreateTopicsResponse",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -229,7 +230,6 @@ impl KafkaCodec for CreatableTopicResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         if 7 <= version.0 {
             self.topic_id.encode(buf, version, is_flexible)?;
         }
@@ -273,7 +273,6 @@ impl KafkaCodec for CreatableTopicResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let topic_id = if 7 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -325,7 +324,6 @@ impl KafkaCodec for CreatableTopicResult {
             }
         }
         Ok(Self {
-            name,
             topic_id,
             error_code,
             error_message,

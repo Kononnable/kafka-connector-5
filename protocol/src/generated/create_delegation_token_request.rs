@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // CreateDelegationTokenRequest
@@ -55,17 +55,21 @@ impl ApiRequest for CreateDelegationTokenRequest {
             self.owner_principal_type
                 .encode(buf, version, is_flexible)?;
         } else if self.owner_principal_type.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'OwnerPrincipalType' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "OwnerPrincipalType",
+                version,
+                api_name: "CreateDelegationTokenRequest",
+            });
         }
         if 3 <= version.0 {
             self.owner_principal_name
                 .encode(buf, version, is_flexible)?;
         } else if self.owner_principal_name.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'OwnerPrincipalName' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "OwnerPrincipalName",
+                version,
+                api_name: "CreateDelegationTokenRequest",
+            });
         }
         self.renewers.encode(buf, version, is_flexible)?;
         self.max_lifetime_ms.encode(buf, version, is_flexible)?;

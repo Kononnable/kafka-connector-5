@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // SaslAuthenticateResponse
@@ -48,9 +48,11 @@ impl ApiResponse for SaslAuthenticateResponse {
         if 1 <= version.0 {
             self.session_lifetime_ms.encode(buf, version, is_flexible)?;
         } else if self.session_lifetime_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'SessionLifetimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "SessionLifetimeMs",
+                version,
+                api_name: "SaslAuthenticateResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

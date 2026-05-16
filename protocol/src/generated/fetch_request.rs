@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // FetchRequest
@@ -129,69 +129,87 @@ impl ApiRequest for FetchRequest {
         if 12 <= version.0 {
             self.cluster_id.encode(buf, version, is_flexible)?;
         } else if self.cluster_id.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'ClusterId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ClusterId",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         if 0 <= version.0 && version.0 <= 14 {
             self.replica_id.encode(buf, version, is_flexible)?;
         } else if self.replica_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ReplicaId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ReplicaId",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         if 15 <= version.0 {
             self.replica_state.encode(buf, version, is_flexible)?;
         } else if self.replica_state != Default::default() {
-            return Err(SerializationError::Encode(
-                "field 'ReplicaState' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ReplicaState",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         self.max_wait_ms.encode(buf, version, is_flexible)?;
         self.min_bytes.encode(buf, version, is_flexible)?;
         if 3 <= version.0 {
             self.max_bytes.encode(buf, version, is_flexible)?;
         } else if self.max_bytes != 0 {
-            return Err(SerializationError::Encode(
-                "field 'MaxBytes' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "MaxBytes",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         if 4 <= version.0 {
             self.isolation_level.encode(buf, version, is_flexible)?;
         } else if self.isolation_level != 0 {
-            return Err(SerializationError::Encode(
-                "field 'IsolationLevel' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IsolationLevel",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         if 7 <= version.0 {
             self.session_id.encode(buf, version, is_flexible)?;
         } else if self.session_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'SessionId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "SessionId",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         if 7 <= version.0 {
             self.session_epoch.encode(buf, version, is_flexible)?;
         } else if self.session_epoch != 0 {
-            return Err(SerializationError::Encode(
-                "field 'SessionEpoch' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "SessionEpoch",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if 7 <= version.0 {
             self.forgotten_topics_data
                 .encode(buf, version, is_flexible)?;
         } else if !self.forgotten_topics_data.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'ForgottenTopicsData' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ForgottenTopicsData",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         if 11 <= version.0 {
             self.rack_id.encode(buf, version, is_flexible)?;
         } else if !self.rack_id.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'RackId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "RackId",
+                version,
+                api_name: "FetchRequest",
+            });
         }
         if is_flexible {
             let mut tag_count = 0u64;

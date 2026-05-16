@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ProduceRequest
@@ -65,9 +65,11 @@ impl ApiRequest for ProduceRequest {
         if 3 <= version.0 {
             self.transactional_id.encode(buf, version, is_flexible)?;
         } else if self.transactional_id.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'TransactionalId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "TransactionalId",
+                version,
+                api_name: "ProduceRequest",
+            });
         }
         self.acks.encode(buf, version, is_flexible)?;
         self.timeout_ms.encode(buf, version, is_flexible)?;

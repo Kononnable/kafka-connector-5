@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // AddPartitionsToTxnResponse
@@ -15,8 +15,9 @@ pub struct AddPartitionsToTxnResponse {
     /// Available in version 4+.
     pub error_code: i16,
     /// Results categorized by transactional ID.
+    /// IndexMap key `TransactionalId` (string): The transactional id corresponding to the transaction.
     /// Available in version 4+.
-    pub results_by_transaction: Vec<AddPartitionsToTxnResult>,
+    pub results_by_transaction: IndexMap<String, AddPartitionsToTxnResult>,
     /// The results for each topic.
     /// Available in version 0-3.
     pub results_by_topic_v3_and_below: Vec<AddPartitionsToTxnTopicResult>,
@@ -32,9 +33,6 @@ pub struct AddPartitionsToTxnPartitionResult {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AddPartitionsToTxnResult {
-    /// The transactional id corresponding to the transaction.
-    /// Available in version 4+.
-    pub transactional_id: String,
     /// The results for each topic.
     /// Available in version 4+.
     pub topic_results: Vec<AddPartitionsToTxnTopicResult>,
@@ -74,25 +72,31 @@ impl ApiResponse for AddPartitionsToTxnResponse {
         if 4 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ErrorCode' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ErrorCode",
+                version,
+                api_name: "AddPartitionsToTxnResponse",
+            });
         }
         if 4 <= version.0 {
             self.results_by_transaction
                 .encode(buf, version, is_flexible)?;
         } else if !self.results_by_transaction.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'ResultsByTransaction' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ResultsByTransaction",
+                version,
+                api_name: "AddPartitionsToTxnResponse",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.results_by_topic_v3_and_below
                 .encode(buf, version, is_flexible)?;
         } else if !self.results_by_topic_v3_and_below.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'ResultsByTopicV3AndBelow' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ResultsByTopicV3AndBelow",
+                version,
+                api_name: "AddPartitionsToTxnResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -227,9 +231,6 @@ impl KafkaCodec for AddPartitionsToTxnResult {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if 4 <= version.0 {
-            self.transactional_id.encode(buf, version, is_flexible)?;
-        }
-        if 4 <= version.0 {
             self.topic_results.encode(buf, version, is_flexible)?;
         }
         if is_flexible {
@@ -243,11 +244,6 @@ impl KafkaCodec for AddPartitionsToTxnResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let transactional_id = if 4 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let topic_results = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -256,10 +252,7 @@ impl KafkaCodec for AddPartitionsToTxnResult {
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            transactional_id,
-            topic_results,
-        })
+        Ok(Self { topic_results })
     }
 }
 

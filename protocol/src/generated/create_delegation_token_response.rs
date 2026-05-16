@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // CreateDelegationTokenResponse
@@ -64,17 +64,21 @@ impl ApiResponse for CreateDelegationTokenResponse {
             self.token_requester_principal_type
                 .encode(buf, version, is_flexible)?;
         } else if !self.token_requester_principal_type.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'TokenRequesterPrincipalType' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "TokenRequesterPrincipalType",
+                version,
+                api_name: "CreateDelegationTokenResponse",
+            });
         }
         if 3 <= version.0 {
             self.token_requester_principal_name
                 .encode(buf, version, is_flexible)?;
         } else if !self.token_requester_principal_name.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'TokenRequesterPrincipalName' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "TokenRequesterPrincipalName",
+                version,
+                api_name: "CreateDelegationTokenResponse",
+            });
         }
         self.issue_timestamp_ms.encode(buf, version, is_flexible)?;
         self.expiry_timestamp_ms.encode(buf, version, is_flexible)?;

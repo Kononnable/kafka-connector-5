@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // JoinGroupResponse
@@ -68,27 +68,33 @@ impl ApiResponse for JoinGroupResponse {
         if 2 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "JoinGroupResponse",
+            });
         }
         self.error_code.encode(buf, version, is_flexible)?;
         self.generation_id.encode(buf, version, is_flexible)?;
         if 7 <= version.0 {
             self.protocol_type.encode(buf, version, is_flexible)?;
         } else if self.protocol_type.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'ProtocolType' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ProtocolType",
+                version,
+                api_name: "JoinGroupResponse",
+            });
         }
         self.protocol_name.encode(buf, version, is_flexible)?;
         self.leader.encode(buf, version, is_flexible)?;
         if 9 <= version.0 {
             self.skip_assignment.encode(buf, version, is_flexible)?;
         } else if self.skip_assignment {
-            return Err(SerializationError::Encode(
-                "field 'SkipAssignment' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "SkipAssignment",
+                version,
+                api_name: "JoinGroupResponse",
+            });
         }
         self.member_id.encode(buf, version, is_flexible)?;
         self.members.encode(buf, version, is_flexible)?;

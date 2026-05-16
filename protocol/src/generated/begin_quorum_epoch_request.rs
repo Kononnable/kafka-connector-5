@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // BeginQuorumEpochRequest
@@ -17,15 +17,13 @@ pub struct BeginQuorumEpochRequest {
     /// The topics.
     pub topics: Vec<TopicData>,
     /// Endpoints for the leader.
+    /// IndexMap key `Name` (string): The name of the endpoint.
     /// Available in version 1+.
-    pub leader_endpoints: Vec<LeaderEndpoint>,
+    pub leader_endpoints: IndexMap<String, LeaderEndpoint>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LeaderEndpoint {
-    /// The name of the endpoint.
-    /// Available in version 1+.
-    pub name: String,
     /// The node's hostname.
     /// Available in version 1+.
     pub host: String,
@@ -81,17 +79,21 @@ impl ApiRequest for BeginQuorumEpochRequest {
         if 1 <= version.0 {
             self.voter_id.encode(buf, version, is_flexible)?;
         } else if self.voter_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'VoterId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "VoterId",
+                version,
+                api_name: "BeginQuorumEpochRequest",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
             self.leader_endpoints.encode(buf, version, is_flexible)?;
         } else if !self.leader_endpoints.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'LeaderEndpoints' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "LeaderEndpoints",
+                version,
+                api_name: "BeginQuorumEpochRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -181,9 +183,6 @@ impl KafkaCodec for LeaderEndpoint {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if 1 <= version.0 {
-            self.name.encode(buf, version, is_flexible)?;
-        }
-        if 1 <= version.0 {
             self.host.encode(buf, version, is_flexible)?;
         }
         if 1 <= version.0 {
@@ -200,11 +199,6 @@ impl KafkaCodec for LeaderEndpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if 1 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let host = if 1 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -218,7 +212,7 @@ impl KafkaCodec for LeaderEndpoint {
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, host, port })
+        Ok(Self { host, port })
     }
 }
 

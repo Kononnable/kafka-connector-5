@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ShareAcknowledgeRequest
@@ -16,23 +16,21 @@ pub struct ShareAcknowledgeRequest {
     /// The current share session epoch: 0 to open a share session; -1 to close it; otherwise increments for consecutive requests.
     pub share_session_epoch: i32,
     /// The topics containing records to acknowledge.
-    pub topics: Vec<AcknowledgeTopic>,
+    /// IndexMap key `TopicId` (uuid): The unique topic ID.
+    pub topics: IndexMap<[u8; 16], AcknowledgeTopic>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AcknowledgePartition {
-    /// The partition index.
-    pub partition_index: i32,
     /// Record batches to acknowledge.
     pub acknowledgement_batches: Vec<AcknowledgementBatch>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AcknowledgeTopic {
-    /// The unique topic ID.
-    pub topic_id: [u8; 16],
     /// The partitions containing records to acknowledge.
-    pub partitions: Vec<AcknowledgePartition>,
+    /// IndexMap key `PartitionIndex` (int32): The partition index.
+    pub partitions: IndexMap<i32, AcknowledgePartition>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -138,7 +136,6 @@ impl KafkaCodec for AcknowledgePartition {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.partition_index.encode(buf, version, is_flexible)?;
         self.acknowledgement_batches
             .encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -152,13 +149,11 @@ impl KafkaCodec for AcknowledgePartition {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
         let acknowledgement_batches = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            partition_index,
             acknowledgement_batches,
         })
     }
@@ -171,7 +166,6 @@ impl KafkaCodec for AcknowledgeTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -184,15 +178,11 @@ impl KafkaCodec for AcknowledgeTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            topic_id,
-            partitions,
-        })
+        Ok(Self { partitions })
     }
 }
 

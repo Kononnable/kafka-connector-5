@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // EndTxnResponse
@@ -48,16 +48,20 @@ impl ApiResponse for EndTxnResponse {
         if 5 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         } else if self.producer_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ProducerId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ProducerId",
+                version,
+                api_name: "EndTxnResponse",
+            });
         }
         if 5 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
         } else if self.producer_epoch != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ProducerEpoch' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ProducerEpoch",
+                version,
+                api_name: "EndTxnResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

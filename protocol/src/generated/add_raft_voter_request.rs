@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // AddRaftVoterRequest
@@ -18,13 +18,12 @@ pub struct AddRaftVoterRequest {
     /// The directory id of the voter getting added to the topic partition.
     pub voter_directory_id: [u8; 16],
     /// The endpoints that can be used to communicate with the voter.
-    pub listeners: Vec<Listener>,
+    /// IndexMap key `Name` (string): The name of the endpoint.
+    pub listeners: IndexMap<String, Listener>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Listener {
-    /// The name of the endpoint.
-    pub name: String,
     /// The hostname.
     pub host: String,
     /// The port.
@@ -130,7 +129,6 @@ impl KafkaCodec for Listener {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -144,12 +142,11 @@ impl KafkaCodec for Listener {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;
         let port = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, host, port })
+        Ok(Self { host, port })
     }
 }

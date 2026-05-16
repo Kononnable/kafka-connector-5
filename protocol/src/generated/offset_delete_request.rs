@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // OffsetDeleteRequest
@@ -12,7 +12,8 @@ pub struct OffsetDeleteRequest {
     /// The unique group identifier.
     pub group_id: String,
     /// The topics to delete offsets for.
-    pub topics: Vec<OffsetDeleteRequestTopic>,
+    /// IndexMap key `Name` (string): The topic name.
+    pub topics: IndexMap<String, OffsetDeleteRequestTopic>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -23,8 +24,6 @@ pub struct OffsetDeleteRequestPartition {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OffsetDeleteRequestTopic {
-    /// The topic name.
-    pub name: String,
     /// Each partition to delete offsets for.
     pub partitions: Vec<OffsetDeleteRequestPartition>,
 }
@@ -131,7 +130,6 @@ impl KafkaCodec for OffsetDeleteRequestTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -144,11 +142,10 @@ impl KafkaCodec for OffsetDeleteRequestTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, partitions })
+        Ok(Self { partitions })
     }
 }

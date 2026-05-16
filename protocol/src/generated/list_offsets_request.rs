@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ListOffsetsRequest
@@ -66,17 +66,21 @@ impl ApiRequest for ListOffsetsRequest {
         if 2 <= version.0 {
             self.isolation_level.encode(buf, version, is_flexible)?;
         } else if self.isolation_level != 0 {
-            return Err(SerializationError::Encode(
-                "field 'IsolationLevel' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IsolationLevel",
+                version,
+                api_name: "ListOffsetsRequest",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if 10 <= version.0 {
             self.timeout_ms.encode(buf, version, is_flexible)?;
         } else if self.timeout_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'TimeoutMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "TimeoutMs",
+                version,
+                api_name: "ListOffsetsRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

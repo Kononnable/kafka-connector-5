@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // VoteRequest
@@ -75,9 +75,11 @@ impl ApiRequest for VoteRequest {
         if 1 <= version.0 {
             self.voter_id.encode(buf, version, is_flexible)?;
         } else if self.voter_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'VoterId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "VoterId",
+                version,
+                api_name: "VoteRequest",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {

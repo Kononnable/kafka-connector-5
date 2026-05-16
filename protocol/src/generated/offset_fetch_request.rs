@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // OffsetFetchRequest
@@ -87,30 +87,38 @@ impl ApiRequest for OffsetFetchRequest {
         if 0 <= version.0 && version.0 <= 7 {
             self.group_id.encode(buf, version, is_flexible)?;
         } else if !self.group_id.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'GroupId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "GroupId",
+                version,
+                api_name: "OffsetFetchRequest",
+            });
         }
         if 0 <= version.0 && version.0 <= 7 {
             self.topics.encode(buf, version, is_flexible)?;
         } else if self.topics.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'Topics' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Topics",
+                version,
+                api_name: "OffsetFetchRequest",
+            });
         }
         if 8 <= version.0 {
             self.groups.encode(buf, version, is_flexible)?;
         } else if !self.groups.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Groups' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Groups",
+                version,
+                api_name: "OffsetFetchRequest",
+            });
         }
         if 7 <= version.0 {
             self.require_stable.encode(buf, version, is_flexible)?;
         } else if self.require_stable {
-            return Err(SerializationError::Encode(
-                "field 'RequireStable' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "RequireStable",
+                version,
+                api_name: "OffsetFetchRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

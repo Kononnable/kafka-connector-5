@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ShareFetchRequest
@@ -28,7 +28,8 @@ pub struct ShareFetchRequest {
     /// Available in version 1+.
     pub batch_size: i32,
     /// The topics to fetch.
-    pub topics: Vec<FetchTopic>,
+    /// IndexMap key `TopicId` (uuid): The unique topic ID.
+    pub topics: IndexMap<[u8; 16], FetchTopic>,
     /// The partitions to remove from this share session.
     pub forgotten_topics_data: Vec<ForgottenTopic>,
 }
@@ -45,8 +46,6 @@ pub struct AcknowledgementBatch {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FetchPartition {
-    /// The partition index.
-    pub partition_index: i32,
     /// The maximum bytes to fetch from this partition. 0 when only acknowledgement with no fetching is required. See KIP-74 for cases where this limit may not be honored.
     /// Available in version 0.
     pub partition_max_bytes: i32,
@@ -56,10 +55,9 @@ pub struct FetchPartition {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FetchTopic {
-    /// The unique topic ID.
-    pub topic_id: [u8; 16],
     /// The partitions to fetch.
-    pub partitions: Vec<FetchPartition>,
+    /// IndexMap key `PartitionIndex` (int32): The partition index.
+    pub partitions: IndexMap<i32, FetchPartition>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -101,16 +99,20 @@ impl ApiRequest for ShareFetchRequest {
         if 1 <= version.0 {
             self.max_records.encode(buf, version, is_flexible)?;
         } else if self.max_records != 0 {
-            return Err(SerializationError::Encode(
-                "field 'MaxRecords' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "MaxRecords",
+                version,
+                api_name: "ShareFetchRequest",
+            });
         }
         if 1 <= version.0 {
             self.batch_size.encode(buf, version, is_flexible)?;
         } else if self.batch_size != 0 {
-            return Err(SerializationError::Encode(
-                "field 'BatchSize' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "BatchSize",
+                version,
+                api_name: "ShareFetchRequest",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         self.forgotten_topics_data
@@ -268,7 +270,6 @@ impl KafkaCodec for FetchPartition {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.partition_index.encode(buf, version, is_flexible)?;
         if version.0 == 0 {
             self.partition_max_bytes.encode(buf, version, is_flexible)?;
         }
@@ -285,7 +286,6 @@ impl KafkaCodec for FetchPartition {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
         let partition_max_bytes = if version.0 == 0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -296,7 +296,6 @@ impl KafkaCodec for FetchPartition {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            partition_index,
             partition_max_bytes,
             acknowledgement_batches,
         })
@@ -310,7 +309,6 @@ impl KafkaCodec for FetchTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -323,15 +321,11 @@ impl KafkaCodec for FetchTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            topic_id,
-            partitions,
-        })
+        Ok(Self { partitions })
     }
 }
 

@@ -87,10 +87,8 @@ impl EventLoop {
                     if event.is_readable() {
                         let _ = conn.on_readable();
                     }
-                    if event.is_writable() {
-                        if let Err(e) = conn.on_writable() {
-                            tracing::error!("write error on connection {}: {e}", conn.token().0);
-                        }
+                    if event.is_writable() && let Err(e) = conn.on_writable() {
+                        tracing::error!("write error on connection {}: {e}", conn.token().0);
                     }
                 }
             }

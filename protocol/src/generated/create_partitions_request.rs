@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // CreatePartitionsRequest
@@ -10,7 +10,8 @@ use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, Seria
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreatePartitionsRequest {
     /// Each topic that we want to create new partitions inside.
-    pub topics: Vec<CreatePartitionsTopic>,
+    /// IndexMap key `Name` (string): The topic name.
+    pub topics: IndexMap<String, CreatePartitionsTopic>,
     /// The time in ms to wait for the partitions to be created.
     pub timeout_ms: i32,
     /// If true, then validate the request, but don't actually increase the number of partitions.
@@ -25,8 +26,6 @@ pub struct CreatePartitionsAssignment {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreatePartitionsTopic {
-    /// The topic name.
-    pub name: String,
     /// The new partition count.
     pub count: i32,
     /// The new partition assignments.
@@ -147,7 +146,6 @@ impl KafkaCodec for CreatePartitionsTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.count.encode(buf, version, is_flexible)?;
         self.assignments.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -161,16 +159,11 @@ impl KafkaCodec for CreatePartitionsTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let count = KafkaCodec::decode(buf, version, is_flexible)?;
         let assignments = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            name,
-            count,
-            assignments,
-        })
+        Ok(Self { count, assignments })
     }
 }

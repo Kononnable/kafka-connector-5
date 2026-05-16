@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // BrokerHeartbeatRequest
@@ -55,9 +55,11 @@ impl ApiRequest for BrokerHeartbeatRequest {
         if 1 <= version.0 {
             self.offline_log_dirs.encode(buf, version, is_flexible)?;
         } else if !self.offline_log_dirs.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'OfflineLogDirs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "OfflineLogDirs",
+                version,
+                api_name: "BrokerHeartbeatRequest",
+            });
         }
         if is_flexible {
             let mut tag_count = 0u64;

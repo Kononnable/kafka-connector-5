@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // AlterPartitionReassignmentsRequest
@@ -61,9 +61,11 @@ impl ApiRequest for AlterPartitionReassignmentsRequest {
             self.allow_replication_factor_change
                 .encode(buf, version, is_flexible)?;
         } else if self.allow_replication_factor_change {
-            return Err(SerializationError::Encode(
-                "field 'AllowReplicationFactorChange' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "AllowReplicationFactorChange",
+                version,
+                api_name: "AlterPartitionReassignmentsRequest",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {

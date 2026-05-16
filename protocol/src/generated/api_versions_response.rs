@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ApiVersionsResponse
@@ -12,19 +12,22 @@ pub struct ApiVersionsResponse {
     /// The top-level error code.
     pub error_code: i16,
     /// The APIs supported by the broker.
-    pub api_keys: Vec<ApiVersion>,
+    /// IndexMap key `ApiKey` (int16): The API index.
+    pub api_keys: IndexMap<i16, ApiVersion>,
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     /// Available in version 1+.
     pub throttle_time_ms: i32,
     /// Features supported by the broker. Note: in v0-v3, features with MinSupportedVersion = 0 are omitted.
+    /// IndexMap key `Name` (string): The name of the feature.
     /// Available in version 3+.
-    pub supported_features: Vec<SupportedFeatureKey>,
+    pub supported_features: IndexMap<String, SupportedFeatureKey>,
     /// The monotonically increasing epoch for the finalized features information. Valid values are >= 0. A value of -1 is special and represents unknown epoch.
     /// Available in version 3+.
     pub finalized_features_epoch: i64,
     /// List of cluster-wide finalized features. The information is valid only if FinalizedFeaturesEpoch >= 0.
+    /// IndexMap key `Name` (string): The name of the feature.
     /// Available in version 3+.
-    pub finalized_features: Vec<FinalizedFeatureKey>,
+    pub finalized_features: IndexMap<String, FinalizedFeatureKey>,
     /// Set by a KRaft controller if the required configurations for ZK migration are present.
     /// Available in version 3+.
     pub zk_migration_ready: bool,
@@ -32,8 +35,6 @@ pub struct ApiVersionsResponse {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ApiVersion {
-    /// The API index.
-    pub api_key: i16,
     /// The minimum supported version, inclusive.
     pub min_version: i16,
     /// The maximum supported version, inclusive.
@@ -42,9 +43,6 @@ pub struct ApiVersion {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FinalizedFeatureKey {
-    /// The name of the feature.
-    /// Available in version 3+.
-    pub name: String,
     /// The cluster-wide finalized max version level for the feature.
     /// Available in version 3+.
     pub max_version_level: i16,
@@ -55,9 +53,6 @@ pub struct FinalizedFeatureKey {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SupportedFeatureKey {
-    /// The name of the feature.
-    /// Available in version 3+.
-    pub name: String,
     /// The minimum supported version for the feature.
     /// Available in version 3+.
     pub min_version: i16,
@@ -93,38 +88,48 @@ impl ApiResponse for ApiVersionsResponse {
         if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "ApiVersionsResponse",
+            });
         }
         if 3 <= version.0 {
             self.supported_features.encode(buf, version, is_flexible)?;
         } else if !self.supported_features.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'SupportedFeatures' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "SupportedFeatures",
+                version,
+                api_name: "ApiVersionsResponse",
+            });
         }
         if 3 <= version.0 {
             self.finalized_features_epoch
                 .encode(buf, version, is_flexible)?;
         } else if self.finalized_features_epoch != 0 {
-            return Err(SerializationError::Encode(
-                "field 'FinalizedFeaturesEpoch' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "FinalizedFeaturesEpoch",
+                version,
+                api_name: "ApiVersionsResponse",
+            });
         }
         if 3 <= version.0 {
             self.finalized_features.encode(buf, version, is_flexible)?;
         } else if !self.finalized_features.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'FinalizedFeatures' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "FinalizedFeatures",
+                version,
+                api_name: "ApiVersionsResponse",
+            });
         }
         if 3 <= version.0 {
             self.zk_migration_ready.encode(buf, version, is_flexible)?;
         } else if self.zk_migration_ready {
-            return Err(SerializationError::Encode(
-                "field 'ZkMigrationReady' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ZkMigrationReady",
+                version,
+                api_name: "ApiVersionsResponse",
+            });
         }
         if is_flexible {
             let mut tag_count = 0u64;
@@ -423,7 +428,6 @@ impl KafkaCodec for ApiVersion {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.api_key.encode(buf, version, is_flexible)?;
         self.min_version.encode(buf, version, is_flexible)?;
         self.max_version.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -437,14 +441,12 @@ impl KafkaCodec for ApiVersion {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let api_key = KafkaCodec::decode(buf, version, is_flexible)?;
         let min_version = KafkaCodec::decode(buf, version, is_flexible)?;
         let max_version = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            api_key,
             min_version,
             max_version,
         })
@@ -458,9 +460,6 @@ impl KafkaCodec for FinalizedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if 3 <= version.0 {
-            self.name.encode(buf, version, is_flexible)?;
-        }
         if 3 <= version.0 {
             self.max_version_level.encode(buf, version, is_flexible)?;
         }
@@ -478,11 +477,6 @@ impl KafkaCodec for FinalizedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if 3 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let max_version_level = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -497,7 +491,6 @@ impl KafkaCodec for FinalizedFeatureKey {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            name,
             max_version_level,
             min_version_level,
         })
@@ -511,9 +504,6 @@ impl KafkaCodec for SupportedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        if 3 <= version.0 {
-            self.name.encode(buf, version, is_flexible)?;
-        }
         if 3 <= version.0 {
             self.min_version.encode(buf, version, is_flexible)?;
         }
@@ -531,11 +521,6 @@ impl KafkaCodec for SupportedFeatureKey {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = if 3 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let min_version = if 3 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -550,7 +535,6 @@ impl KafkaCodec for SupportedFeatureKey {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            name,
             min_version,
             max_version,
         })

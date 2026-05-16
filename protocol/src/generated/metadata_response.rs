@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // MetadataResponse
@@ -13,7 +13,8 @@ pub struct MetadataResponse {
     /// Available in version 3+.
     pub throttle_time_ms: i32,
     /// A list of brokers present in the cluster.
-    pub brokers: Vec<MetadataResponseBroker>,
+    /// IndexMap key `NodeId` (int32): The broker ID.
+    pub brokers: IndexMap<i32, MetadataResponseBroker>,
     /// The cluster ID that responding broker belongs to.
     /// Available in version 2+.
     pub cluster_id: Option<String>,
@@ -32,8 +33,6 @@ pub struct MetadataResponse {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MetadataResponseBroker {
-    /// The broker ID.
-    pub node_id: i32,
     /// The broker hostname.
     pub host: String,
     /// The broker port.
@@ -107,40 +106,50 @@ impl ApiResponse for MetadataResponse {
         if 3 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "MetadataResponse",
+            });
         }
         self.brokers.encode(buf, version, is_flexible)?;
         if 2 <= version.0 {
             self.cluster_id.encode(buf, version, is_flexible)?;
         } else if self.cluster_id.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'ClusterId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ClusterId",
+                version,
+                api_name: "MetadataResponse",
+            });
         }
         if 1 <= version.0 {
             self.controller_id.encode(buf, version, is_flexible)?;
         } else if self.controller_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ControllerId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ControllerId",
+                version,
+                api_name: "MetadataResponse",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if 8 <= version.0 && version.0 <= 10 {
             self.cluster_authorized_operations
                 .encode(buf, version, is_flexible)?;
         } else if self.cluster_authorized_operations != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ClusterAuthorizedOperations' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ClusterAuthorizedOperations",
+                version,
+                api_name: "MetadataResponse",
+            });
         }
         if 13 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ErrorCode' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ErrorCode",
+                version,
+                api_name: "MetadataResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -275,7 +284,6 @@ impl KafkaCodec for MetadataResponseBroker {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.node_id.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if 1 <= version.0 {
@@ -292,7 +300,6 @@ impl KafkaCodec for MetadataResponseBroker {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let node_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;
         let port = KafkaCodec::decode(buf, version, is_flexible)?;
         let rack = if 1 <= version.0 {
@@ -303,12 +310,7 @@ impl KafkaCodec for MetadataResponseBroker {
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            node_id,
-            host,
-            port,
-            rack,
-        })
+        Ok(Self { host, port, rack })
     }
 }
 

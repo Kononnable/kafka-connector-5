@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // HeartbeatRequest
@@ -48,9 +48,11 @@ impl ApiRequest for HeartbeatRequest {
         if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'GroupInstanceId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "GroupInstanceId",
+                version,
+                api_name: "HeartbeatRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

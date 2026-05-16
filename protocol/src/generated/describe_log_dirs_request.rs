@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DescribeLogDirsRequest
@@ -10,13 +10,12 @@ use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, Seria
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DescribeLogDirsRequest {
     /// Each topic that we want to describe log directories for, or null for all topics.
-    pub topics: Option<Vec<DescribableLogDirTopic>>,
+    /// IndexMap key `Topic` (string): The topic name.
+    pub topics: Option<IndexMap<String, DescribableLogDirTopic>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DescribableLogDirTopic {
-    /// The topic name.
-    pub topic: String,
     /// The partition indexes.
     pub partitions: Vec<i32>,
 }
@@ -92,7 +91,6 @@ impl KafkaCodec for DescribableLogDirTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -105,11 +103,10 @@ impl KafkaCodec for DescribableLogDirTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { topic, partitions })
+        Ok(Self { partitions })
     }
 }

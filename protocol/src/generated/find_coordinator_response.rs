@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // FindCoordinatorResponse
@@ -79,51 +79,65 @@ impl ApiResponse for FindCoordinatorResponse {
         if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "FindCoordinatorResponse",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ErrorCode' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ErrorCode",
+                version,
+                api_name: "FindCoordinatorResponse",
+            });
         }
         if 1 <= version.0 && version.0 <= 3 {
             self.error_message.encode(buf, version, is_flexible)?;
         } else if self.error_message.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'ErrorMessage' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ErrorMessage",
+                version,
+                api_name: "FindCoordinatorResponse",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.node_id.encode(buf, version, is_flexible)?;
         } else if self.node_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'NodeId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "NodeId",
+                version,
+                api_name: "FindCoordinatorResponse",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.host.encode(buf, version, is_flexible)?;
         } else if !self.host.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Host' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Host",
+                version,
+                api_name: "FindCoordinatorResponse",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.port.encode(buf, version, is_flexible)?;
         } else if self.port != 0 {
-            return Err(SerializationError::Encode(
-                "field 'Port' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Port",
+                version,
+                api_name: "FindCoordinatorResponse",
+            });
         }
         if 4 <= version.0 {
             self.coordinators.encode(buf, version, is_flexible)?;
         } else if !self.coordinators.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Coordinators' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Coordinators",
+                version,
+                api_name: "FindCoordinatorResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // AlterShareGroupOffsetsRequest
@@ -12,7 +12,8 @@ pub struct AlterShareGroupOffsetsRequest {
     /// The group identifier.
     pub group_id: String,
     /// The topics to alter offsets for.
-    pub topics: Vec<AlterShareGroupOffsetsRequestTopic>,
+    /// IndexMap key `TopicName` (string): The topic name.
+    pub topics: IndexMap<String, AlterShareGroupOffsetsRequestTopic>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -25,8 +26,6 @@ pub struct AlterShareGroupOffsetsRequestPartition {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AlterShareGroupOffsetsRequestTopic {
-    /// The topic name.
-    pub topic_name: String,
     /// Each partition to alter offsets for.
     pub partitions: Vec<AlterShareGroupOffsetsRequestPartition>,
 }
@@ -138,7 +137,6 @@ impl KafkaCodec for AlterShareGroupOffsetsRequestTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic_name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -151,14 +149,10 @@ impl KafkaCodec for AlterShareGroupOffsetsRequestTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_name = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            topic_name,
-            partitions,
-        })
+        Ok(Self { partitions })
     }
 }

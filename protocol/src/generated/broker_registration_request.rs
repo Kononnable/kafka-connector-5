@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // BrokerRegistrationRequest
@@ -16,9 +16,11 @@ pub struct BrokerRegistrationRequest {
     /// The incarnation id of the broker process.
     pub incarnation_id: [u8; 16],
     /// The listeners of this broker.
-    pub listeners: Vec<Listener>,
+    /// IndexMap key `Name` (string): The name of the endpoint.
+    pub listeners: IndexMap<String, Listener>,
     /// The features on this broker. Note: in v0-v3, features with MinSupportedVersion = 0 are omitted.
-    pub features: Vec<Feature>,
+    /// IndexMap key `Name` (string): The feature name.
+    pub features: IndexMap<String, Feature>,
     /// The rack which this broker is in.
     pub rack: Option<String>,
     /// If the required configurations for ZK migration are present, this value is set to true.
@@ -34,8 +36,6 @@ pub struct BrokerRegistrationRequest {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Feature {
-    /// The feature name.
-    pub name: String,
     /// The minimum supported feature level.
     pub min_supported_version: i16,
     /// The maximum supported feature level.
@@ -44,8 +44,6 @@ pub struct Feature {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Listener {
-    /// The name of the endpoint.
-    pub name: String,
     /// The hostname.
     pub host: String,
     /// The port.
@@ -86,24 +84,30 @@ impl ApiRequest for BrokerRegistrationRequest {
             self.is_migrating_zk_broker
                 .encode(buf, version, is_flexible)?;
         } else if self.is_migrating_zk_broker {
-            return Err(SerializationError::Encode(
-                "field 'IsMigratingZkBroker' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IsMigratingZkBroker",
+                version,
+                api_name: "BrokerRegistrationRequest",
+            });
         }
         if 2 <= version.0 {
             self.log_dirs.encode(buf, version, is_flexible)?;
         } else if !self.log_dirs.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'LogDirs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "LogDirs",
+                version,
+                api_name: "BrokerRegistrationRequest",
+            });
         }
         if 3 <= version.0 {
             self.previous_broker_epoch
                 .encode(buf, version, is_flexible)?;
         } else if self.previous_broker_epoch != 0 {
-            return Err(SerializationError::Encode(
-                "field 'PreviousBrokerEpoch' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "PreviousBrokerEpoch",
+                version,
+                api_name: "BrokerRegistrationRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -229,7 +233,6 @@ impl KafkaCodec for Feature {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.min_supported_version
             .encode(buf, version, is_flexible)?;
         self.max_supported_version
@@ -245,14 +248,12 @@ impl KafkaCodec for Feature {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let min_supported_version = KafkaCodec::decode(buf, version, is_flexible)?;
         let max_supported_version = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            name,
             min_supported_version,
             max_supported_version,
         })
@@ -266,7 +267,6 @@ impl KafkaCodec for Listener {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         self.security_protocol.encode(buf, version, is_flexible)?;
@@ -281,7 +281,6 @@ impl KafkaCodec for Listener {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;
         let port = KafkaCodec::decode(buf, version, is_flexible)?;
         let security_protocol = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -289,7 +288,6 @@ impl KafkaCodec for Listener {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            name,
             host,
             port,
             security_protocol,

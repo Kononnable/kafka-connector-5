@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ElectLeadersRequest
@@ -13,15 +13,14 @@ pub struct ElectLeadersRequest {
     /// Available in version 1+.
     pub election_type: i8,
     /// The topic partitions to elect leaders.
-    pub topic_partitions: Option<Vec<TopicPartitions>>,
+    /// IndexMap key `Topic` (string): The name of a topic.
+    pub topic_partitions: Option<IndexMap<String, TopicPartitions>>,
     /// The time in ms to wait for the election to complete.
     pub timeout_ms: i32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TopicPartitions {
-    /// The name of a topic.
-    pub topic: String,
     /// The partitions of this topic whose leader should be elected.
     pub partitions: Vec<i32>,
 }
@@ -51,9 +50,11 @@ impl ApiRequest for ElectLeadersRequest {
         if 1 <= version.0 {
             self.election_type.encode(buf, version, is_flexible)?;
         } else if self.election_type != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ElectionType' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ElectionType",
+                version,
+                api_name: "ElectLeadersRequest",
+            });
         }
         self.topic_partitions.encode(buf, version, is_flexible)?;
         self.timeout_ms.encode(buf, version, is_flexible)?;
@@ -129,7 +130,6 @@ impl KafkaCodec for TopicPartitions {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -142,11 +142,10 @@ impl KafkaCodec for TopicPartitions {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { topic, partitions })
+        Ok(Self { partitions })
     }
 }

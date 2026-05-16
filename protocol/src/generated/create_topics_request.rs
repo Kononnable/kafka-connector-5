@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // CreateTopicsRequest
@@ -10,7 +10,8 @@ use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, Seria
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreateTopicsRequest {
     /// The topics to create.
-    pub topics: Vec<CreatableTopic>,
+    /// IndexMap key `Name` (string): The topic name.
+    pub topics: IndexMap<String, CreatableTopic>,
     /// How long to wait in milliseconds before timing out the request.
     pub timeout_ms: i32,
     /// If true, check that the topics can be created as specified, but don't create anything.
@@ -20,30 +21,26 @@ pub struct CreateTopicsRequest {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreatableReplicaAssignment {
-    /// The partition index.
-    pub partition_index: i32,
     /// The brokers to place the partition on.
     pub broker_ids: Vec<i32>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreatableTopic {
-    /// The topic name.
-    pub name: String,
     /// The number of partitions to create in the topic, or -1 if we are either specifying a manual partition assignment or using the default partitions.
     pub num_partitions: i32,
     /// The number of replicas to create for each partition in the topic, or -1 if we are either specifying a manual partition assignment or using the default replication factor.
     pub replication_factor: i16,
     /// The manual partition assignment, or the empty array if we are using automatic assignment.
-    pub assignments: Vec<CreatableReplicaAssignment>,
+    /// IndexMap key `PartitionIndex` (int32): The partition index.
+    pub assignments: IndexMap<i32, CreatableReplicaAssignment>,
     /// The custom topic configurations to set.
-    pub configs: Vec<CreatableTopicConfig>,
+    /// IndexMap key `Name` (string): The configuration name.
+    pub configs: IndexMap<String, CreatableTopicConfig>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CreatableTopicConfig {
-    /// The configuration name.
-    pub name: String,
     /// The configuration value.
     pub value: Option<String>,
 }
@@ -75,9 +72,11 @@ impl ApiRequest for CreateTopicsRequest {
         if 1 <= version.0 {
             self.validate_only.encode(buf, version, is_flexible)?;
         } else if self.validate_only {
-            return Err(SerializationError::Encode(
-                "field 'validateOnly' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "validateOnly",
+                version,
+                api_name: "CreateTopicsRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -151,7 +150,6 @@ impl KafkaCodec for CreatableReplicaAssignment {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.partition_index.encode(buf, version, is_flexible)?;
         self.broker_ids.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -164,15 +162,11 @@ impl KafkaCodec for CreatableReplicaAssignment {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
         let broker_ids = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            partition_index,
-            broker_ids,
-        })
+        Ok(Self { broker_ids })
     }
 }
 
@@ -183,7 +177,6 @@ impl KafkaCodec for CreatableTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.num_partitions.encode(buf, version, is_flexible)?;
         self.replication_factor.encode(buf, version, is_flexible)?;
         self.assignments.encode(buf, version, is_flexible)?;
@@ -199,7 +192,6 @@ impl KafkaCodec for CreatableTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let num_partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         let replication_factor = KafkaCodec::decode(buf, version, is_flexible)?;
         let assignments = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -208,7 +200,6 @@ impl KafkaCodec for CreatableTopic {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            name,
             num_partitions,
             replication_factor,
             assignments,
@@ -224,7 +215,6 @@ impl KafkaCodec for CreatableTopicConfig {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -237,11 +227,10 @@ impl KafkaCodec for CreatableTopicConfig {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let value = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, value })
+        Ok(Self { value })
     }
 }

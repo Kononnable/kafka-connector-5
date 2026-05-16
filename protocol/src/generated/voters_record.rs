@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // VotersRecord
@@ -17,8 +17,6 @@ pub struct VotersRecord {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Endpoint {
-    /// The name of the endpoint.
-    pub name: String,
     /// The hostname.
     pub host: String,
     /// The port.
@@ -40,7 +38,8 @@ pub struct Voter {
     /// The directory id of the voter in the topic partition.
     pub voter_directory_id: [u8; 16],
     /// The endpoint that can be used to communicate with the voter.
-    pub endpoints: Vec<Endpoint>,
+    /// IndexMap key `Name` (string): The name of the endpoint.
+    pub endpoints: IndexMap<String, Endpoint>,
     /// The range of versions of the protocol that the replica supports.
     pub kraft_version_feature: KRaftVersionFeature,
 }
@@ -84,7 +83,6 @@ impl KafkaCodec for Endpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -98,13 +96,12 @@ impl KafkaCodec for Endpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;
         let port = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, host, port })
+        Ok(Self { host, port })
     }
 }
 

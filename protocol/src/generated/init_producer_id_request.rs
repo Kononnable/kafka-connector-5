@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // InitProducerIdRequest
@@ -55,30 +55,38 @@ impl ApiRequest for InitProducerIdRequest {
         if 3 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         } else if self.producer_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ProducerId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ProducerId",
+                version,
+                api_name: "InitProducerIdRequest",
+            });
         }
         if 3 <= version.0 {
             self.producer_epoch.encode(buf, version, is_flexible)?;
         } else if self.producer_epoch != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ProducerEpoch' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ProducerEpoch",
+                version,
+                api_name: "InitProducerIdRequest",
+            });
         }
         if 6 <= version.0 {
             self.enable2_pc.encode(buf, version, is_flexible)?;
         } else if self.enable2_pc {
-            return Err(SerializationError::Encode(
-                "field 'Enable2Pc' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Enable2Pc",
+                version,
+                api_name: "InitProducerIdRequest",
+            });
         }
         if 6 <= version.0 {
             self.keep_prepared_txn.encode(buf, version, is_flexible)?;
         } else if self.keep_prepared_txn {
-            return Err(SerializationError::Encode(
-                "field 'KeepPreparedTxn' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "KeepPreparedTxn",
+                version,
+                api_name: "InitProducerIdRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

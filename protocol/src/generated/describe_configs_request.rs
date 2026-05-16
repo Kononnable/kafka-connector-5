@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DescribeConfigsRequest
@@ -55,17 +55,21 @@ impl ApiRequest for DescribeConfigsRequest {
         if 1 <= version.0 {
             self.include_synonyms.encode(buf, version, is_flexible)?;
         } else if self.include_synonyms {
-            return Err(SerializationError::Encode(
-                "field 'IncludeSynonyms' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IncludeSynonyms",
+                version,
+                api_name: "DescribeConfigsRequest",
+            });
         }
         if 3 <= version.0 {
             self.include_documentation
                 .encode(buf, version, is_flexible)?;
         } else if self.include_documentation {
-            return Err(SerializationError::Encode(
-                "field 'IncludeDocumentation' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IncludeDocumentation",
+                version,
+                api_name: "DescribeConfigsRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

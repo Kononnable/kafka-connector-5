@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // FindCoordinatorRequest
@@ -45,23 +45,29 @@ impl ApiRequest for FindCoordinatorRequest {
         if 0 <= version.0 && version.0 <= 3 {
             self.key.encode(buf, version, is_flexible)?;
         } else if !self.key.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Key' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Key",
+                version,
+                api_name: "FindCoordinatorRequest",
+            });
         }
         if 1 <= version.0 {
             self.key_type.encode(buf, version, is_flexible)?;
         } else if self.key_type != 0 {
-            return Err(SerializationError::Encode(
-                "field 'KeyType' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "KeyType",
+                version,
+                api_name: "FindCoordinatorRequest",
+            });
         }
         if 4 <= version.0 {
             self.coordinator_keys.encode(buf, version, is_flexible)?;
         } else if !self.coordinator_keys.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'CoordinatorKeys' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "CoordinatorKeys",
+                version,
+                api_name: "FindCoordinatorRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

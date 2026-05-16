@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DeleteRecordsResponse
@@ -12,13 +12,12 @@ pub struct DeleteRecordsResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
     /// Each topic that we wanted to delete records from.
-    pub topics: Vec<DeleteRecordsTopicResult>,
+    /// IndexMap key `Name` (string): The topic name.
+    pub topics: IndexMap<String, DeleteRecordsTopicResult>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeleteRecordsPartitionResult {
-    /// The partition index.
-    pub partition_index: i32,
     /// The partition low water mark.
     pub low_watermark: i64,
     /// The deletion error code, or 0 if the deletion succeeded.
@@ -27,10 +26,9 @@ pub struct DeleteRecordsPartitionResult {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeleteRecordsTopicResult {
-    /// The topic name.
-    pub name: String,
     /// Each partition that we wanted to delete records from.
-    pub partitions: Vec<DeleteRecordsPartitionResult>,
+    /// IndexMap key `PartitionIndex` (int32): The partition index.
+    pub partitions: IndexMap<i32, DeleteRecordsPartitionResult>,
 }
 
 impl ApiResponse for DeleteRecordsResponse {
@@ -114,7 +112,6 @@ impl KafkaCodec for DeleteRecordsPartitionResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.partition_index.encode(buf, version, is_flexible)?;
         self.low_watermark.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -128,14 +125,12 @@ impl KafkaCodec for DeleteRecordsPartitionResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let partition_index = KafkaCodec::decode(buf, version, is_flexible)?;
         let low_watermark = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            partition_index,
             low_watermark,
             error_code,
         })
@@ -149,7 +144,6 @@ impl KafkaCodec for DeleteRecordsTopicResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -162,11 +156,10 @@ impl KafkaCodec for DeleteRecordsTopicResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, partitions })
+        Ok(Self { partitions })
     }
 }

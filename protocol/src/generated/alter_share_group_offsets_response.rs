@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // AlterShareGroupOffsetsResponse
@@ -16,7 +16,8 @@ pub struct AlterShareGroupOffsetsResponse {
     /// The top-level error message, or null if there was no error.
     pub error_message: Option<String>,
     /// The results for each topic.
-    pub responses: Vec<AlterShareGroupOffsetsResponseTopic>,
+    /// IndexMap key `TopicName` (string): The topic name.
+    pub responses: IndexMap<String, AlterShareGroupOffsetsResponseTopic>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -31,8 +32,6 @@ pub struct AlterShareGroupOffsetsResponsePartition {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AlterShareGroupOffsetsResponseTopic {
-    /// The topic name.
-    pub topic_name: String,
     /// The unique topic ID.
     pub topic_id: [u8; 16],
     /// Partitions. Type: []AlterShareGroupOffsetsResponsePartition.
@@ -167,7 +166,6 @@ impl KafkaCodec for AlterShareGroupOffsetsResponseTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic_name.encode(buf, version, is_flexible)?;
         self.topic_id.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -181,14 +179,12 @@ impl KafkaCodec for AlterShareGroupOffsetsResponseTopic {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic_name = KafkaCodec::decode(buf, version, is_flexible)?;
         let topic_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            topic_name,
             topic_id,
             partitions,
         })

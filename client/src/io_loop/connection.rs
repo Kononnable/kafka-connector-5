@@ -1,8 +1,9 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 use mio::Token;
 use mio::net::TcpStream;
 use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
-use protocol::generated::{ApiVersionsRequest, RequestHeader, ResponseHeader};
+use protocol::generated::{ApiVersionsRequest, RequestHeader, ResponseHeader, api_key_name};
 use protocol::traits::{ApiRequest, ApiVersion, SerializationError};
 
 pub struct Connection {
@@ -17,7 +18,7 @@ pub struct Connection {
     /// Bytes ready to be written to the socket.
     bytes_to_send: BytesMut,
     /// Cached ApiVersions entries from this broker.
-    api_versions: Vec<ApiVersionEntry>,
+    api_versions: IndexMap<i16, ApiVersionEntry>,
 }
 
 impl Connection {
@@ -30,7 +31,7 @@ impl Connection {
             write_buffer: BytesMut::new(),
             read_buffer: BytesMut::with_capacity(4096),
             bytes_to_send: BytesMut::new(),
-            api_versions: Vec::new(),
+            api_versions: IndexMap::new(),
         }
     }
 
@@ -53,16 +54,14 @@ impl Connection {
             Some(v) => v,
             None => {
                 let client_max = R::get_max_supported_version().0;
-                let broker_entry = self
-                    .api_versions
-                    .iter()
-                    .find(|k| k.api_key == R::get_api_key().0);
+                let broker_entry = self.api_versions.get(&R::get_api_key().0);
                 match broker_entry {
                     Some(entry) => ApiVersion::new(client_max.min(entry.max_version)),
                     None => {
-                        return Err(SerializationError::UnsupportedVersion(
-                            R::get_min_supported_version(),
-                        ));
+                        return Err(SerializationError::UnsupportedVersion {
+                            api: api_key_name(R::get_api_key().0),
+                            version: R::get_min_supported_version(),
+                        });
                     }
                 }
             }
@@ -71,19 +70,25 @@ impl Connection {
         // Before we know broker capabilities, only ApiVersionsRequest is allowed.
         if self.api_versions.is_empty() {
             if R::get_api_key() != ApiVersionsRequest::get_api_key() {
-                return Err(SerializationError::UnsupportedVersion(version));
+                return Err(SerializationError::UnsupportedVersion {
+                    api: api_key_name(R::get_api_key().0),
+                    version,
+                });
             }
         } else {
-            let supported = self
-                .api_versions
-                .iter()
-                .find(|v| v.api_key == R::get_api_key().0);
+            let supported = self.api_versions.get(&R::get_api_key().0);
             if supported.is_none() {
-                return Err(SerializationError::UnsupportedVersion(version));
+                return Err(SerializationError::UnsupportedVersion {
+                    api: api_key_name(R::get_api_key().0),
+                    version,
+                });
             } else if let Some(v) = supported
                 && (version.0 < v.min_version || version.0 > v.max_version)
             {
-                return Err(SerializationError::UnsupportedVersion(version));
+                return Err(SerializationError::UnsupportedVersion {
+                    api: api_key_name(R::get_api_key().0),
+                    version,
+                });
             }
         }
 
@@ -112,7 +117,7 @@ impl Connection {
         Ok(correlation_id)
     }
 
-    pub(super) fn set_api_versions(&mut self, versions: Vec<ApiVersionEntry>) {
+    pub(super) fn set_api_versions(&mut self, versions: IndexMap<i16, ApiVersionEntry>) {
         self.api_versions = versions;
     }
 
@@ -198,6 +203,7 @@ mod tests {
     use std::time::Duration;
 
     use bytes::{Bytes, BytesMut};
+    use indexmap::IndexMap;
     use mio::Token;
     use mio::net::TcpStream;
     use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
@@ -213,7 +219,7 @@ mod tests {
     fn read_frame_body(peer: &mut std::net::TcpStream) -> Bytes {
         let mut len_buf = [0u8; 4];
         peer.read_exact(&mut len_buf).unwrap();
-        let frame_len = i32::from_be_bytes(len_buf.try_into().unwrap()) as usize;
+        let frame_len = i32::from_be_bytes(len_buf) as usize;
         let mut body = vec![0u8; frame_len];
         peer.read_exact(&mut body).unwrap();
         Bytes::from(body)
@@ -341,7 +347,7 @@ mod tests {
                 .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)))
                 .unwrap_err();
             assert!(
-                matches!(err, SerializationError::UnsupportedVersion(_)),
+                matches!(err, SerializationError::UnsupportedVersion { .. }),
                 "expected UnsupportedVersion, got {}",
                 err
             );
@@ -357,11 +363,13 @@ mod tests {
             assert_eq!(MetadataRequest::get_min_supported_version().0, 0);
 
             // case 1: broker_max (8) < client_max (13) -> picks 8
-            conn.set_api_versions(vec![ApiVersionEntry {
-                api_key: 3,
-                min_version: 2,
-                max_version: 8,
-            }]);
+            conn.set_api_versions(IndexMap::from([(
+                3,
+                ApiVersionEntry {
+                    min_version: 2,
+                    max_version: 8,
+                },
+            )]));
             conn.send_api_request(&MetadataRequest::default(), None)
                 .unwrap();
             assert_eq!(
@@ -372,11 +380,13 @@ mod tests {
             conn.bytes_to_send.clear();
 
             // case 2: broker_max (20) > client_max (13) -> picks client_max
-            conn.set_api_versions(vec![ApiVersionEntry {
-                api_key: 3,
-                min_version: 2,
-                max_version: 20,
-            }]);
+            conn.set_api_versions(IndexMap::from([(
+                3,
+                ApiVersionEntry {
+                    min_version: 2,
+                    max_version: 20,
+                },
+            )]));
             conn.send_api_request(&MetadataRequest::default(), None)
                 .unwrap();
             assert_eq!(
@@ -392,19 +402,21 @@ mod tests {
             let (_peer, stream) = connected_pair();
             let mut conn = Connection::new(Token(1), stream, None);
 
-            // Populate with key 3 (MetadataRequest) only
-            conn.set_api_versions(vec![ApiVersionEntry {
-                api_key: 3,
-                min_version: 2,
-                max_version: 8,
-            }]);
+            // broker only supports api 0 (Produce), not api 3 (Metadata)
+            conn.set_api_versions(IndexMap::from([(
+                0,
+                ApiVersionEntry {
+                    min_version: 0,
+                    max_version: 10,
+                },
+            )]));
 
-            // (a) Key absent from api_versions
+            // (a) Nonexistent key
             let err = conn
-                .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)))
                 .unwrap_err();
             assert!(
-                matches!(err, SerializationError::UnsupportedVersion(_)),
+                matches!(err, SerializationError::UnsupportedVersion { .. }),
                 "expected UnsupportedVersion for absent key, got {}",
                 err
             );
@@ -414,7 +426,7 @@ mod tests {
                 .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(1)))
                 .unwrap_err();
             assert!(
-                matches!(err, SerializationError::UnsupportedVersion(_)),
+                matches!(err, SerializationError::UnsupportedVersion { .. }),
                 "expected UnsupportedVersion for version < min, got {}",
                 err
             );
@@ -424,7 +436,7 @@ mod tests {
                 .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(9)))
                 .unwrap_err();
             assert!(
-                matches!(err, SerializationError::UnsupportedVersion(_)),
+                matches!(err, SerializationError::UnsupportedVersion { .. }),
                 "expected UnsupportedVersion for version > max, got {}",
                 err
             );
@@ -625,7 +637,7 @@ mod tests {
                     RequestHeader {
                         request_api_key: ApiVersionsRequest::get_api_key().0,
                         request_api_version: 0,
-                        correlation_id: i as i32,
+                        correlation_id: i,
                         client_id: None,
                     }
                 );
@@ -764,11 +776,13 @@ mod tests {
             let (mut peer, stream) = connected_pair();
             let mut conn = Connection::new(Token(1), stream, None);
 
-            conn.set_api_versions(vec![ApiVersionEntry {
-                api_key: ApiVersionsRequest::get_api_key().0,
-                min_version: 0,
-                max_version: 4,
-            }]);
+            conn.set_api_versions(IndexMap::from([(
+                ApiVersionsRequest::get_api_key().0,
+                ApiVersionEntry {
+                    min_version: 0,
+                    max_version: 4,
+                },
+            )]));
 
             for _ in 0..3 {
                 conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
@@ -831,11 +845,13 @@ mod tests {
             let (_peer, stream) = connected_pair();
             let mut conn = Connection::new(Token(1), stream, None);
 
-            conn.set_api_versions(vec![ApiVersionEntry {
-                api_key: ApiVersionsRequest::get_api_key().0,
-                min_version: 0,
-                max_version: 4,
-            }]);
+            conn.set_api_versions(IndexMap::from([(
+                ApiVersionsRequest::get_api_key().0,
+                ApiVersionEntry {
+                    min_version: 0,
+                    max_version: 4,
+                },
+            )]));
 
             assert!(!conn.can_write());
             conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))

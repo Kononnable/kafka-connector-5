@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // OffsetForLeaderEpochResponse
@@ -13,7 +13,8 @@ pub struct OffsetForLeaderEpochResponse {
     /// Available in version 2+.
     pub throttle_time_ms: i32,
     /// Each topic we fetched offsets for.
-    pub topics: Vec<OffsetForLeaderTopicResult>,
+    /// IndexMap key `Topic` (string): The topic name.
+    pub topics: IndexMap<String, OffsetForLeaderTopicResult>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -31,8 +32,6 @@ pub struct EpochEndOffset {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OffsetForLeaderTopicResult {
-    /// The topic name.
-    pub topic: String,
     /// Each partition in the topic we fetched offsets for.
     pub partitions: Vec<EpochEndOffset>,
 }
@@ -62,9 +61,11 @@ impl ApiResponse for OffsetForLeaderEpochResponse {
         if 2 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "OffsetForLeaderEpochResponse",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {
@@ -178,7 +179,6 @@ impl KafkaCodec for OffsetForLeaderTopicResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -191,11 +191,10 @@ impl KafkaCodec for OffsetForLeaderTopicResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { topic, partitions })
+        Ok(Self { partitions })
     }
 }

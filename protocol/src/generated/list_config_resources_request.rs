@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ListConfigResourcesRequest
@@ -39,9 +39,11 @@ impl ApiRequest for ListConfigResourcesRequest {
         if 1 <= version.0 {
             self.resource_types.encode(buf, version, is_flexible)?;
         } else if !self.resource_types.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'ResourceTypes' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ResourceTypes",
+                version,
+                api_name: "ListConfigResourcesRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

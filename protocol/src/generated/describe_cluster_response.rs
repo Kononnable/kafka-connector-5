@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DescribeClusterResponse
@@ -23,15 +23,14 @@ pub struct DescribeClusterResponse {
     /// The ID of the controller broker.
     pub controller_id: i32,
     /// Each broker in the response.
-    pub brokers: Vec<DescribeClusterBroker>,
+    /// IndexMap key `BrokerId` (int32): The broker ID.
+    pub brokers: IndexMap<i32, DescribeClusterBroker>,
     /// 32-bit bitfield to represent authorized operations for this cluster.
     pub cluster_authorized_operations: i32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DescribeClusterBroker {
-    /// The broker ID.
-    pub broker_id: i32,
     /// The broker hostname.
     pub host: String,
     /// The broker port.
@@ -71,9 +70,11 @@ impl ApiResponse for DescribeClusterResponse {
         if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
         } else if self.endpoint_type != 0 {
-            return Err(SerializationError::Encode(
-                "field 'EndpointType' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "EndpointType",
+                version,
+                api_name: "DescribeClusterResponse",
+            });
         }
         self.cluster_id.encode(buf, version, is_flexible)?;
         self.controller_id.encode(buf, version, is_flexible)?;
@@ -178,7 +179,6 @@ impl KafkaCodec for DescribeClusterBroker {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.broker_id.encode(buf, version, is_flexible)?;
         self.host.encode(buf, version, is_flexible)?;
         self.port.encode(buf, version, is_flexible)?;
         self.rack.encode(buf, version, is_flexible)?;
@@ -196,7 +196,6 @@ impl KafkaCodec for DescribeClusterBroker {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let broker_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let host = KafkaCodec::decode(buf, version, is_flexible)?;
         let port = KafkaCodec::decode(buf, version, is_flexible)?;
         let rack = KafkaCodec::decode(buf, version, is_flexible)?;
@@ -209,7 +208,6 @@ impl KafkaCodec for DescribeClusterBroker {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            broker_id,
             host,
             port,
             rack,

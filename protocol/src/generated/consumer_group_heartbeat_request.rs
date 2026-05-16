@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ConsumerGroupHeartbeatRequest
@@ -75,9 +75,11 @@ impl ApiRequest for ConsumerGroupHeartbeatRequest {
             self.subscribed_topic_regex
                 .encode(buf, version, is_flexible)?;
         } else if self.subscribed_topic_regex.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'SubscribedTopicRegex' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "SubscribedTopicRegex",
+                version,
+                api_name: "ConsumerGroupHeartbeatRequest",
+            });
         }
         self.server_assignor.encode(buf, version, is_flexible)?;
         self.topic_partitions.encode(buf, version, is_flexible)?;

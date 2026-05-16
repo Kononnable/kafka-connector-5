@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // MetadataRequest
@@ -58,25 +58,31 @@ impl ApiRequest for MetadataRequest {
             self.allow_auto_topic_creation
                 .encode(buf, version, is_flexible)?;
         } else if self.allow_auto_topic_creation {
-            return Err(SerializationError::Encode(
-                "field 'AllowAutoTopicCreation' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "AllowAutoTopicCreation",
+                version,
+                api_name: "MetadataRequest",
+            });
         }
         if 8 <= version.0 && version.0 <= 10 {
             self.include_cluster_authorized_operations
                 .encode(buf, version, is_flexible)?;
         } else if self.include_cluster_authorized_operations {
-            return Err(SerializationError::Encode(
-                "field 'IncludeClusterAuthorizedOperations' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IncludeClusterAuthorizedOperations",
+                version,
+                api_name: "MetadataRequest",
+            });
         }
         if 8 <= version.0 {
             self.include_topic_authorized_operations
                 .encode(buf, version, is_flexible)?;
         } else if self.include_topic_authorized_operations {
-            return Err(SerializationError::Encode(
-                "field 'IncludeTopicAuthorizedOperations' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IncludeTopicAuthorizedOperations",
+                version,
+                api_name: "MetadataRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

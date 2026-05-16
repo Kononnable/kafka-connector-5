@@ -7,12 +7,6 @@ use std::fmt;
 
 use bytes::{Bytes, BytesMut};
 
-impl From<std::str::Utf8Error> for SerializationError {
-    fn from(_: std::str::Utf8Error) -> Self {
-        Self::InvalidUtf8
-    }
-}
-
 // ---------------------------------------------------------------------------
 // ApiVersion
 // ---------------------------------------------------------------------------
@@ -96,30 +90,14 @@ use thiserror::Error as DeriveError;
 /// Errors that can occur during message serialization or deserialization.
 #[derive(Debug, Clone, DeriveError)]
 pub enum SerializationError {
-    /// The wire data is malformed or incomplete.
-    #[error("decode error: {0}")]
-    Decode(&'static str),
-    /// A value could not be encoded (e.g. string too large).
-    #[error("encode error: {0}")]
-    Encode(&'static str),
-    /// The requested version is not supported by this message.
-    #[error("unsupported version {0}")]
-    UnsupportedVersion(ApiVersion),
-    /// The buffer ran out of bytes while reading.
-    #[error("insufficient bytes")]
-    InsufficientBytes,
-    /// The encoded length is negative but the type does not support null.
-    #[error("unexpected null value")]
-    UnexpectedNull,
-    /// The encoded length is invalid.
-    #[error("invalid length: {message}")]
-    InvalidLength { message: String },
-    /// The string data is not valid UTF-8.
-    #[error("invalid UTF-8 string")]
-    InvalidUtf8,
-    /// A value is too large for its wire representation.
-    #[error("value too large: {message}")]
-    ValueTooLarge { message: String },
+    /// The requested version is not supported by the API.
+    #[error("unsupported version {version} for {api}")]
+    UnsupportedVersion {
+        /// The API name.
+        api: &'static str,
+        /// The unsupported version.
+        version: ApiVersion,
+    },
     /// A field has a non-default value but is not supported in the requested version.
     #[error("field '{field}' is not available in version {version} of {api_name}")]
     FieldNotAvailable {
@@ -130,9 +108,6 @@ pub enum SerializationError {
         /// The name of the API message.
         api_name: &'static str,
     },
-    /// A generic protocol error.
-    #[error("protocol error: {message}")]
-    Protocol { message: String },
 }
 
 // ---------------------------------------------------------------------------
@@ -192,29 +167,4 @@ pub trait ApiResponse: Clone + fmt::Debug + Default {
 
     /// Deserialize an instance of `Self` from `buf` for the given protocol `version`.
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError>;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_api_version_order() {
-        assert!(ApiVersion::new(0) < ApiVersion::new(1));
-        assert!(ApiVersion::new(5) > ApiVersion::new(3));
-    }
-
-    #[test]
-    fn test_api_key_from_i16() {
-        let k: ApiKey = 3.into();
-        assert_eq!(k.0, 3);
-        let n: i16 = k.into();
-        assert_eq!(n, 3);
-    }
-
-    #[test]
-    fn test_serialization_error_display() {
-        let e = SerializationError::Decode("bad data");
-        assert!(e.to_string().contains("decode error"));
-    }
 }

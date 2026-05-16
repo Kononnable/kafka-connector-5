@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ElectLeadersResponse
@@ -62,9 +62,11 @@ impl ApiResponse for ElectLeadersResponse {
         if 1 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ErrorCode' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ErrorCode",
+                version,
+                api_name: "ElectLeadersResponse",
+            });
         }
         self.replica_election_results
             .encode(buf, version, is_flexible)?;

@@ -9,6 +9,7 @@ protocol = { path = "../protocol" }
 bytes = { workspace = true }
 derivative = "2.2"
 futures = { version = "0.3", default-features = false, features = ["std"] }
+indexmap = { version = "2", features = ["serde"] }
 futures-timer = "3.0"
 thiserror = "2"
 tracing = "0.1"

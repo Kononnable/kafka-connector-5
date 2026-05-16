@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DeleteGroupsResponse
@@ -12,13 +12,12 @@ pub struct DeleteGroupsResponse {
     /// The duration in milliseconds for which the request was throttled due to a quota violation, or zero if the request did not violate any quota.
     pub throttle_time_ms: i32,
     /// The deletion results.
-    pub results: Vec<DeletableGroupResult>,
+    /// IndexMap key `GroupId` (string): The group id.
+    pub results: IndexMap<String, DeletableGroupResult>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DeletableGroupResult {
-    /// The group id.
-    pub group_id: String,
     /// The deletion error, or 0 if the deletion succeeded.
     pub error_code: i16,
 }
@@ -104,7 +103,6 @@ impl KafkaCodec for DeletableGroupResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.group_id.encode(buf, version, is_flexible)?;
         self.error_code.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -117,14 +115,10 @@ impl KafkaCodec for DeletableGroupResult {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let group_id = KafkaCodec::decode(buf, version, is_flexible)?;
         let error_code = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            group_id,
-            error_code,
-        })
+        Ok(Self { error_code })
     }
 }

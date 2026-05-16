@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // AddPartitionsToTxnRequest
@@ -10,8 +10,9 @@ use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, Seria
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AddPartitionsToTxnRequest {
     /// List of transactions to add partitions to.
+    /// IndexMap key `TransactionalId` (string): The transactional id corresponding to the transaction.
     /// Available in version 4+.
-    pub transactions: Vec<AddPartitionsToTxnTransaction>,
+    pub transactions: IndexMap<String, AddPartitionsToTxnTransaction>,
     /// The transactional id corresponding to the transaction.
     /// Available in version 0-3.
     pub v3_and_below_transactional_id: String,
@@ -36,9 +37,6 @@ pub struct AddPartitionsToTxnTopic {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AddPartitionsToTxnTransaction {
-    /// The transactional id corresponding to the transaction.
-    /// Available in version 4+.
-    pub transactional_id: String,
     /// Current producer id in use by the transactional id.
     /// Available in version 4+.
     pub producer_id: i64,
@@ -78,40 +76,50 @@ impl ApiRequest for AddPartitionsToTxnRequest {
         if 4 <= version.0 {
             self.transactions.encode(buf, version, is_flexible)?;
         } else if !self.transactions.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Transactions' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Transactions",
+                version,
+                api_name: "AddPartitionsToTxnRequest",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_transactional_id
                 .encode(buf, version, is_flexible)?;
         } else if !self.v3_and_below_transactional_id.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'V3AndBelowTransactionalId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "V3AndBelowTransactionalId",
+                version,
+                api_name: "AddPartitionsToTxnRequest",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_producer_id
                 .encode(buf, version, is_flexible)?;
         } else if self.v3_and_below_producer_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'V3AndBelowProducerId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "V3AndBelowProducerId",
+                version,
+                api_name: "AddPartitionsToTxnRequest",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_producer_epoch
                 .encode(buf, version, is_flexible)?;
         } else if self.v3_and_below_producer_epoch != 0 {
-            return Err(SerializationError::Encode(
-                "field 'V3AndBelowProducerEpoch' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "V3AndBelowProducerEpoch",
+                version,
+                api_name: "AddPartitionsToTxnRequest",
+            });
         }
         if 0 <= version.0 && version.0 <= 3 {
             self.v3_and_below_topics.encode(buf, version, is_flexible)?;
         } else if !self.v3_and_below_topics.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'V3AndBelowTopics' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "V3AndBelowTopics",
+                version,
+                api_name: "AddPartitionsToTxnRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -268,9 +276,6 @@ impl KafkaCodec for AddPartitionsToTxnTransaction {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if 4 <= version.0 {
-            self.transactional_id.encode(buf, version, is_flexible)?;
-        }
-        if 4 <= version.0 {
             self.producer_id.encode(buf, version, is_flexible)?;
         }
         if 4 <= version.0 {
@@ -293,11 +298,6 @@ impl KafkaCodec for AddPartitionsToTxnTransaction {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let transactional_id = if 4 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let producer_id = if 4 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -322,7 +322,6 @@ impl KafkaCodec for AddPartitionsToTxnTransaction {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
-            transactional_id,
             producer_id,
             producer_epoch,
             verify_only,

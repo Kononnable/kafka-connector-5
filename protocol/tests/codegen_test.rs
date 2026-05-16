@@ -127,3 +127,31 @@ fn test_generated_struct_create_acls_response() {
         "missing results struct"
     );
 }
+
+#[test]
+fn test_field_not_available() {
+    use bytes::BytesMut;
+    use protocol::generated::api_versions_response::ApiVersionsResponse;
+    use protocol::traits::{ApiResponse, ApiVersion};
+
+    // throttle_time_ms is only available in version 1+
+    let msg = ApiVersionsResponse {
+        throttle_time_ms: 100,
+        ..Default::default()
+    };
+
+    let mut buf = BytesMut::new();
+    let err = msg.serialize(ApiVersion::new(0), &mut buf).unwrap_err();
+
+    assert!(
+        matches!(
+            err,
+            protocol::traits::SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version: protocol::traits::ApiVersion(0),
+                api_name: "ApiVersionsResponse",
+            }
+        ),
+        "unexpected error: {err}"
+    );
+}

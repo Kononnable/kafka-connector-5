@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // IncrementalAlterConfigsRequest
@@ -10,27 +10,39 @@ use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, Seria
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct IncrementalAlterConfigsRequest {
     /// The incremental updates for each resource.
-    pub resources: Vec<AlterConfigsResource>,
+    /// IndexMap key `ResourceType` (int8): The resource type.
+    /// IndexMap key `ResourceName` (string): The resource name.
+    pub resources: IndexMap<AlterConfigsResourceKey, AlterConfigsResource>,
     /// True if we should validate the request, but not change the configurations.
     pub validate_only: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct AlterConfigsResource {
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct AlterConfigsResourceKey {
     /// The resource type.
     pub resource_type: i8,
     /// The resource name.
     pub resource_name: String,
-    /// The configurations.
-    pub configs: Vec<AlterableConfig>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct AlterableConfig {
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct AlterableConfigKey {
     /// The configuration key name.
     pub name: String,
     /// The type (Set, Delete, Append, Subtract) of operation.
     pub config_operation: i8,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct AlterConfigsResource {
+    /// The configurations.
+    /// IndexMap key `Name` (string): The configuration key name.
+    /// IndexMap key `ConfigOperation` (int8): The type (Set, Delete, Append, Subtract) of operation.
+    pub configs: IndexMap<AlterableConfigKey, AlterableConfig>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct AlterableConfig {
     /// The value to set for the configuration key.
     pub value: Option<String>,
 }
@@ -116,9 +128,62 @@ impl KafkaCodec for AlterConfigsResource {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
+        self.configs.encode(buf, version, is_flexible)?;
+        if is_flexible {
+            encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        let configs = KafkaCodec::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
+        }
+        Ok(Self { configs })
+    }
+}
+
+impl KafkaCodec for AlterableConfig {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        self.value.encode(buf, version, is_flexible)?;
+        if is_flexible {
+            encode_unsigned_varint(0u64, buf);
+        }
+        Ok(())
+    }
+
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        let value = KafkaCodec::decode(buf, version, is_flexible)?;
+        if is_flexible {
+            let (_tag_count, _) = decode_unsigned_varint(buf)?;
+        }
+        Ok(Self { value })
+    }
+}
+
+impl KafkaCodec for AlterConfigsResourceKey {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: ApiVer,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
         self.resource_type.encode(buf, version, is_flexible)?;
         self.resource_name.encode(buf, version, is_flexible)?;
-        self.configs.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
         }
@@ -132,19 +197,17 @@ impl KafkaCodec for AlterConfigsResource {
     ) -> Result<Self, SerializationError> {
         let resource_type = KafkaCodec::decode(buf, version, is_flexible)?;
         let resource_name = KafkaCodec::decode(buf, version, is_flexible)?;
-        let configs = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             resource_type,
             resource_name,
-            configs,
         })
     }
 }
 
-impl KafkaCodec for AlterableConfig {
+impl KafkaCodec for AlterableConfigKey {
     fn encode<B: BufMut>(
         &self,
         buf: &mut B,
@@ -153,7 +216,6 @@ impl KafkaCodec for AlterableConfig {
     ) -> Result<(), SerializationError> {
         self.name.encode(buf, version, is_flexible)?;
         self.config_operation.encode(buf, version, is_flexible)?;
-        self.value.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
         }
@@ -167,14 +229,12 @@ impl KafkaCodec for AlterableConfig {
     ) -> Result<Self, SerializationError> {
         let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let config_operation = KafkaCodec::decode(buf, version, is_flexible)?;
-        let value = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
         Ok(Self {
             name,
             config_operation,
-            value,
         })
     }
 }

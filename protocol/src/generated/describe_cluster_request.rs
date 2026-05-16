@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DescribeClusterRequest
@@ -46,17 +46,21 @@ impl ApiRequest for DescribeClusterRequest {
         if 1 <= version.0 {
             self.endpoint_type.encode(buf, version, is_flexible)?;
         } else if self.endpoint_type != 0 {
-            return Err(SerializationError::Encode(
-                "field 'EndpointType' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "EndpointType",
+                version,
+                api_name: "DescribeClusterRequest",
+            });
         }
         if 2 <= version.0 {
             self.include_fenced_brokers
                 .encode(buf, version, is_flexible)?;
         } else if self.include_fenced_brokers {
-            return Err(SerializationError::Encode(
-                "field 'IncludeFencedBrokers' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IncludeFencedBrokers",
+                version,
+                api_name: "DescribeClusterRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

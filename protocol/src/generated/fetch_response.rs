@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // FetchResponse
@@ -21,8 +21,9 @@ pub struct FetchResponse {
     /// The response topics.
     pub responses: Vec<FetchableTopicResponse>,
     /// Endpoints for all current-leaders enumerated in PartitionData, with errors NOT_LEADER_OR_FOLLOWER & FENCED_LEADER_EPOCH.
+    /// IndexMap key `NodeId` (int32): The ID of the associated node.
     /// Available in version 16+.
-    pub node_endpoints: Vec<NodeEndpoint>,
+    pub node_endpoints: IndexMap<i32, NodeEndpoint>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -69,9 +70,6 @@ pub struct LeaderIdAndEpoch {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct NodeEndpoint {
-    /// The ID of the associated node.
-    /// Available in version 16+.
-    pub node_id: i32,
     /// The node's hostname.
     /// Available in version 16+.
     pub host: String,
@@ -149,31 +147,39 @@ impl ApiResponse for FetchResponse {
         if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "FetchResponse",
+            });
         }
         if 7 <= version.0 {
             self.error_code.encode(buf, version, is_flexible)?;
         } else if self.error_code != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ErrorCode' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ErrorCode",
+                version,
+                api_name: "FetchResponse",
+            });
         }
         if 7 <= version.0 {
             self.session_id.encode(buf, version, is_flexible)?;
         } else if self.session_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'SessionId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "SessionId",
+                version,
+                api_name: "FetchResponse",
+            });
         }
         self.responses.encode(buf, version, is_flexible)?;
         if 16 <= version.0 {
             self.node_endpoints.encode(buf, version, is_flexible)?;
         } else if !self.node_endpoints.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'NodeEndpoints' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "NodeEndpoints",
+                version,
+                api_name: "FetchResponse",
+            });
         }
         if is_flexible {
             let mut tag_count = 0u64;
@@ -518,9 +524,6 @@ impl KafkaCodec for NodeEndpoint {
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
         if 16 <= version.0 {
-            self.node_id.encode(buf, version, is_flexible)?;
-        }
-        if 16 <= version.0 {
             self.host.encode(buf, version, is_flexible)?;
         }
         if 16 <= version.0 {
@@ -540,11 +543,6 @@ impl KafkaCodec for NodeEndpoint {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let node_id = if 16 <= version.0 {
-            KafkaCodec::decode(buf, version, is_flexible)?
-        } else {
-            Default::default()
-        };
         let host = if 16 <= version.0 {
             KafkaCodec::decode(buf, version, is_flexible)?
         } else {
@@ -563,12 +561,7 @@ impl KafkaCodec for NodeEndpoint {
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self {
-            node_id,
-            host,
-            port,
-            rack,
-        })
+        Ok(Self { host, port, rack })
     }
 }
 

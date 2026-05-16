@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DeleteTopicsRequest
@@ -54,16 +54,20 @@ impl ApiRequest for DeleteTopicsRequest {
         if 6 <= version.0 {
             self.topics.encode(buf, version, is_flexible)?;
         } else if !self.topics.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Topics' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Topics",
+                version,
+                api_name: "DeleteTopicsRequest",
+            });
         }
         if 0 <= version.0 && version.0 <= 5 {
             self.topic_names.encode(buf, version, is_flexible)?;
         } else if !self.topic_names.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'TopicNames' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "TopicNames",
+                version,
+                api_name: "DeleteTopicsRequest",
+            });
         }
         self.timeout_ms.encode(buf, version, is_flexible)?;
         if is_flexible {

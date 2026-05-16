@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // LeaveGroupRequest
@@ -58,16 +58,20 @@ impl ApiRequest for LeaveGroupRequest {
         if 0 <= version.0 && version.0 <= 2 {
             self.member_id.encode(buf, version, is_flexible)?;
         } else if !self.member_id.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'MemberId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "MemberId",
+                version,
+                api_name: "LeaveGroupRequest",
+            });
         }
         if 3 <= version.0 {
             self.members.encode(buf, version, is_flexible)?;
         } else if !self.members.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Members' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Members",
+                version,
+                api_name: "LeaveGroupRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

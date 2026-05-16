@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DescribeTransactionsResponse
@@ -17,8 +17,6 @@ pub struct DescribeTransactionsResponse {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TopicData {
-    /// The topic name.
-    pub topic: String,
     /// The partition ids included in the current transaction.
     pub partitions: Vec<i32>,
 }
@@ -40,7 +38,8 @@ pub struct TransactionState {
     /// The current epoch associated with the producer id.
     pub producer_epoch: i16,
     /// The set of partitions included in the current transaction (if active). When a transaction is preparing to commit or abort, this will include only partitions which do not have markers.
-    pub topics: Vec<TopicData>,
+    /// IndexMap key `Topic` (string): The topic name.
+    pub topics: IndexMap<String, TopicData>,
 }
 
 impl ApiResponse for DescribeTransactionsResponse {
@@ -124,7 +123,6 @@ impl KafkaCodec for TopicData {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.topic.encode(buf, version, is_flexible)?;
         self.partitions.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -137,12 +135,11 @@ impl KafkaCodec for TopicData {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let topic = KafkaCodec::decode(buf, version, is_flexible)?;
         let partitions = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { topic, partitions })
+        Ok(Self { partitions })
     }
 }
 

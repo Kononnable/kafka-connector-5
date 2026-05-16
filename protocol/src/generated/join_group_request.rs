@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // JoinGroupRequest
@@ -24,7 +24,8 @@ pub struct JoinGroupRequest {
     /// The unique name the for class of protocols implemented by the group we want to join.
     pub protocol_type: String,
     /// The list of protocols that the member supports.
-    pub protocols: Vec<JoinGroupRequestProtocol>,
+    /// IndexMap key `Name` (string): The protocol name.
+    pub protocols: IndexMap<String, JoinGroupRequestProtocol>,
     /// The reason why the member (re-)joins the group.
     /// Available in version 8+.
     pub reason: Option<String>,
@@ -32,8 +33,6 @@ pub struct JoinGroupRequest {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct JoinGroupRequestProtocol {
-    /// The protocol name.
-    pub name: String,
     /// The protocol metadata.
     pub metadata: Vec<u8>,
 }
@@ -66,26 +65,32 @@ impl ApiRequest for JoinGroupRequest {
             self.rebalance_timeout_ms
                 .encode(buf, version, is_flexible)?;
         } else if self.rebalance_timeout_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'RebalanceTimeoutMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "RebalanceTimeoutMs",
+                version,
+                api_name: "JoinGroupRequest",
+            });
         }
         self.member_id.encode(buf, version, is_flexible)?;
         if 5 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'GroupInstanceId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "GroupInstanceId",
+                version,
+                api_name: "JoinGroupRequest",
+            });
         }
         self.protocol_type.encode(buf, version, is_flexible)?;
         self.protocols.encode(buf, version, is_flexible)?;
         if 8 <= version.0 {
             self.reason.encode(buf, version, is_flexible)?;
         } else if self.reason.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'Reason' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Reason",
+                version,
+                api_name: "JoinGroupRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -205,7 +210,6 @@ impl KafkaCodec for JoinGroupRequestProtocol {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<(), SerializationError> {
-        self.name.encode(buf, version, is_flexible)?;
         self.metadata.encode(buf, version, is_flexible)?;
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
@@ -218,11 +222,10 @@ impl KafkaCodec for JoinGroupRequestProtocol {
         version: ApiVer,
         is_flexible: bool,
     ) -> Result<Self, SerializationError> {
-        let name = KafkaCodec::decode(buf, version, is_flexible)?;
         let metadata = KafkaCodec::decode(buf, version, is_flexible)?;
         if is_flexible {
             let (_tag_count, _) = decode_unsigned_varint(buf)?;
         }
-        Ok(Self { name, metadata })
+        Ok(Self { metadata })
     }
 }

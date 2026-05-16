@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // TxnOffsetCommitRequest
@@ -80,23 +80,29 @@ impl ApiRequest for TxnOffsetCommitRequest {
         if 3 <= version.0 {
             self.generation_id.encode(buf, version, is_flexible)?;
         } else if self.generation_id != 0 {
-            return Err(SerializationError::Encode(
-                "field 'GenerationId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "GenerationId",
+                version,
+                api_name: "TxnOffsetCommitRequest",
+            });
         }
         if 3 <= version.0 {
             self.member_id.encode(buf, version, is_flexible)?;
         } else if !self.member_id.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'MemberId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "MemberId",
+                version,
+                api_name: "TxnOffsetCommitRequest",
+            });
         }
         if 3 <= version.0 {
             self.group_instance_id.encode(buf, version, is_flexible)?;
         } else if self.group_instance_id.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'GroupInstanceId' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "GroupInstanceId",
+                version,
+                api_name: "TxnOffsetCommitRequest",
+            });
         }
         self.topics.encode(buf, version, is_flexible)?;
         if is_flexible {

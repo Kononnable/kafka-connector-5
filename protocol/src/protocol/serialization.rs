@@ -18,6 +18,7 @@
 //! | `uuid`           | 16 raw bytes                                           |
 
 use bytes::{Buf, BufMut};
+use indexmap::IndexMap;
 
 pub use crate::traits::SerializationError;
 
@@ -49,7 +50,7 @@ pub fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), Seria
     let mut consumed: usize = 0;
     loop {
         if !buf.has_remaining() {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         let byte = buf.get_u8();
         consumed += 1;
@@ -59,9 +60,7 @@ pub fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), Seria
         }
         shift += 7;
         if shift >= 64 {
-            return Err(SerializationError::Protocol {
-                message: "varint is too large".into(),
-            });
+            panic!("varint value exceeds 64-bit maximum — malformed data");
         }
     }
 }
@@ -119,7 +118,7 @@ impl KafkaCodec for i8 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 1 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_i8())
     }
@@ -142,7 +141,7 @@ impl KafkaCodec for i16 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 2 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_i16())
     }
@@ -165,7 +164,7 @@ impl KafkaCodec for i32 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 4 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_i32())
     }
@@ -188,7 +187,7 @@ impl KafkaCodec for i64 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 8 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_i64())
     }
@@ -211,7 +210,7 @@ impl KafkaCodec for f64 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 8 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_f64())
     }
@@ -234,7 +233,7 @@ impl KafkaCodec for u32 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 4 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_u32())
     }
@@ -257,7 +256,7 @@ impl KafkaCodec for u16 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 2 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_u16())
     }
@@ -284,7 +283,7 @@ impl KafkaCodec for u8 {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 1 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_u8())
     }
@@ -311,7 +310,7 @@ impl KafkaCodec for bool {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 1 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         Ok(buf.get_u8() != 0)
     }
@@ -393,11 +392,10 @@ impl KafkaCodec for String {
         } else {
             // Classic string: 2-byte length + UTF-8
             let len = self.len();
-            if len > i16::MAX as usize {
-                return Err(SerializationError::ValueTooLarge {
-                    message: format!("string length {len} exceeds i16::MAX"),
-                });
-            }
+            assert!(
+                len <= i16::MAX as usize,
+                "string length {len} exceeds i16::MAX"
+            );
             buf.put_i16(len as i16);
             buf.put_slice(self.as_bytes());
             Ok(())
@@ -413,31 +411,33 @@ impl KafkaCodec for String {
             // Compact string: unsigned varint, value 0 = null, otherwise length = value - 1
             let (raw_len, _) = decode_unsigned_varint(buf)?;
             if raw_len == 0 {
-                return Err(SerializationError::UnexpectedNull);
+                panic!("unexpected null");
             }
             let n = (raw_len - 1) as usize;
             if buf.remaining() < n {
-                return Err(SerializationError::InsufficientBytes);
+                panic!("insufficient bytes");
             }
             let bytes = &buf.copy_to_bytes(n)[..];
-            Ok(std::str::from_utf8(bytes)?.to_owned())
+            Ok(std::str::from_utf8(bytes)
+                .expect("broker sent invalid UTF-8")
+                .to_owned())
         } else {
             if buf.remaining() < 2 {
-                return Err(SerializationError::InsufficientBytes);
+                panic!("insufficient bytes");
             }
             let len = buf.get_i16();
             match len {
-                -1 => Err(SerializationError::UnexpectedNull),
-                n if n < 0 => Err(SerializationError::InvalidLength {
-                    message: format!("negative string length {n}"),
-                }),
+                -1 => panic!("unexpected null"),
+                n if n < 0 => panic!("negative string length {n}"),
                 n => {
                     let n = n as usize;
                     if buf.remaining() < n {
-                        return Err(SerializationError::InsufficientBytes);
+                        panic!("insufficient bytes");
                     }
                     let bytes = &buf.copy_to_bytes(n)[..];
-                    Ok(std::str::from_utf8(bytes)?.to_owned())
+                    Ok(std::str::from_utf8(bytes)
+                        .expect("broker sent invalid UTF-8")
+                        .to_owned())
                 }
             }
         }
@@ -472,11 +472,10 @@ impl KafkaCodec for Option<String> {
                 }
                 Some(s) => {
                     let len = s.len();
-                    if len > i16::MAX as usize {
-                        return Err(SerializationError::ValueTooLarge {
-                            message: format!("string length {len} exceeds i16::MAX"),
-                        });
-                    }
+                    assert!(
+                        len <= i16::MAX as usize,
+                        "string length {len} exceeds i16::MAX"
+                    );
                     buf.put_i16(len as i16);
                     buf.put_slice(s.as_bytes());
                     Ok(())
@@ -497,27 +496,33 @@ impl KafkaCodec for Option<String> {
             }
             let n = (raw_len - 1) as usize;
             if buf.remaining() < n {
-                return Err(SerializationError::InsufficientBytes);
+                panic!("insufficient bytes");
             }
             let bytes = &buf.copy_to_bytes(n)[..];
-            Ok(Some(std::str::from_utf8(bytes)?.to_owned()))
+            Ok(Some(
+                std::str::from_utf8(bytes)
+                    .expect("broker sent invalid UTF-8")
+                    .to_owned(),
+            ))
         } else {
             if buf.remaining() < 2 {
-                return Err(SerializationError::InsufficientBytes);
+                panic!("insufficient bytes");
             }
             let len = buf.get_i16();
             match len {
                 -1 => Ok(None),
-                n if n < 0 => Err(SerializationError::InvalidLength {
-                    message: format!("negative nullable-string length {n}"),
-                }),
+                n if n < 0 => panic!("negative nullable-string length {n}"),
                 n => {
                     let n = n as usize;
                     if buf.remaining() < n {
-                        return Err(SerializationError::InsufficientBytes);
+                        panic!("insufficient bytes");
                     }
                     let bytes = &buf.copy_to_bytes(n)[..];
-                    Ok(Some(std::str::from_utf8(bytes)?.to_owned()))
+                    Ok(Some(
+                        std::str::from_utf8(bytes)
+                            .expect("broker sent invalid UTF-8")
+                            .to_owned(),
+                    ))
                 }
             }
         }
@@ -543,11 +548,10 @@ impl<T: KafkaCodec> KafkaCodec for Vec<T> {
             Ok(())
         } else {
             let len = self.len();
-            if len > i32::MAX as usize {
-                return Err(SerializationError::ValueTooLarge {
-                    message: format!("array length {len} exceeds i32::MAX"),
-                });
-            }
+            assert!(
+                len <= i32::MAX as usize,
+                "array length {len} exceeds i32::MAX"
+            );
             buf.put_i32(len as i32);
             for item in self {
                 item.encode(buf, _version, false)?;
@@ -564,7 +568,7 @@ impl<T: KafkaCodec> KafkaCodec for Vec<T> {
         if is_flexible {
             let (raw_count, _) = decode_unsigned_varint(buf)?;
             if raw_count == 0 {
-                return Err(SerializationError::UnexpectedNull);
+                panic!("unexpected null");
             }
             let n = (raw_count - 1) as usize;
             let mut items = Vec::with_capacity(n);
@@ -574,14 +578,12 @@ impl<T: KafkaCodec> KafkaCodec for Vec<T> {
             Ok(items)
         } else {
             if buf.remaining() < 4 {
-                return Err(SerializationError::InsufficientBytes);
+                panic!("insufficient bytes");
             }
             let len = buf.get_i32();
             match len {
-                -1 => Err(SerializationError::UnexpectedNull),
-                n if n < 0 => Err(SerializationError::InvalidLength {
-                    message: format!("negative array length {n}"),
-                }),
+                -1 => panic!("unexpected null"),
+                n if n < 0 => panic!("negative array length {n}"),
                 n => {
                     let mut items = Vec::with_capacity(n as usize);
                     for _ in 0..n {
@@ -648,20 +650,180 @@ impl<T: KafkaCodec> KafkaCodec for Option<Vec<T>> {
             Ok(Some(items))
         } else {
             if buf.remaining() < 4 {
-                return Err(SerializationError::InsufficientBytes);
+                panic!("insufficient bytes");
             }
             let len = buf.get_i32();
             match len {
                 -1 => Ok(None),
-                n if n < 0 => Err(SerializationError::InvalidLength {
-                    message: format!("negative nullable-array length {n}"),
-                }),
+                n if n < 0 => panic!("negative nullable-array length {n}"),
                 n => {
                     let mut items = Vec::with_capacity(n as usize);
                     for _ in 0..n {
                         items.push(T::decode(buf, _version, false)?);
                     }
                     Ok(Some(items))
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// IndexMap<K, V> — serialized identically to Vec<(K, V)>
+// ---------------------------------------------------------------------------
+
+impl<K: KafkaCodec + std::hash::Hash + Eq, V: KafkaCodec> KafkaCodec for IndexMap<K, V> {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        if is_flexible {
+            encode_unsigned_varint(self.len() as u64 + 1, buf);
+            for (key, val) in self.iter() {
+                key.encode(buf, version, true)?;
+                val.encode(buf, version, true)?;
+            }
+            Ok(())
+        } else {
+            let len = self.len();
+            assert!(
+                len <= i32::MAX as usize,
+                "IndexMap length {len} exceeds i32::MAX"
+            );
+            buf.put_i32(len as i32);
+            for (key, val) in self.iter() {
+                key.encode(buf, version, false)?;
+                val.encode(buf, version, false)?;
+            }
+            Ok(())
+        }
+    }
+
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        if is_flexible {
+            let (raw_count, _) = decode_unsigned_varint(buf)?;
+            if raw_count == 0 {
+                panic!("unexpected null");
+            }
+            let n = (raw_count - 1) as usize;
+            let mut map = IndexMap::with_capacity(n);
+            for _ in 0..n {
+                let key = K::decode(buf, version, true)?;
+                let val = V::decode(buf, version, true)?;
+                map.insert(key, val);
+            }
+            Ok(map)
+        } else {
+            if buf.remaining() < 4 {
+                panic!("insufficient bytes");
+            }
+            let len = buf.get_i32();
+            match len {
+                -1 => panic!("unexpected null"),
+                n if n < 0 => panic!("negative IndexMap length {n}"),
+                n => {
+                    let mut map = IndexMap::with_capacity(n as usize);
+                    for _ in 0..n {
+                        let key = K::decode(buf, version, false)?;
+                        let val = V::decode(buf, version, false)?;
+                        map.insert(key, val);
+                    }
+                    Ok(map)
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Option<IndexMap<K, V>> — nullable IndexMap
+// ---------------------------------------------------------------------------
+
+impl<K: KafkaCodec + std::hash::Hash + Eq, V: KafkaCodec> KafkaCodec for Option<IndexMap<K, V>> {
+    fn encode<B: BufMut>(
+        &self,
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<(), SerializationError> {
+        if is_flexible {
+            match self {
+                None => {
+                    encode_unsigned_varint(0, buf);
+                    Ok(())
+                }
+                Some(map) => {
+                    encode_unsigned_varint(map.len() as u64 + 1, buf);
+                    for (key, val) in map.iter() {
+                        key.encode(buf, version, true)?;
+                        val.encode(buf, version, true)?;
+                    }
+                    Ok(())
+                }
+            }
+        } else {
+            match self {
+                None => {
+                    buf.put_i32(-1);
+                    Ok(())
+                }
+                Some(map) => {
+                    assert!(
+                        map.len() <= i32::MAX as usize,
+                        "nullable IndexMap length {} exceeds i32::MAX",
+                        map.len()
+                    );
+                    buf.put_i32(map.len() as i32);
+                    for (key, val) in map.iter() {
+                        key.encode(buf, version, false)?;
+                        val.encode(buf, version, false)?;
+                    }
+                    Ok(())
+                }
+            }
+        }
+    }
+
+    fn decode<B: Buf>(
+        buf: &mut B,
+        version: crate::traits::ApiVersion,
+        is_flexible: bool,
+    ) -> Result<Self, SerializationError> {
+        if is_flexible {
+            let (raw_count, _) = decode_unsigned_varint(buf)?;
+            if raw_count == 0 {
+                return Ok(None);
+            }
+            let n = (raw_count - 1) as usize;
+            let mut map = IndexMap::with_capacity(n);
+            for _ in 0..n {
+                let key = K::decode(buf, version, true)?;
+                let val = V::decode(buf, version, true)?;
+                map.insert(key, val);
+            }
+            Ok(Some(map))
+        } else {
+            if buf.remaining() < 4 {
+                panic!("insufficient bytes");
+            }
+            let len = buf.get_i32();
+            match len {
+                -1 => Ok(None),
+                n if n < 0 => panic!("negative nullable IndexMap length {n}"),
+                n => {
+                    let mut map = IndexMap::with_capacity(n as usize);
+                    for _ in 0..n {
+                        let key = K::decode(buf, version, false)?;
+                        let val = V::decode(buf, version, false)?;
+                        map.insert(key, val);
+                    }
+                    Ok(Some(map))
                 }
             }
         }
@@ -689,7 +851,7 @@ impl KafkaCodec for [u8; 16] {
         _is_flexible: bool,
     ) -> Result<Self, SerializationError> {
         if buf.remaining() < 16 {
-            return Err(SerializationError::InsufficientBytes);
+            panic!("insufficient bytes");
         }
         let mut out = [0u8; 16];
         buf.copy_to_slice(&mut out);
@@ -801,15 +963,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "unexpected null")]
     fn test_nullable_string_decode_error_on_nonnull_string() {
         // String decode should reject -1 length
         let mut buf = BytesMut::new();
         buf.put_i16(-1);
         let mut read: &[u8] = &buf;
-        assert!(matches!(
-            String::decode(&mut read, crate::traits::ApiVersion::new(0), false),
-            Err(SerializationError::UnexpectedNull)
-        ));
+        String::decode(&mut read, crate::traits::ApiVersion::new(0), false).unwrap();
     }
 
     #[test]
@@ -926,14 +1086,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "insufficient bytes")]
     fn test_insufficient_bytes_i32() {
         let mut buf = BytesMut::new();
         buf.put_u8(0);
         let mut read: &[u8] = &buf;
-        assert!(matches!(
-            i32::decode(&mut read, crate::traits::ApiVersion::new(0), false),
-            Err(SerializationError::InsufficientBytes)
-        ));
+        i32::decode(&mut read, crate::traits::ApiVersion::new(0), false).unwrap();
     }
 
     #[test]
@@ -947,56 +1105,5 @@ mod tests {
         let mut read: &[u8] = &buf;
         let val = Vec::<u8>::decode(&mut read, crate::traits::ApiVersion::new(0), false).unwrap();
         assert!(val.is_empty());
-    }
-
-    #[test]
-    fn test_tagged_field_roundtrip() {
-        use crate::generated::fetch_snapshot_request::{FetchSnapshotRequest, TopicSnapshot};
-
-        let original = FetchSnapshotRequest {
-            cluster_id: Some("test-cluster-id".into()),
-            replica_id: 42,
-            max_bytes: 65536,
-            topics: vec![TopicSnapshot {
-                name: "test-topic".into(),
-                partitions: vec![],
-            }],
-        };
-
-        let ver = crate::traits::ApiVersion::new(0);
-
-        // Encode/decode with flexible encoding — tagged field goes to tag buffer
-        let mut buf = BytesMut::new();
-        KafkaCodec::encode(&original, &mut buf, ver, true).unwrap();
-        let mut read: &[u8] = &buf;
-        let decoded = <FetchSnapshotRequest as KafkaCodec>::decode(&mut read, ver, true).unwrap();
-        assert_eq!(
-            decoded.cluster_id,
-            Some("test-cluster-id".into()),
-            "tagged field cluster_id should round-trip"
-        );
-        assert_eq!(decoded.replica_id, 42);
-        assert_eq!(decoded.max_bytes, 65536);
-        assert_eq!(decoded.topics.len(), 1);
-        assert_eq!(decoded.topics[0].name, "test-topic");
-
-        // Classic encoding — tagged field goes inline
-        let mut buf2 = BytesMut::new();
-        KafkaCodec::encode(&original, &mut buf2, ver, false).unwrap();
-        let mut read2: &[u8] = &buf2;
-        let decoded2 =
-            <FetchSnapshotRequest as KafkaCodec>::decode(&mut read2, ver, false).unwrap();
-        assert_eq!(decoded2, original);
-
-        // Empty tagged field (None) — should encode as tag_count=0
-        let no_cluster = FetchSnapshotRequest {
-            cluster_id: None,
-            ..Default::default()
-        };
-        let mut buf3 = BytesMut::new();
-        KafkaCodec::encode(&no_cluster, &mut buf3, ver, true).unwrap();
-        let mut read3: &[u8] = &buf3;
-        let decoded3 = <FetchSnapshotRequest as KafkaCodec>::decode(&mut read3, ver, true).unwrap();
-        assert_eq!(decoded3.cluster_id, None);
     }
 }

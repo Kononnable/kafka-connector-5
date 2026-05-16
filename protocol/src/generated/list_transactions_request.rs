@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // ListTransactionsRequest
@@ -48,17 +48,21 @@ impl ApiRequest for ListTransactionsRequest {
         if 1 <= version.0 {
             self.duration_filter.encode(buf, version, is_flexible)?;
         } else if self.duration_filter != 0 {
-            return Err(SerializationError::Encode(
-                "field 'DurationFilter' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "DurationFilter",
+                version,
+                api_name: "ListTransactionsRequest",
+            });
         }
         if 2 <= version.0 {
             self.transactional_id_pattern
                 .encode(buf, version, is_flexible)?;
         } else if self.transactional_id_pattern.is_some() {
-            return Err(SerializationError::Encode(
-                "field 'TransactionalIdPattern' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "TransactionalIdPattern",
+                version,
+                api_name: "ListTransactionsRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // LeaveGroupResponse
@@ -57,17 +57,21 @@ impl ApiResponse for LeaveGroupResponse {
         if 1 <= version.0 {
             self.throttle_time_ms.encode(buf, version, is_flexible)?;
         } else if self.throttle_time_ms != 0 {
-            return Err(SerializationError::Encode(
-                "field 'ThrottleTimeMs' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "ThrottleTimeMs",
+                version,
+                api_name: "LeaveGroupResponse",
+            });
         }
         self.error_code.encode(buf, version, is_flexible)?;
         if 3 <= version.0 {
             self.members.encode(buf, version, is_flexible)?;
         } else if !self.members.is_empty() {
-            return Err(SerializationError::Encode(
-                "field 'Members' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "Members",
+                version,
+                api_name: "LeaveGroupResponse",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);

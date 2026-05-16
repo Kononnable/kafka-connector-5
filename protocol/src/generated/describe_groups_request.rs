@@ -1,8 +1,8 @@
 #![allow(unused_imports, unused_variables)]
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-
 use crate::protocol::serialization::{KafkaCodec, decode_unsigned_varint, encode_unsigned_varint};
 use crate::traits::{ApiKey, ApiRequest, ApiResponse, ApiVersion as ApiVer, SerializationError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use indexmap::IndexMap;
 
 // -------------------------------------------------------
 // DescribeGroupsRequest
@@ -43,9 +43,11 @@ impl ApiRequest for DescribeGroupsRequest {
             self.include_authorized_operations
                 .encode(buf, version, is_flexible)?;
         } else if self.include_authorized_operations {
-            return Err(SerializationError::Encode(
-                "field 'IncludeAuthorizedOperations' is not available in this version",
-            ));
+            return Err(SerializationError::FieldNotAvailable {
+                field: "IncludeAuthorizedOperations",
+                version,
+                api_name: "DescribeGroupsRequest",
+            });
         }
         if is_flexible {
             encode_unsigned_varint(0u64, buf);
