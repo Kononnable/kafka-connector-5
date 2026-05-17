@@ -137,7 +137,7 @@ impl Connection {
     /// — the node_id is unknown at connect time and filled in after the first
     /// MetadataResponse. Connections to other brokers should have the correct
     /// node_id passed to [`Connection::new`] directly.
-    pub fn set_node_id(&mut self, id: i32) {
+    pub(super) fn set_node_id(&mut self, id: i32) {
         self.node_id = id;
     }
 

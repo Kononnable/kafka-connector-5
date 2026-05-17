@@ -1,3 +1,4 @@
+mod bootstrap;
 mod connection;
 mod controller;
 mod lifecycle_state;
