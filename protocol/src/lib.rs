@@ -7,6 +7,7 @@ pub mod error;
 pub mod generated;
 pub mod generator;
 pub mod protocol;
+pub mod record_batch;
 pub mod traits;
 
 pub use generator::structs::{ErrorCode, Field, FieldDefault, MessageStruct, MessageType};

@@ -11,5 +11,6 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-tokio = { version = "1.0", features = ["full"] }
 bytes = "1.0"
+bitflags = "2"
+crc32c = "0.6"
