@@ -1,19 +1,26 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
-struct BrokerInfo;
+/// Information about a single broker in the cluster.
+#[derive(Clone, Debug)]
+#[allow(dead_code)]
+pub struct BrokerInfo {
+    pub host: String,
+    pub port: i32,
+}
 
-struct PartitionInfo;
-
+/// Cached cluster topology.
+///
+/// Key is the broker's node id (`i32`), matching the wire protocol.
+#[derive(Clone, Debug, Default)]
 pub struct MetadataCache {
-    _brokers: HashMap<u32, BrokerInfo>,
-    _partitions: HashMap<(String, u32), PartitionInfo>,
+    /// All known brokers, keyed by node id.
+    pub brokers: IndexMap<i32, BrokerInfo>,
 }
 
 impl MetadataCache {
     pub fn new() -> Self {
         MetadataCache {
-            _brokers: HashMap::new(),
-            _partitions: HashMap::new(),
+            brokers: IndexMap::new(),
         }
     }
 }

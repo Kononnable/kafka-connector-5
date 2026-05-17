@@ -3,14 +3,17 @@ use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Instant;
 
+use bytes::Bytes;
 use mio::net::TcpStream;
 use mio::{Events, Interest, Poll, Token, Waker};
-use protocol::generated::{ApiVersionsRequest, ApiVersionsResponse, ResponseHeader};
-use protocol::traits::{ApiResponse, ApiVersion};
+use protocol::generated::{
+    ApiVersionsRequest, ApiVersionsResponse, MetadataRequest, MetadataResponse,
+};
+use protocol::traits::ApiVersion;
 
 use super::connection::Connection;
 use super::lifecycle_state::LifecycleState;
-use super::metadata::MetadataCache;
+use super::metadata::{BrokerInfo, MetadataCache};
 use super::sender::CommandSender;
 use crate::cluster::ClusterOptions;
 
@@ -26,7 +29,7 @@ pub struct EventLoop {
     cmd_rx: mpsc::Receiver<Command>,
     poll: Poll,
     connections: Vec<Connection>,
-    _metadata_cache: MetadataCache,
+    metadata_cache: MetadataCache,
     lifecycle: LifecycleState,
     next_token: usize,
 }
@@ -46,7 +49,7 @@ impl EventLoop {
             cmd_rx: rx,
             poll,
             connections: Vec::new(),
-            _metadata_cache: MetadataCache::new(),
+            metadata_cache: MetadataCache::new(),
             lifecycle: lifecycle.clone(),
             next_token: 1, // 0 is reserved for WAKEUP_TOKEN
         };
@@ -186,30 +189,28 @@ impl EventLoop {
                                 token,
                                 stream,
                                 Some(self.options.client_name.clone()),
+                                -1, // node_id unknown before metadata
                             );
 
-                            if let Err(reason) = self.fetch_api_versions(&mut conn, token) {
-                                let addr = conn
-                                    .stream()
-                                    .peer_addr()
-                                    .map_or_else(|_| "unknown".to_string(), |a| a.to_string());
-                                tracing::warn!(
-                                    "failed to fetch api versions from {addr}: {reason}"
-                                );
+                            let addr = conn.peer_addr();
+                            let result = self
+                                .fetch_api_versions(&mut conn, token)
+                                .and_then(|_| self.fetch_metadata(&mut conn, token))
+                                .and_then(|resp| self.apply_metadata(&mut conn, resp));
+
+                            if let Err(reason) = result {
+                                tracing::warn!("failed to bootstrap via {addr}: {reason}");
                                 let _ = self.poll.registry().deregister(conn.stream());
                                 continue;
                             }
 
-                            // Success — close remaining candidates, keep this one.
+                            // Close remaining candidates, keep this one.
                             for (mut other, _) in candidates.drain(..) {
                                 let _ = self.poll.registry().deregister(&mut other);
                             }
-                            let addr = conn
-                                .stream()
-                                .peer_addr()
-                                .map_or("unknown".to_string(), |a| a.to_string());
+                            let node_id = conn.node_id().to_string();
                             self.connections.push(conn);
-                            tracing::info!("connected to bootstrap broker {addr}");
+                            tracing::info!("connected to broker {node_id} at {addr}");
                             return;
                         }
                     }
@@ -228,34 +229,25 @@ impl EventLoop {
         }
     }
 
-    fn fetch_api_versions(&mut self, conn: &mut Connection, token: Token) -> Result<(), String> {
-        let deadline = Instant::now() + self.options.request_timeout;
-        let version = ApiVersion::new(0);
-
-        conn.send_api_request(&ApiVersionsRequest::default(), Some(version))
-            .map_err(|e| format!("serialize: {e}"))?;
-
-        let mut poll_events = Events::with_capacity(1);
-        while conn.can_write() {
-            let rem = deadline.saturating_duration_since(Instant::now());
-            if rem.is_zero() {
-                return Err("write timed out".into());
-            }
-            let _ = self.poll.poll(&mut poll_events, Some(rem));
-            if poll_events
-                .iter()
-                .any(|e| e.token() == token && e.is_writable())
-            {
-                let _ = conn.on_writable();
-            }
-        }
-
+    /// Synchronously poll for a complete response frame.
+    ///
+    /// Blocks the event loop until data arrives or the deadline expires.
+    /// Only safe during the bootstrap sequence where no other connections
+    /// or channel commands are being processed.
+    fn poll_response_frame(
+        &mut self,
+        conn: &mut Connection,
+        token: Token,
+        deadline: Instant,
+        poll_events: &mut Events,
+        ctx: &'static str,
+    ) -> Result<Bytes, String> {
         loop {
             let rem = deadline.saturating_duration_since(Instant::now());
             if rem.is_zero() {
-                return Err("read timed out".into());
+                return Err(format!("{ctx} timed out"));
             }
-            let _ = self.poll.poll(&mut poll_events, Some(rem));
+            let _ = self.poll.poll(poll_events, Some(rem));
             if poll_events
                 .iter()
                 .any(|e| e.token() == token && e.is_readable())
@@ -266,21 +258,115 @@ impl EventLoop {
                     Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => continue,
                     Err(e) => return Err(format!("read error: {e}")),
                 }
-                if let Some((_, mut body)) = conn.read_broker_response() {
-                    if ResponseHeader::decode(&mut body, false).is_err() {
-                        return Err("invalid response header".into());
-                    }
-                    match ApiVersionsResponse::deserialize(version, &mut body) {
-                        Ok(resp) if resp.error_code == 0 => {
-                            conn.set_api_versions(resp.api_keys);
-                            return Ok(());
-                        }
-                        Ok(resp) => return Err(format!("broker error: {}", resp.error_code)),
-                        Err(e) => return Err(format!("decode response: {e}")),
-                    }
+                if let Some((_, body)) = conn.read_broker_response() {
+                    return Ok(body);
                 }
             }
         }
+    }
+
+    fn fetch_api_versions(&mut self, conn: &mut Connection, token: Token) -> Result<(), String> {
+        let deadline = Instant::now() + self.options.request_timeout;
+        let version = ApiVersion::new(0);
+
+        conn.send_api_request(&ApiVersionsRequest::default(), Some(version))
+            .map_err(|e| format!("serialize: {e}"))?;
+
+        let mut poll_events = Events::with_capacity(1);
+        self.flush_sync(conn, token, deadline, &mut poll_events)?;
+
+        let body =
+            self.poll_response_frame(conn, token, deadline, &mut poll_events, "api versions")?;
+        let resp = conn
+            .decode_response::<ApiVersionsResponse>(body, version)
+            .map_err(|e| format!("{e}"))?;
+        if resp.error_code == 0 {
+            conn.set_api_versions(resp.api_keys);
+            Ok(())
+        } else {
+            Err(format!("broker error: {}", resp.error_code))
+        }
+    }
+
+    /// Populate the metadata cache by sending a MetadataRequest to the bootstrap broker.
+    fn fetch_metadata(
+        &mut self,
+        conn: &mut Connection,
+        token: Token,
+    ) -> Result<MetadataResponse, String> {
+        let deadline = Instant::now() + self.options.request_timeout;
+
+        let (_, version) = conn
+            .send_api_request(&MetadataRequest::default(), None)
+            .map_err(|e| format!("serialize MetadataRequest: {e}"))?;
+
+        let mut poll_events = Events::with_capacity(1);
+        self.flush_sync(conn, token, deadline, &mut poll_events)?;
+
+        let body = self.poll_response_frame(conn, token, deadline, &mut poll_events, "metadata")?;
+        let resp = conn
+            .decode_response::<MetadataResponse>(body, version)
+            .map_err(|e| format!("{e}"))?;
+        Ok(resp)
+    }
+
+    /// Populate the cache from a MetadataResponse and set the connection's node_id.
+    fn apply_metadata(
+        &mut self,
+        conn: &mut Connection,
+        resp: MetadataResponse,
+    ) -> Result<(), String> {
+        for (node_id, broker) in &resp.brokers {
+            self.metadata_cache.brokers.insert(
+                *node_id,
+                BrokerInfo {
+                    host: broker.host.clone(),
+                    port: broker.port,
+                },
+            );
+        }
+
+        // Identify which broker we're connected to by matching host:port.
+        // The response key provides the authoritative node_id.
+        let peer = conn.peer_addr();
+        for (node_id, broker) in &resp.brokers {
+            let broker_port = broker.port as u16;
+            if broker.host == peer.ip().to_string() && broker_port == peer.port() {
+                conn.set_node_id(*node_id);
+                return Ok(());
+            }
+        }
+        Err(format!(
+            "connected broker at {peer} not found in cluster metadata"
+        ))
+    }
+
+    /// Synchronously flush the write buffer until empty or deadline expires.
+    ///
+    /// Only safe during the bootstrap sequence where the event loop is not yet
+    /// processing other connections or commands from the channel.
+    fn flush_sync(
+        &mut self,
+        conn: &mut Connection,
+        token: Token,
+        deadline: Instant,
+        poll_events: &mut Events,
+    ) -> Result<(), String> {
+        while conn.can_write() {
+            let rem = deadline.saturating_duration_since(Instant::now());
+            if rem.is_zero() {
+                return Err("write timed out".into());
+            }
+            let _ = self.poll.poll(poll_events, Some(rem));
+            if poll_events
+                .iter()
+                .any(|e| e.token() == token && e.is_writable())
+            {
+                conn.on_writable()
+                    .map_err(|e| format!("write error: {e}"))?;
+            }
+        }
+        Ok(())
     }
 
     fn tick(&mut self) {
