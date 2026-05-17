@@ -2,17 +2,25 @@ use std::net::ToSocketAddrs;
 use std::thread;
 use std::time::Instant;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
+use indexmap::IndexMap;
 use mio::net::TcpStream;
 use mio::{Events, Interest, Token};
+use protocol::ErrorCode;
+use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
 use protocol::generated::{
-    ApiVersionsRequest, ApiVersionsResponse, MetadataRequest, MetadataResponse,
+    ApiVersionsRequest, ApiVersionsResponse, MetadataRequest, MetadataResponse, ResponseHeader,
 };
-use protocol::traits::ApiVersion;
+use protocol::traits::{ApiRequest, ApiResponse, ApiVersion};
 
 use super::connection::Connection;
 use super::controller::EventLoop;
 use super::metadata::BrokerInfo;
+
+enum ApiVersionNegotiation {
+    Done(IndexMap<i16, ApiVersionEntry>),
+    Retry(ApiVersion),
+}
 
 impl EventLoop {
     pub(super) fn bootstrap_cluster_connection(&mut self) {
@@ -20,7 +28,6 @@ impl EventLoop {
         let retry_delay = self.options.connection_retry_delay;
 
         loop {
-            // Re-resolve on each attempt so DNS changes are picked up.
             let addrs: Vec<_> = self
                 .options
                 .bootstrap_servers
@@ -86,7 +93,7 @@ impl EventLoop {
                                 token,
                                 stream,
                                 Some(self.options.client_name.clone()),
-                                -1, // node_id unknown before metadata
+                                -1,
                             );
 
                             let addr = conn.peer_addr();
@@ -101,7 +108,6 @@ impl EventLoop {
                                 continue;
                             }
 
-                            // Close remaining candidates, keep this one.
                             for (mut other, _) in candidates.drain(..) {
                                 let _ = self.poll.registry().deregister(&mut other);
                             }
@@ -114,7 +120,6 @@ impl EventLoop {
                 }
             }
 
-            // All candidates exhausted — deregister, sleep, retry.
             for (mut other, _) in candidates.drain(..) {
                 let _ = self.poll.registry().deregister(&mut other);
             }
@@ -126,19 +131,32 @@ impl EventLoop {
         }
     }
 
-    /// Synchronously poll for a complete response frame.
-    ///
-    /// Blocks the event loop until data arrives or the deadline expires.
-    /// Only safe during the bootstrap sequence where no other connections
-    /// or channel commands are being processed.
-    fn poll_response_frame(
+    /// Flush the write buffer and wait for a response frame,
+    /// blocking the event loop until it arrives or `request_timeout` expires.
+    fn flush_and_poll_response(
         &mut self,
         conn: &mut Connection,
         token: Token,
-        deadline: Instant,
         poll_events: &mut Events,
         ctx: &'static str,
     ) -> Result<Bytes, String> {
+        let deadline = Instant::now() + self.options.request_timeout;
+
+        while conn.can_write() {
+            let rem = deadline.saturating_duration_since(Instant::now());
+            if rem.is_zero() {
+                return Err(format!("{ctx} write timed out"));
+            }
+            let _ = self.poll.poll(poll_events, Some(rem));
+            if poll_events
+                .iter()
+                .any(|e| e.token() == token && e.is_writable())
+            {
+                conn.on_writable()
+                    .map_err(|e| format!("write error: {e}"))?;
+            }
+        }
+
         loop {
             let rem = deadline.saturating_duration_since(Instant::now());
             if rem.is_zero() {
@@ -163,51 +181,105 @@ impl EventLoop {
     }
 
     fn fetch_api_versions(&mut self, conn: &mut Connection, token: Token) -> Result<(), String> {
-        let deadline = Instant::now() + self.options.request_timeout;
-        let version = ApiVersion::new(0);
+        let mut poll_events = Events::with_capacity(1);
 
+        // First attempt: send the highest version we support.
+        let version = ApiVersionsRequest::get_max_supported_version();
         conn.send_api_request(&ApiVersionsRequest::default(), Some(version))
             .map_err(|e| format!("serialize: {e}"))?;
 
-        let mut poll_events = Events::with_capacity(1);
-        self.flush_sync(conn, token, deadline, &mut poll_events)?;
+        let mut body =
+            self.flush_and_poll_response(conn, token, &mut poll_events, "api versions")?;
 
-        let body =
-            self.poll_response_frame(conn, token, deadline, &mut poll_events, "api versions")?;
-        let resp = conn
-            .decode_response::<ApiVersionsResponse>(body, version)
-            .map_err(|e| format!("{e}"))?;
-        if resp.error_code == 0 {
-            conn.set_api_versions(resp.api_keys);
-            Ok(())
-        } else {
-            Err(format!("broker error: {}", resp.error_code))
+        match Self::process_api_versions_response(&mut body, version)? {
+            ApiVersionNegotiation::Done(keys) => {
+                conn.set_api_versions(keys);
+                Ok(())
+            }
+            ApiVersionNegotiation::Retry(v) => {
+                // Second attempt: use the negotiated version.
+                conn.send_api_request(&ApiVersionsRequest::default(), Some(v))
+                    .map_err(|e| format!("serialize: {e}"))?;
+
+                let mut body =
+                    self.flush_and_poll_response(conn, token, &mut poll_events, "api versions")?;
+
+                match Self::process_api_versions_response(&mut body, v)? {
+                    ApiVersionNegotiation::Done(keys) => {
+                        conn.set_api_versions(keys);
+                        Ok(())
+                    }
+                    ApiVersionNegotiation::Retry(_) => {
+                        Err("broker violated negotiation procedure per KIP-35/KIP-511".into())
+                    }
+                }
+            }
         }
     }
 
-    /// Populate the metadata cache by sending a MetadataRequest to the bootstrap broker.
+    fn process_api_versions_response(
+        body: &mut Bytes,
+        version: ApiVersion,
+    ) -> Result<ApiVersionNegotiation, String> {
+        if ResponseHeader::decode(body, false).is_err() {
+            return Err("invalid response header".into());
+        }
+
+        let error_code = i16::from_be_bytes(
+            body.chunk()[..2]
+                .try_into()
+                .map_err(|_| "empty response body".to_string())?,
+        );
+
+        match error_code {
+            0 => {
+                let resp = ApiVersionsResponse::deserialize(version, body)
+                    .map_err(|e| format!("decode response: {e}"))?;
+                if resp.error_code != 0 {
+                    return Err(format!("broker error: {}", resp.error_code));
+                }
+                Ok(ApiVersionNegotiation::Done(resp.api_keys))
+            }
+
+            n if n == ErrorCode::UnsupportedVersion as i16 => {
+                let resp = ApiVersionsResponse::deserialize(ApiVersion::new(0), body)
+                    .map_err(|e| format!("decode v0 fallback: {e}"))?;
+
+                let negotiated = resp
+                    .api_keys
+                    .get(&ApiVersionsRequest::get_api_key().0)
+                    .map_or(ApiVersion::new(0), |entry| {
+                        ApiVersion::new(
+                            ApiVersionsRequest::get_max_supported_version()
+                                .0
+                                .min(entry.max_version),
+                        )
+                    });
+
+                Ok(ApiVersionNegotiation::Retry(negotiated))
+            }
+
+            n => Err(format!("broker error: {n}")),
+        }
+    }
+
     fn fetch_metadata(
         &mut self,
         conn: &mut Connection,
         token: Token,
     ) -> Result<MetadataResponse, String> {
-        let deadline = Instant::now() + self.options.request_timeout;
-
         let (_, version) = conn
             .send_api_request(&MetadataRequest::default(), None)
             .map_err(|e| format!("serialize MetadataRequest: {e}"))?;
 
         let mut poll_events = Events::with_capacity(1);
-        self.flush_sync(conn, token, deadline, &mut poll_events)?;
-
-        let body = self.poll_response_frame(conn, token, deadline, &mut poll_events, "metadata")?;
+        let body = self.flush_and_poll_response(conn, token, &mut poll_events, "metadata")?;
         let resp = conn
             .decode_response::<MetadataResponse>(body, version)
             .map_err(|e| format!("{e}"))?;
         Ok(resp)
     }
 
-    /// Populate the cache from a MetadataResponse and set the connection's node_id.
     fn apply_metadata(
         &mut self,
         conn: &mut Connection,
@@ -223,8 +295,6 @@ impl EventLoop {
             );
         }
 
-        // Identify which broker we're connected to by matching host:port.
-        // The response key provides the authoritative node_id.
         let peer = conn.peer_addr();
         for (node_id, broker) in &resp.brokers {
             let broker_port = broker.port as u16;
@@ -237,32 +307,100 @@ impl EventLoop {
             "connected broker at {peer} not found in cluster metadata"
         ))
     }
+}
 
-    /// Synchronously flush the write buffer until empty or deadline expires.
-    ///
-    /// Only safe during the bootstrap sequence where the event loop is not yet
-    /// processing other connections or commands from the channel.
-    fn flush_sync(
-        &mut self,
-        conn: &mut Connection,
-        token: Token,
-        deadline: Instant,
-        poll_events: &mut Events,
-    ) -> Result<(), String> {
-        while conn.can_write() {
-            let rem = deadline.saturating_duration_since(Instant::now());
-            if rem.is_zero() {
-                return Err("write timed out".into());
-            }
-            let _ = self.poll.poll(poll_events, Some(rem));
-            if poll_events
-                .iter()
-                .any(|e| e.token() == token && e.is_writable())
-            {
-                conn.on_writable()
-                    .map_err(|e| format!("write error: {e}"))?;
-            }
+#[cfg(test)]
+mod tests {
+    use bytes::{Bytes, BytesMut};
+    use protocol::ErrorCode;
+    use protocol::generated::{ApiVersionsRequest, FetchRequest, MetadataRequest};
+    use protocol::traits::{ApiKey, ApiRequest, ApiVersion};
+
+    use super::super::controller::EventLoop;
+    use super::ApiVersionNegotiation;
+
+    fn make_response(error_code: Option<ErrorCode>, keys: &[(ApiKey, i16, i16)]) -> Bytes {
+        let mut buf = BytesMut::new();
+        buf.extend_from_slice(&0i32.to_be_bytes());
+        buf.extend_from_slice(&error_code.map_or(0, |e| e as i16).to_be_bytes());
+        buf.extend_from_slice(&(keys.len() as i32).to_be_bytes());
+        for &(key, min, max) in keys {
+            buf.extend_from_slice(&key.0.to_be_bytes());
+            buf.extend_from_slice(&min.to_be_bytes());
+            buf.extend_from_slice(&max.to_be_bytes());
         }
-        Ok(())
+        buf.freeze()
+    }
+
+    #[test_log::test]
+    fn success_with_version_0_returns_done() {
+        let mut body = make_response(
+            None,
+            &[
+                (MetadataRequest::get_api_key(), 0, 9),
+                (FetchRequest::get_api_key(), 0, 12),
+            ],
+        );
+
+        let result = EventLoop::process_api_versions_response(&mut body, ApiVersion::new(0));
+
+        match result.unwrap() {
+            ApiVersionNegotiation::Done(keys) => {
+                assert_eq!(
+                    keys.get(&MetadataRequest::get_api_key().0)
+                        .unwrap()
+                        .max_version,
+                    9
+                );
+                assert_eq!(
+                    keys.get(&FetchRequest::get_api_key().0)
+                        .unwrap()
+                        .max_version,
+                    12
+                );
+            }
+            _ => panic!("expected Done"),
+        }
+    }
+
+    #[test_log::test]
+    fn unsupported_version_with_api_versions_request_key_returns_retry() {
+        let mut body = make_response(
+            Some(ErrorCode::UnsupportedVersion),
+            &[
+                (ApiVersionsRequest::get_api_key(), 0, 1),
+                (ApiKey::new(0), 0, 10),
+            ],
+        );
+
+        let result = EventLoop::process_api_versions_response(&mut body, ApiVersion::new(4));
+
+        match result.unwrap() {
+            ApiVersionNegotiation::Retry(v) => assert_eq!(v.0, 1),
+            _ => panic!("expected Retry"),
+        }
+    }
+
+    #[test_log::test]
+    fn unsupported_version_without_api_versions_request_key_falls_back_to_v0() {
+        let mut body = make_response(
+            Some(ErrorCode::UnsupportedVersion),
+            &[(ApiKey::new(0), 0, 10)],
+        );
+
+        let result = EventLoop::process_api_versions_response(&mut body, ApiVersion::new(4));
+
+        match result.unwrap() {
+            ApiVersionNegotiation::Retry(v) => assert_eq!(v.0, 0),
+            _ => panic!("expected Retry(v0)"),
+        }
+    }
+
+    #[test_log::test]
+    fn other_error_code_returns_error() {
+        let mut body = make_response(Some(ErrorCode::TopicAlreadyExists), &[]);
+
+        let result = EventLoop::process_api_versions_response(&mut body, ApiVersion::new(4));
+        assert!(result.is_err());
     }
 }
