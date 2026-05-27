@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use super::error::ClusterOptionsValidationError;
 
-#[derive(Debug, derivative::Derivative)]
+#[derive(Debug, Clone, derivative::Derivative)]
 #[derivative(Default)]
 pub struct ClusterOptions {
     pub bootstrap_servers: Vec<String>,
@@ -23,6 +23,10 @@ pub struct ClusterOptions {
     /// Delay between connection retry attempts.
     #[derivative(Default(value = "Duration::from_millis(1_000)"))]
     pub connection_retry_delay: Duration,
+
+    /// Maximum time between periodic metadata refreshes.
+    #[derivative(Default(value = "Duration::from_secs(300)"))]
+    pub metadata_refresh_interval: Duration,
 }
 
 impl ClusterOptions {

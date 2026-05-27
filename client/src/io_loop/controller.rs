@@ -2,7 +2,7 @@ use std::sync::{Arc, mpsc};
 
 use mio::{Events, Poll, Token, Waker};
 
-use super::connection::Connection;
+use super::connection::ConnectionPool;
 use super::lifecycle_state::LifecycleState;
 use super::metadata::MetadataCache;
 use super::sender::CommandSender;
@@ -19,10 +19,9 @@ pub struct EventLoop {
     pub(super) options: ClusterOptions,
     cmd_rx: mpsc::Receiver<Command>,
     pub(super) poll: Poll,
-    pub(super) connections: Vec<Connection>,
+    pub(super) connections: ConnectionPool,
     pub(super) metadata_cache: MetadataCache,
     lifecycle: LifecycleState,
-    pub(super) next_token: usize,
 }
 
 impl EventLoop {
@@ -36,13 +35,12 @@ impl EventLoop {
         let lifecycle = LifecycleState::new();
 
         let event_loop = EventLoop {
+            metadata_cache: MetadataCache::new(options.metadata_refresh_interval),
+            connections: ConnectionPool::new(Some(options.client_name.clone())),
             options,
             cmd_rx: rx,
             poll,
-            connections: Vec::new(),
-            metadata_cache: MetadataCache::new(),
             lifecycle: lifecycle.clone(),
-            next_token: 1, // 0 is reserved for WAKEUP_TOKEN
         };
 
         (event_loop, cmd_tx, lifecycle)
@@ -69,30 +67,27 @@ impl EventLoop {
                 }
             }
 
-            // Drain the wakeup fd (just read the event, no action needed).
-            // Then process I/O events from broker sockets.
+            // Process I/O events from broker sockets.
             for event in &events {
                 let token = event.token();
                 if token == WAKEUP_TOKEN {
                     continue;
                 }
 
-                if let Some(conn) = self.connections.iter_mut().find(|c| c.token() == token) {
+                if let Some(conn) = self.connections.find_by_token(token) {
                     if event.is_readable() {
                         let _ = conn.on_readable();
                     }
                     if event.is_writable()
                         && let Err(e) = conn.on_writable()
                     {
-                        tracing::error!("write error on connection {}: {e}", conn.token().0);
+                        tracing::error!("write error on connection {}: {e}", conn.node_id());
                     }
                 }
             }
 
-            // Drain commands from the channel
             self.drain_commands();
-
-            // Tick state machines
+            self.process_responses();
             self.tick();
         }
     }
@@ -109,7 +104,19 @@ impl EventLoop {
         }
     }
 
+    fn process_responses(&mut self) {
+        for (conn_idx, conn) in self.connections.connections.iter_mut().enumerate() {
+            while let Some((corr_id, body)) = conn.read_broker_response() {
+                if !self.metadata_cache.on_response(corr_id, conn_idx, body) {
+                    // TODO: dispatch to producer/consumer state machines.
+                    tracing::debug!(corr_id, "unhandled response (no state machine registered)");
+                }
+            }
+        }
+    }
+
     fn tick(&mut self) {
-        // TODO: tick state machines
+        let registry = self.poll.registry();
+        self.metadata_cache.tick(&mut self.connections, registry);
     }
 }

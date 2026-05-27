@@ -42,8 +42,7 @@ impl EventLoop {
             let mut candidates: Vec<(TcpStream, Token)> = Vec::new();
 
             for addr in &addrs {
-                let token = Token(self.next_token);
-                self.next_token += 1;
+                let token = self.connections.next_token();
 
                 if let Ok(mut stream) = TcpStream::connect(*addr)
                     && self
@@ -291,6 +290,7 @@ impl EventLoop {
                 BrokerInfo {
                     host: broker.host.clone(),
                     port: broker.port,
+                    rack: broker.rack.clone(),
                 },
             );
         }
