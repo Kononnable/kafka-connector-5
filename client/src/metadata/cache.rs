@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use mio::Registry;
 use protocol::generated::MetadataResponse;
 
-use super::connection::ConnectionPool;
+use crate::connection::ConnectionPool;
 
 /// Information about a single broker in the cluster.
 #[derive(Clone, Debug)]
@@ -55,17 +55,17 @@ impl MetadataCache {
     }
 
     /// Stub — to be implemented when metadata request dispatch is integrated.
-    pub fn tick(&mut self, _pool: &mut ConnectionPool, _registry: &Registry) {
+    pub(crate) fn tick(&mut self, _pool: &mut ConnectionPool, _registry: &Registry) {
         // TODO: implement metadata refresh tick logic
     }
 
     /// Stub — returns false to indicate the response was not handled.
-    pub fn on_response(&mut self, _corr_id: i32, _conn_idx: usize, _body: Bytes) -> bool {
+    pub(crate) fn on_response(&mut self, _corr_id: i32, _conn_idx: usize, _body: Bytes) -> bool {
         false
     }
 
     /// Apply a MetadataResponse to the cache, replacing existing broker/topic state.
-    pub fn apply(&mut self, response: &MetadataResponse) {
+    pub(crate) fn apply(&mut self, response: &MetadataResponse) {
         self.controller_id = response.controller_id;
 
         for (node_id, broker) in &response.brokers {

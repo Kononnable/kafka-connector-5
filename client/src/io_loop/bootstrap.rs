@@ -13,9 +13,9 @@ use protocol::generated::{
 };
 use protocol::traits::{ApiRequest, ApiResponse, ApiVersion};
 
-use super::connection::Connection;
 use super::controller::EventLoop;
-use super::metadata::BrokerInfo;
+use crate::connection::Connection;
+use crate::metadata::BrokerInfo;
 
 enum ApiVersionNegotiation {
     Done(IndexMap<i16, ApiVersionEntry>),

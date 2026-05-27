@@ -2,11 +2,11 @@ use std::sync::{Arc, mpsc};
 
 use mio::{Events, Poll, Token, Waker};
 
-use super::connection::ConnectionPool;
 use super::lifecycle_state::LifecycleState;
-use super::metadata::MetadataCache;
 use super::sender::CommandSender;
 use crate::cluster::ClusterOptions;
+use crate::connection::ConnectionPool;
+use crate::metadata::MetadataCache;
 
 /// Token used for the wakeup fd (eventfd/pipe) to interrupt poll.
 const WAKEUP_TOKEN: Token = Token(0);
@@ -105,7 +105,7 @@ impl EventLoop {
     }
 
     fn process_responses(&mut self) {
-        for (conn_idx, conn) in self.connections.connections.iter_mut().enumerate() {
+        for (conn_idx, conn) in self.connections.iter_mut().enumerate() {
             while let Some((corr_id, body)) = conn.read_broker_response() {
                 if !self.metadata_cache.on_response(corr_id, conn_idx, body) {
                     // TODO: dispatch to producer/consumer state machines.

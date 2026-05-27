@@ -1,8 +1,6 @@
 mod bootstrap;
-mod connection;
 mod controller;
 mod lifecycle_state;
-mod metadata;
 mod sender;
 
 pub use controller::{Command, EventLoop};
