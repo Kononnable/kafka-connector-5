@@ -1,3 +1,3 @@
 mod cache;
 
-pub(crate) use cache::{BrokerInfo, MetadataCache};
+pub(crate) use cache::MetadataCache;

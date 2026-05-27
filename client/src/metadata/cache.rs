@@ -38,9 +38,9 @@ pub struct TopicMetadata {
 
 /// Cached cluster topology with refresh scheduling.
 pub struct MetadataCache {
-    pub brokers: IndexMap<i32, BrokerInfo>,
-    pub controller_id: i32,
-    pub topics: IndexMap<String, TopicMetadata>,
+    brokers: IndexMap<i32, BrokerInfo>,
+    controller_id: i32,
+    topics: IndexMap<String, TopicMetadata>,
     refresh_interval: Duration,
 }
 
@@ -54,21 +54,12 @@ impl MetadataCache {
         }
     }
 
-    /// Stub — to be implemented when metadata request dispatch is integrated.
-    pub(crate) fn tick(&mut self, _pool: &mut ConnectionPool, _registry: &Registry) {
-        // TODO: implement metadata refresh tick logic
-    }
-
-    /// Stub — returns false to indicate the response was not handled.
-    pub(crate) fn on_response(&mut self, _corr_id: i32, _conn_idx: usize, _body: Bytes) -> bool {
-        false
-    }
-
-    /// Apply a MetadataResponse to the cache, replacing existing broker/topic state.
-    pub(crate) fn apply(&mut self, response: &MetadataResponse) {
-        self.controller_id = response.controller_id;
-
-        for (node_id, broker) in &response.brokers {
+    /// Populate the cache from the initial bootstrap MetadataResponse.
+    /// Panics if the cache is not empty.
+    pub(crate) fn bootstrap(&mut self, resp: &MetadataResponse) {
+        assert!(self.brokers.is_empty(), "metadata cache already populated");
+        self.controller_id = resp.controller_id;
+        for (node_id, broker) in &resp.brokers {
             self.brokers.insert(
                 *node_id,
                 BrokerInfo {
@@ -78,34 +69,15 @@ impl MetadataCache {
                 },
             );
         }
+    }
 
-        let mut new_topics = IndexMap::new();
-        for topic in &response.topics {
-            if let Some(ref name) = topic.name {
-                let mut partitions = IndexMap::new();
-                for part in &topic.partitions {
-                    partitions.insert(
-                        part.partition_index,
-                        PartitionInfo {
-                            partition_index: part.partition_index,
-                            leader_id: part.leader_id,
-                            leader_epoch: part.leader_epoch,
-                            replica_nodes: part.replica_nodes.clone(),
-                            isr_nodes: part.isr_nodes.clone(),
-                            offline_replicas: part.offline_replicas.clone(),
-                        },
-                    );
-                }
-                let meta = TopicMetadata {
-                    name: name.clone(),
-                    topic_id: topic.topic_id,
-                    error_code: topic.error_code,
-                    is_internal: topic.is_internal,
-                    partitions,
-                };
-                new_topics.insert(name.clone(), meta);
-            }
-        }
-        self.topics = new_topics;
+    /// Stub — to be implemented when metadata request dispatch is integrated.
+    pub(crate) fn tick(&mut self, _pool: &mut ConnectionPool, _registry: &Registry) {
+        // TODO: implement metadata refresh tick logic
+    }
+
+    /// Stub — returns false to indicate the response was not handled.
+    pub(crate) fn on_response(&mut self, _corr_id: i32, _conn_idx: usize, _body: Bytes) -> bool {
+        false
     }
 }

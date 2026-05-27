@@ -15,7 +15,6 @@ use protocol::traits::{ApiRequest, ApiResponse, ApiVersion};
 
 use super::controller::EventLoop;
 use crate::connection::Connection;
-use crate::metadata::BrokerInfo;
 
 enum ApiVersionNegotiation {
     Done(IndexMap<i16, ApiVersionEntry>),
@@ -99,7 +98,10 @@ impl EventLoop {
                             let result = self
                                 .fetch_api_versions(&mut conn, token)
                                 .and_then(|_| self.fetch_metadata(&mut conn, token))
-                                .and_then(|resp| self.apply_metadata(&mut conn, resp));
+                                .and_then(|resp| {
+                                    self.metadata_cache.bootstrap(&resp);
+                                    self.assign_node_id(&mut conn, &resp)
+                                });
 
                             if let Err(reason) = result {
                                 tracing::warn!("failed to bootstrap via {addr}: {reason}");
@@ -279,22 +281,7 @@ impl EventLoop {
         Ok(resp)
     }
 
-    fn apply_metadata(
-        &mut self,
-        conn: &mut Connection,
-        resp: MetadataResponse,
-    ) -> Result<(), String> {
-        for (node_id, broker) in &resp.brokers {
-            self.metadata_cache.brokers.insert(
-                *node_id,
-                BrokerInfo {
-                    host: broker.host.clone(),
-                    port: broker.port,
-                    rack: broker.rack.clone(),
-                },
-            );
-        }
-
+    fn assign_node_id(&self, conn: &mut Connection, resp: &MetadataResponse) -> Result<(), String> {
         let peer = conn.peer_addr();
         for (node_id, broker) in &resp.brokers {
             let broker_port = broker.port as u16;

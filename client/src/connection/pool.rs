@@ -32,9 +32,18 @@ impl ConnectionPool {
         self.connections.iter_mut().find(|c| c.token() == token)
     }
 
-    /// Iterate over connections by mutable reference.
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Connection> {
-        self.connections.iter_mut()
+    /// Drain all available broker responses from every connection.
+    /// Returns an iterator of `(connection_index, correlation_id, body)`.
+    pub fn drain_responses(&mut self) -> impl Iterator<Item = (usize, i32, Bytes)> + '_ {
+        self.connections
+            .iter_mut()
+            .enumerate()
+            .flat_map(|(idx, conn)| {
+                std::iter::from_fn(move || {
+                    conn.read_broker_response()
+                        .map(|(corr_id, body)| (idx, corr_id, body))
+                })
+            })
     }
 
     /// Add a new connection to the pool.

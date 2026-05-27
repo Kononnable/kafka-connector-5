@@ -86,13 +86,13 @@ impl EventLoop {
                 }
             }
 
-            self.drain_commands();
+            self.process_commands();
             self.process_responses();
             self.tick();
         }
     }
 
-    fn drain_commands(&mut self) {
+    fn process_commands(&mut self) {
         while let Ok(cmd) = self.cmd_rx.try_recv() {
             match cmd {
                 Command::Shutdown => {
@@ -105,12 +105,10 @@ impl EventLoop {
     }
 
     fn process_responses(&mut self) {
-        for (conn_idx, conn) in self.connections.iter_mut().enumerate() {
-            while let Some((corr_id, body)) = conn.read_broker_response() {
-                if !self.metadata_cache.on_response(corr_id, conn_idx, body) {
-                    // TODO: dispatch to producer/consumer state machines.
-                    tracing::debug!(corr_id, "unhandled response (no state machine registered)");
-                }
+        for (conn_idx, corr_id, body) in self.connections.drain_responses() {
+            if !self.metadata_cache.on_response(corr_id, conn_idx, body) {
+                // TODO: dispatch to producer/consumer state machines.
+                tracing::debug!(corr_id, "unhandled response (no state machine registered)");
             }
         }
     }
