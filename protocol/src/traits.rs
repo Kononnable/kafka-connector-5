@@ -7,10 +7,6 @@ use std::fmt;
 
 use bytes::{Bytes, BytesMut};
 
-// ---------------------------------------------------------------------------
-// ApiVersion
-// ---------------------------------------------------------------------------
-
 /// Kafka protocol version number (i16 on the wire).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct ApiVersion(pub i16);
@@ -47,10 +43,6 @@ impl From<ApiVersion> for i16 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// ApiKey
-// ---------------------------------------------------------------------------
-
 /// Kafka API key (i16 on the wire).
 ///
 /// Each request/response pair is identified by a unique numeric key.
@@ -81,10 +73,6 @@ impl From<ApiKey> for i16 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// SerializationError
-// ---------------------------------------------------------------------------
-
 use thiserror::Error as DeriveError;
 
 /// Errors that can occur during message serialization or deserialization.
@@ -109,10 +97,6 @@ pub enum SerializationError {
         api_name: &'static str,
     },
 }
-
-// ---------------------------------------------------------------------------
-// ApiRequest trait
-// ---------------------------------------------------------------------------
 
 /// A Kafka request message that can be serialized to the wire.
 pub trait ApiRequest: Clone + fmt::Debug + Default {
@@ -139,10 +123,6 @@ pub trait ApiRequest: Clone + fmt::Debug + Default {
     /// Deserialize an instance of `Self` from `buf` for the given protocol `version`.
     fn deserialize(version: ApiVersion, buf: &mut Bytes) -> Result<Self, SerializationError>;
 }
-
-// ---------------------------------------------------------------------------
-// ApiResponse trait
-// ---------------------------------------------------------------------------
 
 /// A Kafka response message that can be deserialized from the wire.
 pub trait ApiResponse: Clone + fmt::Debug + Default {

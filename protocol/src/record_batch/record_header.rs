@@ -62,10 +62,6 @@ impl RecordHeader {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Zig-zag helpers (i32 / i64)
-// ---------------------------------------------------------------------------
-
 /// Encode `value` as a zig-zag unsigned varint (i32).
 #[inline]
 pub(crate) fn zig_zag_i32(value: i32) -> u64 {

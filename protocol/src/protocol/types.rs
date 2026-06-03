@@ -5,10 +5,6 @@
 
 use std::fmt;
 
-// ---------------------------------------------------------------------------
-// VarInt
-// ---------------------------------------------------------------------------
-
 /// A variable-length integer encoded with zig-zag.
 ///
 /// On the wire this is an unsigned varint whose value is `(n << 1) ^ (n >> 31)`,
@@ -40,10 +36,6 @@ impl From<VarInt> for i32 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// VarLong
-// ---------------------------------------------------------------------------
-
 /// A variable-length long integer encoded with zig-zag.
 ///
 /// On the wire this is an unsigned varint whose value is `(n << 1) ^ (n >> 63)`.
@@ -73,10 +65,6 @@ impl From<VarLong> for i64 {
         v.0
     }
 }
-
-// ---------------------------------------------------------------------------
-// CompactArray length encoding helper
-// ---------------------------------------------------------------------------
 
 /// Compute the unsigned varint-encoded length for a compact array/string/bytes
 /// whose element count (or byte length) is `n`.  Compact arrays use

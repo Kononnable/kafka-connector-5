@@ -8,7 +8,7 @@ use futures_timer::Delay;
 use super::ClusterOptions;
 use super::error::ClusterOptionsValidationError;
 use crate::consumer::{ConsumerController, ConsumerOptions, ConsumerOptionsValidationError};
-use crate::io_loop::{Command, CommandSender, EventLoop, LifecycleState};
+use crate::io_loop::{Command, CommandSender, EventLoop, LifecycleState, State};
 use crate::producer::{ProducerController, ProducerOptions, ProducerOptionsValidationError};
 
 pub struct ClusterController {
@@ -40,7 +40,7 @@ impl ClusterController {
         self: Arc<Self>,
         options: ProducerOptions,
     ) -> Result<ProducerController, Vec<ProducerOptionsValidationError>> {
-        while self.lifecycle_state.state() != crate::io_loop::State::Active {
+        while self.lifecycle_state.state() != State::Active {
             Delay::new(Duration::from_millis(10)).await;
         }
         ProducerController::new(self, options)
@@ -53,7 +53,7 @@ impl ClusterController {
         self: Arc<Self>,
         options: ConsumerOptions,
     ) -> Result<ConsumerController, Vec<ConsumerOptionsValidationError>> {
-        while self.lifecycle_state.state() != crate::io_loop::State::Active {
+        while self.lifecycle_state.state() != State::Active {
             Delay::new(Duration::from_millis(10)).await;
         }
         ConsumerController::new(self, options)

@@ -123,15 +123,6 @@ impl Connection {
         Ok((correlation_id, version))
     }
 
-    /// Push pre-serialized bytes directly into `bytes_to_send`.
-    pub fn send_raw_request(&mut self, payload: Bytes) {
-        self.bytes_to_send.extend_from_slice(&payload);
-    }
-
-    pub(crate) fn set_api_versions(&mut self, versions: IndexMap<i16, ApiVersionEntry>) {
-        self.api_versions = versions;
-    }
-
     pub fn node_id(&self) -> i32 {
         self.node_id
     }
@@ -144,6 +135,10 @@ impl Connection {
     /// node_id passed to [`Connection::new`] directly.
     pub(crate) fn set_node_id(&mut self, id: i32) {
         self.node_id = id;
+    }
+
+    pub(crate) fn set_api_versions(&mut self, versions: IndexMap<i16, ApiVersionEntry>) {
+        self.api_versions = versions;
     }
 
     /// Returns the peer address of the connected socket.

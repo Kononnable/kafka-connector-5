@@ -1,65 +1,50 @@
 use std::sync::{Arc, mpsc};
 
-use mio::{Events, Poll, Token, Waker};
+use mio::Events;
 
-use super::lifecycle_state::LifecycleState;
+use super::lifecycle_state::{LifecycleState, State};
 use super::sender::CommandSender;
 use crate::cluster::ClusterOptions;
-use crate::connection::ConnectionPool;
-use crate::metadata::MetadataCache;
-
-/// Token used for the wakeup fd (eventfd/pipe) to interrupt poll.
-const WAKEUP_TOKEN: Token = Token(0);
+use crate::cluster::state::ClusterState;
 
 pub enum Command {
     Shutdown,
 }
 
 pub struct EventLoop {
-    pub(super) options: ClusterOptions,
-    cmd_rx: mpsc::Receiver<Command>,
-    pub(super) poll: Poll,
-    pub(super) connections: ConnectionPool,
-    pub(super) metadata_cache: MetadataCache,
+    pub(super) state: ClusterState,
     lifecycle: LifecycleState,
+    cmd_rx: mpsc::Receiver<Command>,
 }
 
 impl EventLoop {
     pub fn new(options: ClusterOptions) -> (Self, CommandSender, LifecycleState) {
-        let poll = Poll::new().expect("failed to create mio Poll");
-        let (tx, rx) = mpsc::channel();
-
-        let waker = Waker::new(poll.registry(), WAKEUP_TOKEN).expect("failed to create mio Waker");
-
-        let cmd_tx = CommandSender::new(tx, Arc::new(waker));
+        let (state, waker) = ClusterState::new(options);
         let lifecycle = LifecycleState::new();
+        let handle = lifecycle.clone();
+
+        let (tx, rx) = mpsc::channel();
+        let cmd_tx = CommandSender::new(tx, Arc::new(waker));
 
         let event_loop = EventLoop {
-            metadata_cache: MetadataCache::new(options.metadata_refresh_interval),
-            connections: ConnectionPool::new(Some(options.client_name.clone())),
-            options,
+            state,
+            lifecycle,
             cmd_rx: rx,
-            poll,
-            lifecycle: lifecycle.clone(),
         };
 
-        (event_loop, cmd_tx, lifecycle)
+        (event_loop, cmd_tx, handle)
     }
 
     pub fn run(&mut self) {
-        self.bootstrap_cluster_connection();
+        self.state.bootstrap();
         self.lifecycle.set_active();
 
         let mut events = Events::with_capacity(1024);
 
-        while self.lifecycle.state() != super::State::ShutdownComplete {
-            // Block indefinitely — the waker will interrupt poll when a command arrives.
-            if let Err(e) = self.poll.poll(&mut events, None) {
+        while self.lifecycle.state() != State::ShutdownComplete {
+            if let Err(e) = self.state.pool().poll_io(&mut events, None) {
                 match e.kind() {
-                    std::io::ErrorKind::Interrupted => {
-                        // EINTR — signal was delivered while blocking. Retry.
-                        continue;
-                    }
+                    std::io::ErrorKind::Interrupted => continue,
                     _ => {
                         tracing::error!("poll error: {e}");
                         break;
@@ -67,28 +52,25 @@ impl EventLoop {
                 }
             }
 
-            // Process I/O events from broker sockets.
-            for event in &events {
-                let token = event.token();
-                if token == WAKEUP_TOKEN {
-                    continue;
-                }
-
-                if let Some(conn) = self.connections.find_by_token(token) {
-                    if event.is_readable() {
-                        let _ = conn.on_readable();
-                    }
-                    if event.is_writable()
-                        && let Err(e) = conn.on_writable()
-                    {
-                        tracing::error!("write error on connection {}: {e}", conn.node_id());
-                    }
-                }
-            }
-
+        self.state.dispatch_io_events(&events);
+            self.state.connect_to_brokers();
+            self.send_api_requests();
             self.process_commands();
-            self.process_responses();
+            self.process_api_responses();
             self.tick();
+        }
+    }
+
+    fn send_api_requests(&mut self) {
+        for &(broker_id, corr_id) in &self.state.pool().send_api_requests() {
+            let idx = self
+                .state
+                .pool()
+                .connections()
+                .iter()
+                .position(|c| c.node_id() == broker_id)
+                .expect("broker connection must exist for just-flushed request");
+            self.state.metadata_mut().register_inflight_refresh(idx, corr_id);
         }
     }
 
@@ -97,24 +79,27 @@ impl EventLoop {
             match cmd {
                 Command::Shutdown => {
                     self.lifecycle.set_shutdown_triggered();
-                    // TODO: graceful close sequence (flush pending sends, leave group, etc.)
                     self.lifecycle.set_shutdown_complete();
                 }
             }
         }
     }
 
-    fn process_responses(&mut self) {
-        for (conn_idx, corr_id, body) in self.connections.drain_responses() {
-            if !self.metadata_cache.on_response(corr_id, conn_idx, body) {
-                // TODO: dispatch to producer/consumer state machines.
+    fn process_api_responses(&mut self) {
+        for (conn_idx, corr_id, body) in self.state.pool().collect_responses() {
+            if !self
+                .state
+                .metadata_mut()
+                .on_response(corr_id, conn_idx, body)
+            {
                 tracing::debug!(corr_id, "unhandled response (no state machine registered)");
             }
         }
     }
 
     fn tick(&mut self) {
-        let registry = self.poll.registry();
-        self.metadata_cache.tick(&mut self.connections, registry);
+        if let Some(req) = self.state.metadata_mut().tick() {
+            let _ = self.state.send(None, req, None);
+        }
     }
 }

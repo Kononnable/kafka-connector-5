@@ -1,30 +1,129 @@
+use std::io;
+use std::time::Duration;
+
 use bytes::Bytes;
-use mio::Token;
-use mio::net::TcpStream;
+use mio::{Events, Poll, Registry, Token, Waker};
+use protocol::traits::{ApiRequest, ApiVersion};
 
 use super::transport::Connection;
 
-/// Manages a set of broker connections.
+/// Token for the waker (eventfd/pipe) used to interrupt poll.
+const WAKEUP_TOKEN: Token = Token(0);
+
+/// A request queued for a broker that has no connection yet.
+/// The closure captures the concrete request; it is invoked at flush time
+/// with a live connection so proper version negotiation can happen.
+struct QueuedRequest {
+    api_key: i16,
+    flush: Box<dyn FnOnce(&mut Connection) -> Result<i32, String> + Send>,
+}
+
+/// Manages a set of broker connections and pending outgoing requests.
 pub struct ConnectionPool {
     connections: Vec<Connection>,
-    client_id: Option<String>,
-    next_token: usize,
+    pending: Vec<(i32, QueuedRequest)>,
+    client_id: String,
+    poll: Poll,
 }
 
 impl ConnectionPool {
-    pub fn new(client_id: Option<String>) -> Self {
-        ConnectionPool {
+    pub fn new(client_id: String) -> (Self, Waker) {
+        let poll = Poll::new().expect("failed to create mio Poll");
+        let waker = Waker::new(poll.registry(), WAKEUP_TOKEN).expect("failed to create mio Waker");
+        let pool = ConnectionPool {
             connections: Vec::new(),
+            pending: Vec::new(),
             client_id,
-            next_token: 1,
-        }
+            poll,
+        };
+        (pool, waker)
     }
 
-    /// Allocate the next token and advance the counter.
-    pub fn next_token(&mut self) -> Token {
-        let token = Token(self.next_token);
-        self.next_token += 1;
-        token
+    /// Return the client id stored at construction time.
+    pub fn client_id(&self) -> &str {
+        &self.client_id
+    }
+
+    /// Queue a request for the given broker.
+    /// Serialization + version negotiation happen at flush time.
+    pub fn enqueue<R: ApiRequest + Send + 'static>(
+        &mut self,
+        broker_id: i32,
+        request: R,
+        version: Option<ApiVersion>,
+    ) {
+        let api_key = R::get_api_key().0;
+        let flush = Box::new(move |conn: &mut Connection| {
+            conn.send_api_request(&request, version)
+                .map(|(cid, _)| cid)
+                .map_err(|e| format!("{e}"))
+        });
+        self.pending.push((broker_id, QueuedRequest { api_key, flush }));
+    }
+
+    /// Return the set of broker ids that have queued requests.
+    pub fn pending_brokers(&self) -> Vec<i32> {
+        let mut seen = Vec::new();
+        for (id, _) in &self.pending {
+            if !seen.contains(id) {
+                seen.push(*id);
+            }
+        }
+        seen
+    }
+
+    /// Push all queued requests for `broker_id` onto the connection's
+    /// write buffer.  Returns the correlation id of each flushed request.
+    pub fn flush_pending(&mut self, broker_id: i32) -> Vec<i32> {
+        let Some(conn) = self
+            .connections
+            .iter_mut()
+            .find(|c| c.node_id() == broker_id)
+        else {
+            return Vec::new();
+        };
+
+        let mut corr_ids = Vec::new();
+        let mut i = 0;
+        while i < self.pending.len() {
+            if self.pending[i].0 == broker_id {
+                let (_, q) = self.pending.swap_remove(i);
+                match (q.flush)(conn) {
+                    Ok(cid) => corr_ids.push(cid),
+                    Err(e) => tracing::warn!("flush failed (api_key={}): {e}", q.api_key),
+                }
+            } else {
+                i += 1;
+            }
+        }
+        corr_ids
+    }
+
+    /// Flush queued requests for every connected broker.
+    /// Returns `(broker_id, correlation_id)` for each flushed request.
+    pub fn send_api_requests(&mut self) -> Vec<(i32, i32)> {
+        let ids: Vec<i32> = self.connections.iter().map(|c| c.node_id()).collect();
+        let mut flushed = Vec::new();
+        for broker_id in ids {
+            for cid in self.flush_pending(broker_id) {
+                flushed.push((broker_id, cid));
+            }
+        }
+        flushed
+    }
+
+    /// Poll for I/O events on all registered connections.
+    pub fn poll_io(&mut self, events: &mut Events, timeout: Option<Duration>) -> io::Result<()> {
+        self.poll.poll(events, timeout)
+    }
+
+    pub fn registry(&self) -> &Registry {
+        self.poll.registry()
+    }
+
+    /// Access the live connections list.
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
     }
 
     /// Find a connection by token.
@@ -32,9 +131,8 @@ impl ConnectionPool {
         self.connections.iter_mut().find(|c| c.token() == token)
     }
 
-    /// Drain all available broker responses from every connection.
-    /// Returns an iterator of `(connection_index, correlation_id, body)`.
-    pub fn drain_responses(&mut self) -> impl Iterator<Item = (usize, i32, Bytes)> + '_ {
+    /// Collect all available broker responses from every connection.
+    pub fn collect_responses(&mut self) -> Vec<(usize, i32, Bytes)> {
         self.connections
             .iter_mut()
             .enumerate()
@@ -44,64 +142,11 @@ impl ConnectionPool {
                         .map(|(corr_id, body)| (idx, corr_id, body))
                 })
             })
+            .collect()
     }
 
     /// Add a new connection to the pool.
     pub fn push(&mut self, conn: Connection) {
         self.connections.push(conn);
-    }
-
-    /// Send a protocol request to the connection for the given broker.
-    /// Handles connection lookup, establishment, and sending.
-    ///
-    /// # Arguments
-    /// * `broker_id` — the broker node id to send to
-    /// * `payload` — pre-serialized Kafka frame bytes
-    /// * `addrs` — socket addresses to connect to if no connection exists
-    /// * `registry` — mio registry for socket registration
-    pub fn send_api_request(
-        &mut self,
-        broker_id: i32,
-        payload: Bytes,
-        addrs: &[std::net::SocketAddr],
-        registry: &mio::Registry,
-    ) -> Result<(), &'static str> {
-        // Check if a connection for this broker already exists.
-        if let Some(conn) = self
-            .connections
-            .iter_mut()
-            .find(|c| c.node_id() == broker_id)
-        {
-            conn.send_raw_request(payload);
-            return Ok(());
-        }
-
-        // No connection exists — attempt to connect.
-        for addr in addrs {
-            match TcpStream::connect(*addr) {
-                Ok(mut stream) => {
-                    let token = Token(self.connections.len() + 1); // placeholder, actual token assigned by caller
-                    if registry
-                        .register(
-                            &mut stream,
-                            token,
-                            mio::Interest::READABLE | mio::Interest::WRITABLE,
-                        )
-                        .is_ok()
-                    {
-                        let mut conn =
-                            Connection::new(token, stream, self.client_id.clone(), broker_id);
-                        conn.send_raw_request(payload);
-                        self.connections.push(conn);
-                        return Ok(());
-                    }
-                }
-                Err(e) => {
-                    tracing::warn!(broker_id, addr = ?addr, "failed to connect: {e}");
-                }
-            }
-        }
-
-        Err("failed to connect to broker")
     }
 }

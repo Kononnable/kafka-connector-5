@@ -16,10 +16,6 @@ use std::time::Instant;
 use bytes::Buf;
 use protocol::protocol::serialization::SerializationError;
 
-// ---------------------------------------------------------------------------
-// ParsedFrame
-// ---------------------------------------------------------------------------
-
 /// Information extracted from a single Kafka request or response frame.
 #[derive(Debug, Clone)]
 pub struct ParsedFrame {
@@ -109,9 +105,6 @@ pub fn request_body_offset(data: &[u8], is_flexible: bool) -> usize {
     data.len() - cur.len()
 }
 
-// In-flight tracking
-// ---------------------------------------------------------------------------
-
 /// A tracked in-flight request.
 #[derive(Debug, Clone)]
 pub struct InFlightRequest {
@@ -121,10 +114,6 @@ pub struct InFlightRequest {
     pub client_id: String,
     pub sent_at: Instant,
 }
-
-// ---------------------------------------------------------------------------
-// Frame parsing helpers
-// ---------------------------------------------------------------------------
 
 /// Try to parse the size prefix from a buffer.
 /// Returns `Some(size)` if at least 4 bytes are available, `None` otherwise.

@@ -4,17 +4,9 @@
 //! It understands the Kafka wire protocol and can inspect, log, or modify
 //! requests and responses as they pass through.
 
-// ---------------------------------------------------------------------------
-// Public re-exports
-// ---------------------------------------------------------------------------
-
 pub use crate::config::ProxyConfig;
 pub use crate::error::ProxyError;
 pub use crate::server::ProxyServer;
-
-// ---------------------------------------------------------------------------
-// Sub-modules
-// ---------------------------------------------------------------------------
 
 pub mod config;
 pub mod error;

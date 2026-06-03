@@ -203,10 +203,6 @@ impl RecordBatch {
     }
 }
 
-// ---------------------------------------------------------------------------
-// SystemTime ↔ epoch millis conversion
-// ---------------------------------------------------------------------------
-
 fn ts_to_millis(ts: SystemTime) -> i64 {
     ts.duration_since(UNIX_EPOCH)
         .unwrap_or(Duration::ZERO)

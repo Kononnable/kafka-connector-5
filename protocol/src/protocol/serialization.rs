@@ -22,10 +22,6 @@ use indexmap::IndexMap;
 
 pub use crate::traits::SerializationError;
 
-// ---------------------------------------------------------------------------
-// Helper: unsigned varint encoding (used internally by varint / varlong)
-// ---------------------------------------------------------------------------
-
 /// Encode `value` as an unsigned variable-length integer.
 /// Returns the number of bytes written.
 pub fn encode_unsigned_varint<B: BufMut>(mut value: u64, buf: &mut B) -> usize {
@@ -65,10 +61,6 @@ pub fn decode_unsigned_varint<B: Buf>(buf: &mut B) -> Result<(u64, usize), Seria
     }
 }
 
-// ---------------------------------------------------------------------------
-// Traits
-// ---------------------------------------------------------------------------
-
 /// A type that can be encoded/decoded to/from Kafka's binary wire format.
 pub trait KafkaCodec: Sized {
     /// Encode `self` into `buf` for the given API `version`.
@@ -97,9 +89,6 @@ pub trait KafkaCodec: Sized {
     ) -> Result<Self, SerializationError>;
 }
 
-// ---------------------------------------------------------------------------
-// Implementations for primitive types
-// ---------------------------------------------------------------------------
 
 impl KafkaCodec for i8 {
     fn encode<B: BufMut>(
@@ -262,10 +251,6 @@ impl KafkaCodec for u16 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// u8 (single byte, used by Vec<u8> via blanket Vec<T> impl)
-// ---------------------------------------------------------------------------
-
 impl KafkaCodec for u8 {
     fn encode<B: BufMut>(
         &self,
@@ -289,10 +274,6 @@ impl KafkaCodec for u8 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// bool → int8 (0 / 1)
-// ---------------------------------------------------------------------------
-
 impl KafkaCodec for bool {
     fn encode<B: BufMut>(
         &self,
@@ -315,10 +296,6 @@ impl KafkaCodec for bool {
         Ok(buf.get_u8() != 0)
     }
 }
-
-// ---------------------------------------------------------------------------
-// varint (zig-zag encoded i32)
-// ---------------------------------------------------------------------------
 
 impl KafkaCodec for super::types::VarInt {
     fn encode<B: BufMut>(
@@ -345,10 +322,6 @@ impl KafkaCodec for super::types::VarInt {
     }
 }
 
-// ---------------------------------------------------------------------------
-// varlong (zig-zag encoded i64)
-// ---------------------------------------------------------------------------
-
 impl KafkaCodec for super::types::VarLong {
     fn encode<B: BufMut>(
         &self,
@@ -371,10 +344,6 @@ impl KafkaCodec for super::types::VarLong {
         Ok(super::types::VarLong(value))
     }
 }
-
-// ---------------------------------------------------------------------------
-// String / NullableString
-// ---------------------------------------------------------------------------
 
 impl KafkaCodec for String {
     fn encode<B: BufMut>(
@@ -529,10 +498,6 @@ impl KafkaCodec for Option<String> {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Array (Vec<T>)
-// ---------------------------------------------------------------------------
-
 impl<T: KafkaCodec> KafkaCodec for Vec<T> {
     fn encode<B: BufMut>(
         &self,
@@ -595,10 +560,6 @@ impl<T: KafkaCodec> KafkaCodec for Vec<T> {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Nullable array (Option<Vec<T>>)
-// ---------------------------------------------------------------------------
 
 impl<T: KafkaCodec> KafkaCodec for Option<Vec<T>> {
     fn encode<B: BufMut>(
@@ -668,10 +629,6 @@ impl<T: KafkaCodec> KafkaCodec for Option<Vec<T>> {
     }
 }
 
-// ---------------------------------------------------------------------------
-// IndexMap<K, V> — serialized identically to Vec<(K, V)>
-// ---------------------------------------------------------------------------
-
 impl<K: KafkaCodec + std::hash::Hash + Eq, V: KafkaCodec> KafkaCodec for IndexMap<K, V> {
     fn encode<B: BufMut>(
         &self,
@@ -740,10 +697,6 @@ impl<K: KafkaCodec + std::hash::Hash + Eq, V: KafkaCodec> KafkaCodec for IndexMa
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Option<IndexMap<K, V>> — nullable IndexMap
-// ---------------------------------------------------------------------------
 
 impl<K: KafkaCodec + std::hash::Hash + Eq, V: KafkaCodec> KafkaCodec for Option<IndexMap<K, V>> {
     fn encode<B: BufMut>(
@@ -830,10 +783,6 @@ impl<K: KafkaCodec + std::hash::Hash + Eq, V: KafkaCodec> KafkaCodec for Option<
     }
 }
 
-// ---------------------------------------------------------------------------
-// UUID (16 raw bytes)
-// ---------------------------------------------------------------------------
-
 impl KafkaCodec for [u8; 16] {
     fn encode<B: BufMut>(
         &self,
@@ -858,10 +807,6 @@ impl KafkaCodec for [u8; 16] {
         Ok(out)
     }
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
