@@ -52,8 +52,8 @@ impl EventLoop {
                 }
             }
 
-        self.state.dispatch_io_events(&events);
-            self.state.connect_to_brokers();
+            let dead_broker_ids = self.state.prune_dead_connections(&events);
+            self.state.connect_to_brokers(&dead_broker_ids);
             self.send_api_requests();
             self.process_commands();
             self.process_api_responses();

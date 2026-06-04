@@ -27,6 +27,14 @@ pub struct ClusterOptions {
     /// Maximum time between periodic metadata refreshes.
     #[derivative(Default(value = "Duration::from_secs(300)"))]
     pub metadata_refresh_interval: Duration,
+
+    /// Initial reconnect backoff duration.
+    #[derivative(Default(value = "Duration::from_millis(50)"))]
+    pub reconnect_backoff_ms: Duration,
+
+    /// Maximum reconnect backoff duration.
+    #[derivative(Default(value = "Duration::from_millis(1_000)"))]
+    pub reconnect_backoff_max_ms: Duration,
 }
 
 impl ClusterOptions {

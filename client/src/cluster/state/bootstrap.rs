@@ -168,7 +168,9 @@ impl ClusterState {
             if rem.is_zero() {
                 return Err(format!("{ctx} write timed out"));
             }
-            let _ = self.pool().poll_io(poll_events, Some(rem));
+            let _ = self
+                .pool()
+                .poll_io(poll_events, Some(rem));
             if poll_events
                 .iter()
                 .any(|e| e.token() == token && e.is_writable())
@@ -184,7 +186,9 @@ impl ClusterState {
             if rem.is_zero() {
                 return Err(format!("{ctx} timed out"));
             }
-            let _ = self.pool().poll_io(poll_events, Some(rem));
+            let _ = self
+                .pool()
+                .poll_io(poll_events, Some(rem));
             if poll_events
                 .iter()
                 .any(|e| e.token() == token && e.is_readable())

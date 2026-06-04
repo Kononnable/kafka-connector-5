@@ -89,7 +89,6 @@ pub trait KafkaCodec: Sized {
     ) -> Result<Self, SerializationError>;
 }
 
-
 impl KafkaCodec for i8 {
     fn encode<B: BufMut>(
         &self,

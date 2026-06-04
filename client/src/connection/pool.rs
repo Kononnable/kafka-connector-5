@@ -1,7 +1,8 @@
 use std::io;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bytes::Bytes;
+use indexmap::IndexMap;
 use mio::{Events, Poll, Registry, Token, Waker};
 use protocol::traits::{ApiRequest, ApiVersion};
 
@@ -18,12 +19,20 @@ struct QueuedRequest {
     flush: Box<dyn FnOnce(&mut Connection) -> Result<i32, String> + Send>,
 }
 
+/// Per-broker reconnect failure tracking.
+struct BrokerReconnectState {
+    failures: u32,
+    next_attempt: Option<Instant>,
+}
+
 /// Manages a set of broker connections and pending outgoing requests.
 pub struct ConnectionPool {
     connections: Vec<Connection>,
     pending: Vec<(i32, QueuedRequest)>,
     client_id: String,
     poll: Poll,
+    /// Tracks reconnect backoff state per broker.
+    broker_reconnect: IndexMap<i32, BrokerReconnectState>,
 }
 
 impl ConnectionPool {
@@ -35,6 +44,7 @@ impl ConnectionPool {
             pending: Vec::new(),
             client_id,
             poll,
+            broker_reconnect: IndexMap::new(),
         };
         (pool, waker)
     }
@@ -113,7 +123,33 @@ impl ConnectionPool {
     }
 
     /// Poll for I/O events on all registered connections.
-    pub fn poll_io(&mut self, events: &mut Events, timeout: Option<Duration>) -> io::Result<()> {
+    /// When no connections are registered, uses a timeout based on the
+    /// earliest backoff expiration to avoid blocking forever.
+    pub fn poll_io(
+        &mut self,
+        events: &mut Events,
+        timeout: Option<Duration>,
+    ) -> io::Result<()> {
+        if self.connections.is_empty() {
+            let mut earliest = None;
+            for state in self.broker_reconnect.values() {
+                if state.failures == 0 {
+                    continue;
+                }
+                let wait = state.next_attempt.map_or(Duration::ZERO, |t| {
+                    t.saturating_duration_since(Instant::now())
+                });
+                if wait.is_zero() {
+                    return self.poll.poll(events, Some(Duration::from_millis(0)));
+                }
+                if earliest.map_or(true, |e| wait < e) {
+                    earliest = Some(wait);
+                }
+            }
+            if let Some(backoff) = earliest {
+                return self.poll.poll(events, Some(backoff));
+            }
+        }
         self.poll.poll(events, timeout)
     }
 
@@ -148,5 +184,115 @@ impl ConnectionPool {
     /// Add a new connection to the pool.
     pub fn push(&mut self, conn: Connection) {
         self.connections.push(conn);
+    }
+
+    /// Remove a dead connection by broker id. Increments the broker's
+    /// reconnect failure counter and schedules the next retry.
+    pub fn remove_connection(&mut self, broker_id: i32, base: Duration, max: Duration) {
+        if let Some(pos) = self.connections.iter().position(|c| c.node_id() == broker_id) {
+            let entry = self.broker_reconnect.entry(broker_id).or_insert_with(|| {
+                BrokerReconnectState {
+                    failures: 0,
+                    next_attempt: None,
+                }
+            });
+            entry.failures = entry.failures.saturating_add(1);
+            entry.next_attempt = Some(Instant::now() + entry.backoff(base, max));
+            self.connections.remove(pos);
+        }
+    }
+
+    /// Check whether we should attempt reconnection to `broker_id`.
+    /// Returns `true` if the backoff period has elapsed or there are no
+    /// prior failures.
+    pub fn can_reconnect(&self, broker_id: i32) -> bool {
+        let Some(entry) = self.broker_reconnect.get(&broker_id) else {
+            return true;
+        };
+        entry.failures == 0 || entry.next_attempt.map_or(true, |t| t.elapsed() > Duration::ZERO)
+    }
+
+    /// Record that a reconnect attempt is being made for `broker_id`.
+    /// Sets the next attempt time based on current failure count.
+    pub fn record_reconnect_attempt(&mut self, broker_id: i32, base: Duration, max: Duration) {
+        if let Some(entry) = self.broker_reconnect.get_mut(&broker_id) {
+            entry.next_attempt = Some(Instant::now() + entry.backoff(base, max));
+        }
+    }
+
+    /// Reset reconnect failure tracking for `broker_id` (successful reconnect).
+    pub fn reset_reconnect(&mut self, broker_id: i32) {
+        if let Some(entry) = self.broker_reconnect.get_mut(&broker_id) {
+            entry.failures = 0;
+            entry.next_attempt = None;
+        }
+    }
+
+    /// Increment reconnect failure counter and schedule next attempt
+    /// (called when a reconnect attempt fails).
+    pub fn increment_reconnect_failure(&mut self, broker_id: i32, base: Duration, max: Duration) {
+        if let Some(entry) = self.broker_reconnect.get_mut(&broker_id) {
+            entry.failures = entry.failures.saturating_add(1);
+            entry.next_attempt = Some(Instant::now() + entry.backoff(base, max));
+        }
+    }
+
+    /// Attempt to reconnect to a broker. Records the attempt, increments
+    /// failure counter on failure, and resets on success.
+    pub fn try_reconnect(
+        &mut self,
+        broker_id: i32,
+        base: Duration,
+        max: Duration,
+        result: Result<(), String>,
+    ) {
+        self.record_reconnect_attempt(broker_id, base, max);
+        if let Err(e) = result {
+            self.increment_reconnect_failure(broker_id, base, max);
+            tracing::warn!("reconnect to broker {broker_id} failed: {e}");
+        }
+    }
+
+    /// Return broker ids that have pending reconnect attempts whose
+    /// backoff has expired but are not currently connected.
+    pub fn expired_reconnects(&self) -> Vec<i32> {
+        let mut expired = Vec::new();
+        let connected: Vec<i32> = self.connections.iter().map(|c| c.node_id()).collect();
+        for (&broker_id, state) in &self.broker_reconnect {
+            if connected.contains(&broker_id) {
+                continue;
+            }
+            if state.failures == 0 {
+                continue;
+            }
+            if state.next_attempt.map_or(true, |t| t.elapsed() <= Duration::ZERO) {
+                expired.push(broker_id);
+            }
+        }
+        expired
+    }
+}
+
+impl BrokerReconnectState {
+    /// Calculate exponential backoff with jitter.
+    ///
+    /// Formula: MIN(max, base * 2^(failures-1)) * jitter
+    /// Jitter is a random factor in [0.8, 1.2] (KIP-144).
+    fn backoff(&self, base: Duration, max: Duration) -> Duration {
+        if self.failures == 0 {
+            return Duration::from_millis(0);
+        }
+        let exp = (self.failures - 1) as u32;
+        let capped = if exp >= 31 {
+            max
+        } else {
+            let multiplier = (1u32 << exp) as u32;
+            std::cmp::min(
+                base.checked_mul(multiplier).unwrap_or(max),
+                max,
+            )
+        };
+        let jitter = 0.8 + 0.4 * rand::random::<f64>();
+        capped.mul_f64(jitter)
     }
 }
