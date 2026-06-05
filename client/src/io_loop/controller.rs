@@ -42,12 +42,6 @@ impl EventLoop {
         let mut events = Events::with_capacity(1024);
 
         while self.lifecycle.state() != State::ShutdownComplete {
-            // Check for rebootstrap condition before blocking on I/O.
-            if self.state.metadata.needs_rebootstrap() {
-                self.state.rebootstrap();
-                continue;
-            }
-
             if let Err(e) = self.state.pool.poll_io(&mut events, None) {
                 match e.kind() {
                     std::io::ErrorKind::Interrupted => continue,

@@ -258,31 +258,6 @@ impl ConnectionPool {
         }
     }
 
-    /// Deregister all connections from the poll and drop them.
-    /// Also clears the pending request queue and resets reconnect state.
-    pub fn close_all(&mut self) {
-        let registry = self.poll.registry();
-        for mut conn in self.connections.drain(..) {
-            let _ = registry.deregister(conn.stream());
-        }
-        self.pending.clear();
-        self.broker_reconnect.clear();
-    }
-
-    /// Return `true` when there are no live connections AND every known
-    /// broker is in backoff state (i.e. no node can be connected to right now).
-    pub fn all_brokers_in_backoff(&self) -> bool {
-        if self.connections.is_empty() && !self.broker_reconnect.is_empty() {
-            // Every tracked broker should have `failures > 0` and
-            // `next_attempt` in the future (or none at all).
-            self.broker_reconnect
-                .values()
-                .all(|s| s.failures > 0 && s.next_attempt.map_or(true, |t| t > Instant::now()))
-        } else {
-            false
-        }
-    }
-
     /// Return broker ids that have pending reconnect attempts whose
     /// backoff has expired but are not currently connected.
     pub fn expired_reconnects(&self) -> Vec<i32> {

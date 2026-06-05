@@ -21,10 +21,7 @@ impl ClusterState {
         let (pool, waker) = ConnectionPool::new(options.client_name.clone());
         let state = Self {
             pool,
-            metadata: MetadataCache::new(
-                options.metadata_refresh_interval,
-                options.metadata_recovery_rebootstrap_trigger_ms,
-            ),
+            metadata: MetadataCache::new(options.metadata_refresh_interval),
             options,
             next_connection_token: 1,
         };
@@ -115,11 +112,6 @@ impl ClusterState {
             self.pool.try_reconnect(broker_id, base, max, result);
         }
 
-        // Detect KIP-899 condition: all brokers are stuck in backoff.
-        if self.pool.all_brokers_in_backoff() {
-            self.metadata.set_all_brokers_unavailable();
-        }
-
         // Connect to new brokers from pending queue
         for broker_id in self.pool.pending_brokers() {
             if self
@@ -176,26 +168,6 @@ impl ClusterState {
         Err(format!("could not connect to broker {broker_id}"))
     }
 
-    /// Close all connections, clear metadata, and re-bootstrap from
-    /// `bootstrap.servers`.  Blocks the calling thread until a connection
-    /// is re-established and metadata is refreshed.
-    pub fn rebootstrap(&mut self) {
-        tracing::info!("rebootstrapping from bootstrap servers");
-
-        // 1. Close all existing connections.
-        self.pool.close_all();
-
-        // 2. Clear metadata cache (but preserve rebootstrap config).
-        self.metadata.clear();
-
-        // 3. Re-run the blocking bootstrap sequence.
-        self.bootstrap();
-
-        // 4. Reset rebootstrap tracking state.
-        self.metadata.reset_rebootstrap_state();
-
-        tracing::info!("rebootstrap complete");
-    }
 }
 
 mod bootstrap;
