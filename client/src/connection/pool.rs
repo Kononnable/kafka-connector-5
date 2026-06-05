@@ -16,7 +16,7 @@ const WAKEUP_TOKEN: Token = Token(0);
 /// with a live connection so proper version negotiation can happen.
 struct QueuedRequest {
     api_key: i16,
-    flush: Box<dyn FnOnce(&mut Connection) -> Result<i32, String> + Send>,
+    flush: Box<dyn FnOnce(&mut Connection) -> Result<(i32, ApiVersion), String> + Send>,
 }
 
 /// Per-broker reconnect failure tracking.
@@ -65,10 +65,11 @@ impl ConnectionPool {
         let api_key = R::get_api_key().0;
         let flush = Box::new(move |conn: &mut Connection| {
             conn.send_api_request(&request, version)
-                .map(|(cid, _)| cid)
+                .map(|(cid, v)| (cid, v))
                 .map_err(|e| format!("{e}"))
         });
-        self.pending.push((broker_id, QueuedRequest { api_key, flush }));
+        self.pending
+            .push((broker_id, QueuedRequest { api_key, flush }));
     }
 
     /// Return the set of broker ids that have queued requests.
@@ -83,8 +84,8 @@ impl ConnectionPool {
     }
 
     /// Push all queued requests for `broker_id` onto the connection's
-    /// write buffer.  Returns the correlation id of each flushed request.
-    pub fn flush_pending(&mut self, broker_id: i32) -> Vec<i32> {
+    /// write buffer.  Returns `(correlation_id, version)` for each flushed request.
+    pub fn flush_pending(&mut self, broker_id: i32) -> Vec<(i32, ApiVersion)> {
         let Some(conn) = self
             .connections
             .iter_mut()
@@ -93,30 +94,30 @@ impl ConnectionPool {
             return Vec::new();
         };
 
-        let mut corr_ids = Vec::new();
+        let mut flushed = Vec::new();
         let mut i = 0;
         while i < self.pending.len() {
             if self.pending[i].0 == broker_id {
                 let (_, q) = self.pending.swap_remove(i);
                 match (q.flush)(conn) {
-                    Ok(cid) => corr_ids.push(cid),
+                    Ok((cid, ver)) => flushed.push((cid, ver)),
                     Err(e) => tracing::warn!("flush failed (api_key={}): {e}", q.api_key),
                 }
             } else {
                 i += 1;
             }
         }
-        corr_ids
+        flushed
     }
 
     /// Flush queued requests for every connected broker.
-    /// Returns `(broker_id, correlation_id)` for each flushed request.
-    pub fn send_api_requests(&mut self) -> Vec<(i32, i32)> {
+    /// Returns `(broker_id, correlation_id, version)` for each flushed request.
+    pub fn send_api_requests(&mut self) -> Vec<(i32, i32, ApiVersion)> {
         let ids: Vec<i32> = self.connections.iter().map(|c| c.node_id()).collect();
         let mut flushed = Vec::new();
         for broker_id in ids {
-            for cid in self.flush_pending(broker_id) {
-                flushed.push((broker_id, cid));
+            for (cid, ver) in self.flush_pending(broker_id) {
+                flushed.push((broker_id, cid, ver));
             }
         }
         flushed
@@ -125,11 +126,7 @@ impl ConnectionPool {
     /// Poll for I/O events on all registered connections.
     /// When no connections are registered, uses a timeout based on the
     /// earliest backoff expiration to avoid blocking forever.
-    pub fn poll_io(
-        &mut self,
-        events: &mut Events,
-        timeout: Option<Duration>,
-    ) -> io::Result<()> {
+    pub fn poll_io(&mut self, events: &mut Events, timeout: Option<Duration>) -> io::Result<()> {
         if self.connections.is_empty() {
             let mut earliest = None;
             for state in self.broker_reconnect.values() {
@@ -189,13 +186,18 @@ impl ConnectionPool {
     /// Remove a dead connection by broker id. Increments the broker's
     /// reconnect failure counter and schedules the next retry.
     pub fn remove_connection(&mut self, broker_id: i32, base: Duration, max: Duration) {
-        if let Some(pos) = self.connections.iter().position(|c| c.node_id() == broker_id) {
-            let entry = self.broker_reconnect.entry(broker_id).or_insert_with(|| {
-                BrokerReconnectState {
-                    failures: 0,
-                    next_attempt: None,
-                }
-            });
+        if let Some(pos) = self
+            .connections
+            .iter()
+            .position(|c| c.node_id() == broker_id)
+        {
+            let entry =
+                self.broker_reconnect
+                    .entry(broker_id)
+                    .or_insert_with(|| BrokerReconnectState {
+                        failures: 0,
+                        next_attempt: None,
+                    });
             entry.failures = entry.failures.saturating_add(1);
             entry.next_attempt = Some(Instant::now() + entry.backoff(base, max));
             self.connections.remove(pos);
@@ -209,7 +211,10 @@ impl ConnectionPool {
         let Some(entry) = self.broker_reconnect.get(&broker_id) else {
             return true;
         };
-        entry.failures == 0 || entry.next_attempt.map_or(true, |t| t.elapsed() > Duration::ZERO)
+        entry.failures == 0
+            || entry
+                .next_attempt
+                .map_or(true, |t| t.elapsed() > Duration::ZERO)
     }
 
     /// Record that a reconnect attempt is being made for `broker_id`.
@@ -253,6 +258,31 @@ impl ConnectionPool {
         }
     }
 
+    /// Deregister all connections from the poll and drop them.
+    /// Also clears the pending request queue and resets reconnect state.
+    pub fn close_all(&mut self) {
+        let registry = self.poll.registry();
+        for mut conn in self.connections.drain(..) {
+            let _ = registry.deregister(conn.stream());
+        }
+        self.pending.clear();
+        self.broker_reconnect.clear();
+    }
+
+    /// Return `true` when there are no live connections AND every known
+    /// broker is in backoff state (i.e. no node can be connected to right now).
+    pub fn all_brokers_in_backoff(&self) -> bool {
+        if self.connections.is_empty() && !self.broker_reconnect.is_empty() {
+            // Every tracked broker should have `failures > 0` and
+            // `next_attempt` in the future (or none at all).
+            self.broker_reconnect
+                .values()
+                .all(|s| s.failures > 0 && s.next_attempt.map_or(true, |t| t > Instant::now()))
+        } else {
+            false
+        }
+    }
+
     /// Return broker ids that have pending reconnect attempts whose
     /// backoff has expired but are not currently connected.
     pub fn expired_reconnects(&self) -> Vec<i32> {
@@ -265,7 +295,10 @@ impl ConnectionPool {
             if state.failures == 0 {
                 continue;
             }
-            if state.next_attempt.map_or(true, |t| t.elapsed() <= Duration::ZERO) {
+            if state
+                .next_attempt
+                .map_or(true, |t| t.elapsed() <= Duration::ZERO)
+            {
                 expired.push(broker_id);
             }
         }
@@ -287,10 +320,7 @@ impl BrokerReconnectState {
             max
         } else {
             let multiplier = (1u32 << exp) as u32;
-            std::cmp::min(
-                base.checked_mul(multiplier).unwrap_or(max),
-                max,
-            )
+            std::cmp::min(base.checked_mul(multiplier).unwrap_or(max), max)
         };
         let jitter = 0.8 + 0.4 * rand::random::<f64>();
         capped.mul_f64(jitter)

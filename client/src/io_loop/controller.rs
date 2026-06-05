@@ -42,7 +42,13 @@ impl EventLoop {
         let mut events = Events::with_capacity(1024);
 
         while self.lifecycle.state() != State::ShutdownComplete {
-            if let Err(e) = self.state.pool().poll_io(&mut events, None) {
+            // Check for rebootstrap condition before blocking on I/O.
+            if self.state.metadata.needs_rebootstrap() {
+                self.state.rebootstrap();
+                continue;
+            }
+
+            if let Err(e) = self.state.pool.poll_io(&mut events, None) {
                 match e.kind() {
                     std::io::ErrorKind::Interrupted => continue,
                     _ => {
@@ -62,15 +68,17 @@ impl EventLoop {
     }
 
     fn send_api_requests(&mut self) {
-        for &(broker_id, corr_id) in &self.state.pool().send_api_requests() {
+        for &(broker_id, corr_id, version) in &self.state.pool.send_api_requests() {
             let idx = self
                 .state
-                .pool()
+                .pool
                 .connections()
                 .iter()
                 .position(|c| c.node_id() == broker_id)
                 .expect("broker connection must exist for just-flushed request");
-            self.state.metadata_mut().register_inflight_refresh(idx, corr_id);
+            self.state
+                .metadata
+                .register_inflight_refresh(idx, corr_id, version);
         }
     }
 
@@ -86,19 +94,15 @@ impl EventLoop {
     }
 
     fn process_api_responses(&mut self) {
-        for (conn_idx, corr_id, body) in self.state.pool().collect_responses() {
-            if !self
-                .state
-                .metadata_mut()
-                .on_response(corr_id, conn_idx, body)
-            {
+        for (conn_idx, corr_id, body) in self.state.pool.collect_responses() {
+            if !self.state.metadata.on_response(corr_id, conn_idx, body) {
                 tracing::debug!(corr_id, "unhandled response (no state machine registered)");
             }
         }
     }
 
     fn tick(&mut self) {
-        if let Some(req) = self.state.metadata_mut().tick() {
+        if let Some(req) = self.state.metadata.tick() {
             let _ = self.state.send(None, req, None);
         }
     }

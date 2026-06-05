@@ -35,6 +35,11 @@ pub struct ClusterOptions {
     /// Maximum reconnect backoff duration.
     #[derivative(Default(value = "Duration::from_millis(1_000)"))]
     pub reconnect_backoff_max_ms: Duration,
+
+    /// If a metadata response has not been received for this duration,
+    /// the client will re-bootstrap using `bootstrap.servers`.
+    #[derivative(Default(value = "Duration::from_secs(300)"))]
+    pub metadata_recovery_rebootstrap_trigger_ms: Duration,
 }
 
 impl ClusterOptions {

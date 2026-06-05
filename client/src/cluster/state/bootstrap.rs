@@ -55,7 +55,7 @@ impl ClusterState {
                 self.next_connection_token += 1;
                 if let Ok(mut stream) = TcpStream::connect(*addr)
                     && self
-                        .pool()
+                        .pool
                         .registry()
                         .register(&mut stream, token, Interest::WRITABLE | Interest::READABLE)
                         .is_ok()
@@ -82,7 +82,7 @@ impl ClusterState {
                     break;
                 }
 
-                if let Err(e) = self.pool().poll_io(&mut poll_events, Some(remaining)) {
+                if let Err(e) = self.pool.poll_io(&mut poll_events, Some(remaining)) {
                     match e.kind() {
                         io::ErrorKind::Interrupted => continue,
                         _ => {
@@ -118,17 +118,17 @@ impl ClusterState {
 
                             if let Err(reason) = result {
                                 tracing::warn!("failed to bootstrap via {addr}: {reason}");
-                                let _ = self.pool().registry().deregister(conn.stream());
+                                let _ = self.pool.registry().deregister(conn.stream());
                                 continue;
                             }
 
                             // Close remaining candidates.
                             for (mut other, _) in candidates.drain(..) {
-                                let _ = self.pool().registry().deregister(&mut other);
+                                let _ = self.pool.registry().deregister(&mut other);
                             }
 
                             let node_id = conn.node_id();
-                            self.pool().push(conn);
+                            self.pool.push(conn);
                             tracing::info!("connected to broker {node_id} at {addr}");
                             return;
                         }
@@ -138,7 +138,7 @@ impl ClusterState {
 
             // Clean up straggler candidates.
             for (mut other, _) in candidates.drain(..) {
-                let _ = self.pool().registry().deregister(&mut other);
+                let _ = self.pool.registry().deregister(&mut other);
             }
 
             tracing::warn!(
@@ -168,9 +168,7 @@ impl ClusterState {
             if rem.is_zero() {
                 return Err(format!("{ctx} write timed out"));
             }
-            let _ = self
-                .pool()
-                .poll_io(poll_events, Some(rem));
+            let _ = self.pool.poll_io(poll_events, Some(rem));
             if poll_events
                 .iter()
                 .any(|e| e.token() == token && e.is_writable())
@@ -186,9 +184,7 @@ impl ClusterState {
             if rem.is_zero() {
                 return Err(format!("{ctx} timed out"));
             }
-            let _ = self
-                .pool()
-                .poll_io(poll_events, Some(rem));
+            let _ = self.pool.poll_io(poll_events, Some(rem));
             if poll_events
                 .iter()
                 .any(|e| e.token() == token && e.is_readable())

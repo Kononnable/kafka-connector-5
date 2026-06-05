@@ -11,8 +11,8 @@ use crate::metadata::MetadataCache;
 /// Owns the connection pool, metadata cache, and the mio `Poll` instance.
 pub struct ClusterState {
     pub(crate) options: ClusterOptions,
-    pool: ConnectionPool,
-    metadata: MetadataCache,
+    pub(crate) pool: ConnectionPool,
+    pub(crate) metadata: MetadataCache,
     next_connection_token: usize,
 }
 
@@ -21,7 +21,10 @@ impl ClusterState {
         let (pool, waker) = ConnectionPool::new(options.client_name.clone());
         let state = Self {
             pool,
-            metadata: MetadataCache::new(options.metadata_refresh_interval),
+            metadata: MetadataCache::new(
+                options.metadata_refresh_interval,
+                options.metadata_recovery_rebootstrap_trigger_ms,
+            ),
             options,
             next_connection_token: 1,
         };
@@ -38,7 +41,7 @@ impl ClusterState {
             if token == Token(0) {
                 continue;
             }
-            if let Some(conn) = self.pool().find_by_token(token) {
+            if let Some(conn) = self.pool.find_by_token(token) {
                 let node_id = conn.node_id();
                 if event.is_readable() {
                     if conn.on_readable().is_err() {
@@ -65,7 +68,7 @@ impl ClusterState {
         let base = self.options.reconnect_backoff_ms;
         let max = self.options.reconnect_backoff_max_ms;
         for &broker_id in &broker_ids {
-            self.pool().remove_connection(broker_id, base, max);
+            self.pool.remove_connection(broker_id, base, max);
         }
         broker_ids
     }
@@ -87,7 +90,7 @@ impl ClusterState {
                 .ok_or_else(|| "no brokers in metadata cache".to_string())?,
         };
 
-        self.pool().enqueue(broker_id, request, version);
+        self.pool.enqueue(broker_id, request, version);
         Ok(())
     }
 
@@ -99,26 +102,36 @@ impl ClusterState {
 
         // Reconnect to brokers whose connections just died
         for &broker_id in dead_broker_ids {
-            if !self.pool().can_reconnect(broker_id) {
+            if !self.pool.can_reconnect(broker_id) {
                 continue;
             }
             let result = self.try_connect(broker_id);
-            self.pool().try_reconnect(broker_id, base, max, result);
+            self.pool.try_reconnect(broker_id, base, max, result);
         }
 
         // Retry backoff-expired brokers from previous iterations
-        for broker_id in self.pool().expired_reconnects() {
+        for broker_id in self.pool.expired_reconnects() {
             let result = self.try_connect(broker_id);
-            self.pool().try_reconnect(broker_id, base, max, result);
+            self.pool.try_reconnect(broker_id, base, max, result);
+        }
+
+        // Detect KIP-899 condition: all brokers are stuck in backoff.
+        if self.pool.all_brokers_in_backoff() {
+            self.metadata.set_all_brokers_unavailable();
         }
 
         // Connect to new brokers from pending queue
-        for broker_id in self.pool().pending_brokers() {
-            if self.pool().connections().iter().any(|c| c.node_id() == broker_id) {
+        for broker_id in self.pool.pending_brokers() {
+            if self
+                .pool
+                .connections()
+                .iter()
+                .any(|c| c.node_id() == broker_id)
+            {
                 continue;
             }
             let result = self.try_connect(broker_id);
-            self.pool().try_reconnect(broker_id, base, max, result);
+            self.pool.try_reconnect(broker_id, base, max, result);
         }
     }
 
@@ -139,7 +152,7 @@ impl ClusterState {
                     let token = Token(self.next_connection_token);
                     self.next_connection_token += 1;
                     if self
-                        .pool()
+                        .pool
                         .registry()
                         .register(&mut stream, token, Interest::READABLE | Interest::WRITABLE)
                         .is_ok()
@@ -147,11 +160,11 @@ impl ClusterState {
                         let conn = Connection::new(
                             token,
                             stream,
-                            Some(self.pool().client_id().to_string()),
+                            Some(self.pool.client_id().to_string()),
                             broker_id,
                         );
-                        self.pool().push(conn);
-                        self.pool().reset_reconnect(broker_id);
+                        self.pool.push(conn);
+                        self.pool.reset_reconnect(broker_id);
                         return Ok(());
                     }
                 }
@@ -163,12 +176,25 @@ impl ClusterState {
         Err(format!("could not connect to broker {broker_id}"))
     }
 
-    pub fn pool(&mut self) -> &mut ConnectionPool {
-        &mut self.pool
-    }
+    /// Close all connections, clear metadata, and re-bootstrap from
+    /// `bootstrap.servers`.  Blocks the calling thread until a connection
+    /// is re-established and metadata is refreshed.
+    pub fn rebootstrap(&mut self) {
+        tracing::info!("rebootstrapping from bootstrap servers");
 
-    pub fn metadata_mut(&mut self) -> &mut MetadataCache {
-        &mut self.metadata
+        // 1. Close all existing connections.
+        self.pool.close_all();
+
+        // 2. Clear metadata cache (but preserve rebootstrap config).
+        self.metadata.clear();
+
+        // 3. Re-run the blocking bootstrap sequence.
+        self.bootstrap();
+
+        // 4. Reset rebootstrap tracking state.
+        self.metadata.reset_rebootstrap_state();
+
+        tracing::info!("rebootstrap complete");
     }
 }
 
