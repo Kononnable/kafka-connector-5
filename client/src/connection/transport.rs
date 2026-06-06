@@ -523,7 +523,7 @@ mod tests {
         fn test_read_incomplete_frame_body() {
             let (_peer, stream) = connected_pair();
             let mut conn = Connection::new(Token(1), stream, None, -1);
-            conn.read_buffer.extend_from_slice(&100i32.to_be_bytes());
+            conn.read_buffer.extend_from_slice(&100_i32.to_be_bytes());
             conn.read_buffer.extend_from_slice(&[0u8; 50]);
             assert!(conn.read_broker_response().is_none());
         }

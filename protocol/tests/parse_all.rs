@@ -3,7 +3,7 @@ use std::path::Path;
 #[test]
 fn test_all_json_files_parse() {
     let path = Path::new("messages/");
-    let mut total = 0u32;
+    let mut total = 0_u32;
     let mut failed = Vec::new();
 
     for entry in std::fs::read_dir(path).unwrap() {

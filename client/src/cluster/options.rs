@@ -35,7 +35,6 @@ pub struct ClusterOptions {
     /// Maximum reconnect backoff duration.
     #[derivative(Default(value = "Duration::from_millis(1_000)"))]
     pub reconnect_backoff_max_ms: Duration,
-
 }
 
 impl ClusterOptions {

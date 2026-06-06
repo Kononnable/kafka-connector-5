@@ -950,7 +950,7 @@ mod tests {
 
     #[test]
     fn test_roundtrip_array() {
-        let items = vec![1i32, 2, 3, 4];
+        let items = vec![1_i32, 2, 3, 4];
         let mut buf = BytesMut::new();
         items
             .encode(&mut buf, crate::traits::ApiVersion::new(0), false)
@@ -1002,7 +1002,7 @@ mod tests {
     #[test]
     fn test_roundtrip_varint() {
         use super::super::types::VarInt;
-        for val in [0i32, 1, -1, 127, -128, 16383, -16384, 2000000, -2000000] {
+        for val in [0_i32, 1, -1, 127, -128, 16383, -16384, 2000000, -2000000] {
             let mut buf = BytesMut::new();
             VarInt(val)
                 .encode(&mut buf, crate::traits::ApiVersion::new(0), false)

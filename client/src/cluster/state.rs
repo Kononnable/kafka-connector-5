@@ -40,25 +40,21 @@ impl ClusterState {
             }
             if let Some(conn) = self.pool.find_by_token(token) {
                 let node_id = conn.node_id();
-                if event.is_readable() {
-                    if conn.on_readable().is_err() {
-                        tracing::error!(
-                            "read error on connection {:?} (broker {})",
-                            token.0,
-                            node_id
-                        );
-                        broker_ids.push(node_id);
-                    }
+                if event.is_readable() && conn.on_readable().is_err() {
+                    tracing::error!(
+                        "read error on connection {:?} (broker {})",
+                        token.0,
+                        node_id
+                    );
+                    broker_ids.push(node_id);
                 }
-                if event.is_writable() {
-                    if conn.on_writable().is_err() {
-                        tracing::error!(
-                            "write error on connection {:?} (broker {})",
-                            token.0,
-                            node_id
-                        );
-                        broker_ids.push(node_id);
-                    }
+                if event.is_writable() && conn.on_writable().is_err() {
+                    tracing::error!(
+                        "write error on connection {:?} (broker {})",
+                        token.0,
+                        node_id
+                    );
+                    broker_ids.push(node_id);
                 }
             }
         }
@@ -167,7 +163,6 @@ impl ClusterState {
         }
         Err(format!("could not connect to broker {broker_id}"))
     }
-
 }
 
 mod bootstrap;
