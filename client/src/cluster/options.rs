@@ -61,3 +61,106 @@ impl ClusterOptions {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_ok_with_valid_servers() {
+        let opts = ClusterOptions {
+            bootstrap_servers: vec!["127.0.0.1:9092".to_string()],
+            ..Default::default()
+        };
+        assert!(opts.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_ok_with_multiple_valid_servers() {
+        let opts = ClusterOptions {
+            bootstrap_servers: vec![
+                "127.0.0.1:9092".to_string(),
+                "127.0.0.1:9093".to_string(),
+                "127.0.0.1:9094".to_string(),
+            ],
+            ..Default::default()
+        };
+        assert!(opts.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_fails_with_empty_servers() {
+        let opts = ClusterOptions {
+            bootstrap_servers: Vec::new(),
+            ..Default::default()
+        };
+        let err = opts.validate().unwrap_err();
+        assert_eq!(err.len(), 1);
+        assert!(matches!(
+            err[0],
+            ClusterOptionsValidationError::NoBootstrapServers
+        ));
+    }
+
+    #[test]
+    fn validate_fails_with_invalid_address() {
+        let opts = ClusterOptions {
+            bootstrap_servers: vec!["not-a-valid-address".to_string()],
+            ..Default::default()
+        };
+        let err = opts.validate().unwrap_err();
+        assert_eq!(err.len(), 1);
+        match &err[0] {
+            ClusterOptionsValidationError::InvalidAddress { address, .. } => {
+                assert_eq!(address, "not-a-valid-address");
+            }
+            _ => panic!("expected InvalidAddress"),
+        }
+    }
+
+    #[test]
+    fn validate_fails_with_multiple_errors() {
+        let opts = ClusterOptions {
+            bootstrap_servers: vec![
+                "".to_string(),
+                "not-an-ip".to_string(),
+                "also-invalid:abc".to_string(),
+            ],
+            ..Default::default()
+        };
+        let err = opts.validate().unwrap_err();
+        assert_eq!(err.len(), 3);
+        // First error: empty string is not a valid SocketAddr
+        match &err[0] {
+            ClusterOptionsValidationError::InvalidAddress { .. } => {}
+            _ => panic!("expected InvalidAddress, got {:?}", err[0]),
+        }
+        // Second error: not-an-ip
+        match &err[1] {
+            ClusterOptionsValidationError::InvalidAddress { .. } => {}
+            _ => panic!("expected InvalidAddress, got {:?}", err[1]),
+        }
+        // Third error: also-invalid:abc
+        match &err[2] {
+            ClusterOptionsValidationError::InvalidAddress { .. } => {}
+            _ => panic!("expected InvalidAddress, got {:?}", err[2]),
+        }
+    }
+
+    #[test]
+    fn validate_empty_server_in_list_also_errors() {
+        let opts = ClusterOptions {
+            bootstrap_servers: vec!["127.0.0.1:9092".to_string(), "".to_string()],
+            ..Default::default()
+        };
+        let err = opts.validate().unwrap_err();
+        assert_eq!(err.len(), 1);
+        match &err[0] {
+            ClusterOptionsValidationError::InvalidAddress { address, .. } => {
+                assert_eq!(address, "");
+            }
+            _ => panic!("expected InvalidAddress"),
+        }
+    }
+
+}
