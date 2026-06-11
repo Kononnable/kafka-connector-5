@@ -15,6 +15,7 @@ use protocol::traits::{ApiRequest, ApiResponse, ApiVersion};
 
 use super::ClusterState;
 use crate::connection::Connection;
+use crate::types::{BrokerId, RequestHandlerId};
 
 impl ClusterState {
     /// Bootstrap the cluster connection.
@@ -102,7 +103,7 @@ impl ClusterState {
                                 token,
                                 stream,
                                 Some(self.options.client_name.clone()),
-                                -1,
+                                BrokerId(-1),
                             );
 
                             let addr = conn.peer_addr();
@@ -211,7 +212,7 @@ impl ClusterState {
         let version = ApiVersionsRequest::get_max_supported_version();
         let token = conn.token();
 
-        conn.send_api_request(&ApiVersionsRequest::default(), Some(version))
+        conn.send_api_request(&ApiVersionsRequest::default(), Some(version), RequestHandlerId(0), self.options.request_timeout)
             .map_err(|e| format!("serialize: {e}"))?;
 
         let mut body = self.flush_and_poll_response(
@@ -255,7 +256,7 @@ impl ClusterState {
                 )
             });
 
-        conn.send_api_request(&ApiVersionsRequest::default(), Some(negotiated))
+        conn.send_api_request(&ApiVersionsRequest::default(), Some(negotiated), RequestHandlerId(0), self.options.request_timeout)
             .map_err(|e| format!("serialize retry: {e}"))?;
 
         let mut body = self.flush_and_poll_response(
@@ -294,7 +295,7 @@ impl ClusterState {
     ) -> Result<MetadataResponse, String> {
         let token = conn.token();
         let (_, version) = conn
-            .send_api_request(&MetadataRequest::default(), None)
+            .send_api_request(&MetadataRequest::default(), None, RequestHandlerId(0), self.options.request_timeout)
             .map_err(|e| format!("serialize MetadataRequest: {e}"))?;
 
         let mut poll_events = Events::with_capacity(1);
@@ -319,7 +320,7 @@ impl ClusterState {
         for (node_id, broker) in &resp.brokers {
             let broker_port = broker.port as u16;
             if broker.host == peer.ip().to_string() && broker_port == peer.port() {
-                conn.set_node_id(*node_id);
+                conn.set_node_id(BrokerId(*node_id));
                 return Ok(());
             }
         }

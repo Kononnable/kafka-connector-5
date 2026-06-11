@@ -4,12 +4,17 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use futures_timer::Delay;
+use indexmap::IndexMap;
 
 use super::ClusterOptions;
 use super::error::ClusterOptionsValidationError;
 use crate::consumer::{ConsumerController, ConsumerOptions, ConsumerOptionsValidationError};
 use crate::io_loop::{Command, CommandSender, EventLoop, LifecycleState, State};
 use crate::producer::{ProducerController, ProducerOptions, ProducerOptionsValidationError};
+use crate::types::BrokerId;
+use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
+
+
 
 pub struct ClusterController {
     event_loop: Option<JoinHandle<()>>,
@@ -18,6 +23,10 @@ pub struct ClusterController {
 }
 
 impl ClusterController {
+    pub fn state(&self) -> State {
+        self.lifecycle_state.state()
+    }
+
     pub fn new(options: ClusterOptions) -> Result<Arc<Self>, Vec<ClusterOptionsValidationError>> {
         options.validate()?;
         let (mut el, cmd_tx, lifecycle_state) = EventLoop::new(options);
@@ -44,6 +53,27 @@ impl ClusterController {
             Delay::new(Duration::from_millis(10)).await;
         }
         ProducerController::new(self, options)
+    }
+
+    /// Returns the API versions supported by a connected broker.
+    ///
+    /// Pass `None` to query any available broker.
+    /// Waits for the event loop to become active before querying.
+    pub async fn broker_api_versions(
+        self: &Arc<Self>,
+        broker_id: Option<BrokerId>,
+    ) -> Option<IndexMap<i16, ApiVersionEntry>> {
+        while self.lifecycle_state.state() != State::Active {
+            Delay::new(Duration::from_millis(10)).await;
+        }
+        let (tx, rx) = futures::channel::oneshot::channel();
+        self.cmd_tx
+            .send(Command::GetApiVersions {
+                broker_id,
+                reply: tx,
+            })
+            .ok()?;
+        rx.await.ok()?
     }
 
     /// Create a consumer using this cluster connection.

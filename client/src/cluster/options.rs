@@ -1,4 +1,3 @@
-use std::net::SocketAddr;
 use std::time::Duration;
 
 use super::error::ClusterOptionsValidationError;
@@ -46,10 +45,10 @@ impl ClusterOptions {
         }
 
         for addr in &self.bootstrap_servers {
-            if let Err(e) = addr.parse::<SocketAddr>() {
+            if let Err(msg) = validate_bootstrap_addr(addr) {
                 errors.push(ClusterOptionsValidationError::InvalidAddress {
                     address: addr.clone(),
-                    source: e,
+                    msg,
                 });
             }
         }
@@ -60,6 +59,16 @@ impl ClusterOptions {
             Err(errors)
         }
     }
+}
+
+fn validate_bootstrap_addr(addr: &str) -> Result<(), String> {
+    let port_str = addr.rsplit(':').next().ok_or_else(|| {
+        format!("missing port in bootstrap address \"{addr}\"")
+    })?;
+    port_str
+        .parse::<u16>()
+        .map_err(|_| format!("invalid port in bootstrap address \"{addr}\""))?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -89,6 +98,18 @@ mod tests {
     }
 
     #[test]
+    fn validate_ok_with_hostname() {
+        let opts = ClusterOptions {
+            bootstrap_servers: vec![
+                "localhost:9092".to_string(),
+                "kafka-broker-1.example.com:9092".to_string(),
+            ],
+            ..Default::default()
+        };
+        assert!(opts.validate().is_ok());
+    }
+
+    #[test]
     fn validate_fails_with_empty_servers() {
         let opts = ClusterOptions {
             bootstrap_servers: Vec::new(),
@@ -103,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn validate_fails_with_invalid_address() {
+    fn validate_fails_with_missing_port() {
         let opts = ClusterOptions {
             bootstrap_servers: vec!["not-a-valid-address".to_string()],
             ..Default::default()
@@ -119,48 +140,35 @@ mod tests {
     }
 
     #[test]
-    fn validate_fails_with_multiple_errors() {
+    fn validate_fails_with_invalid_port() {
         let opts = ClusterOptions {
-            bootstrap_servers: vec![
-                "".to_string(),
-                "not-an-ip".to_string(),
-                "also-invalid:abc".to_string(),
-            ],
-            ..Default::default()
-        };
-        let err = opts.validate().unwrap_err();
-        assert_eq!(err.len(), 3);
-        // First error: empty string is not a valid SocketAddr
-        match &err[0] {
-            ClusterOptionsValidationError::InvalidAddress { .. } => {}
-            _ => panic!("expected InvalidAddress, got {:?}", err[0]),
-        }
-        // Second error: not-an-ip
-        match &err[1] {
-            ClusterOptionsValidationError::InvalidAddress { .. } => {}
-            _ => panic!("expected InvalidAddress, got {:?}", err[1]),
-        }
-        // Third error: also-invalid:abc
-        match &err[2] {
-            ClusterOptionsValidationError::InvalidAddress { .. } => {}
-            _ => panic!("expected InvalidAddress, got {:?}", err[2]),
-        }
-    }
-
-    #[test]
-    fn validate_empty_server_in_list_also_errors() {
-        let opts = ClusterOptions {
-            bootstrap_servers: vec!["127.0.0.1:9092".to_string(), "".to_string()],
+            bootstrap_servers: vec!["127.0.0.1:notaport".to_string()],
             ..Default::default()
         };
         let err = opts.validate().unwrap_err();
         assert_eq!(err.len(), 1);
         match &err[0] {
             ClusterOptionsValidationError::InvalidAddress { address, .. } => {
-                assert_eq!(address, "");
+                assert_eq!(address, "127.0.0.1:notaport");
             }
             _ => panic!("expected InvalidAddress"),
         }
     }
 
+    #[test]
+    fn validate_fails_with_multiple_errors() {
+        let opts = ClusterOptions {
+            bootstrap_servers: vec![
+                "".to_string(),
+                "not-an-address".to_string(),
+                "also-invalid:abc".to_string(),
+            ],
+            ..Default::default()
+        };
+        let err = opts.validate().unwrap_err();
+        assert_eq!(err.len(), 3);
+        for e in &err {
+            assert!(matches!(e, ClusterOptionsValidationError::InvalidAddress { .. }));
+        }
+    }
 }

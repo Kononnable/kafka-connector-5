@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
+
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use indexmap::IndexMap;
 use mio::Token;
@@ -6,25 +9,28 @@ use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
 use protocol::generated::{ApiVersionsRequest, RequestHeader, ResponseHeader, api_key_name};
 use protocol::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
 
+use crate::types::{ApiKey, BrokerId, CorrelationId, InflightRequest, RequestHandlerId};
+
 pub struct Connection {
     token: Token,
     stream: TcpStream,
     client_id: Option<String>,
-    /// The broker's node id. `-1` until the initial MetadataResponse arrives.
-    node_id: i32,
+    node_id: BrokerId,
     next_correlation_id: i32,
-    // TODO: pick a sensible initial capacity
     write_buffer: BytesMut,
-    // TODO: pick a sensible initial capacity
     read_buffer: BytesMut,
-    /// Bytes ready to be written to the socket.
     bytes_to_send: BytesMut,
-    /// Cached ApiVersions entries from this broker.
     api_versions: IndexMap<i16, ApiVersionEntry>,
+    inflight: HashMap<CorrelationId, InflightRequest>,
 }
 
 impl Connection {
-    pub fn new(token: Token, stream: TcpStream, client_id: Option<String>, node_id: i32) -> Self {
+    pub fn new(
+        token: Token,
+        stream: TcpStream,
+        client_id: Option<String>,
+        node_id: BrokerId,
+    ) -> Self {
         Connection {
             token,
             stream,
@@ -35,6 +41,7 @@ impl Connection {
             read_buffer: BytesMut::with_capacity(4096),
             bytes_to_send: BytesMut::new(),
             api_versions: IndexMap::new(),
+            inflight: HashMap::new(),
         }
     }
 
@@ -51,11 +58,16 @@ impl Connection {
     ///
     /// Returns the correlation id **and** the actual version used (useful
     /// when `version` is `None` and negotiation happens internally).
+    ///
+    /// Automatically registers an inflight entry on the connection so
+    /// the response can be dispatched to the correct handler.
     pub fn send_api_request<R: ApiRequest>(
         &mut self,
         request: &R,
         version: Option<ApiVersion>,
-    ) -> Result<(i32, ApiVersion), SerializationError> {
+        handler_id: RequestHandlerId,
+        timeout: Duration,
+    ) -> Result<(CorrelationId, ApiVersion), SerializationError> {
         let version = match version {
             Some(v) => v,
             None => {
@@ -98,8 +110,9 @@ impl Connection {
             }
         }
 
-        let correlation_id = self.next_correlation_id;
+        let correlation_id_raw = self.next_correlation_id;
         self.next_correlation_id += 1;
+        let corr_id = CorrelationId::new(correlation_id_raw);
 
         // Reserve space for the frame length — filled in at the end.
         self.write_buffer.put_i32(0);
@@ -107,7 +120,7 @@ impl Connection {
         let header = RequestHeader {
             request_api_key: R::get_api_key().0,
             request_api_version: version.0,
-            correlation_id,
+            correlation_id: correlation_id_raw,
             client_id: self.client_id.clone(),
         };
         header.encode(&mut self.write_buffer)?;
@@ -120,10 +133,24 @@ impl Connection {
 
         self.bytes_to_send
             .extend_from_slice(&self.write_buffer.split());
-        Ok((correlation_id, version))
+
+        let sent_at = Instant::now();
+        let deadline = sent_at + timeout;
+        self.inflight.insert(
+            corr_id,
+            InflightRequest {
+                api_key: ApiKey(R::get_api_key().0),
+                version,
+                sent_at,
+                deadline,
+                handler_id,
+            },
+        );
+
+        Ok((corr_id, version))
     }
 
-    pub fn node_id(&self) -> i32 {
+    pub fn node_id(&self) -> BrokerId {
         self.node_id
     }
 
@@ -133,8 +160,12 @@ impl Connection {
     /// — the node_id is unknown at connect time and filled in after the first
     /// MetadataResponse. Connections to other brokers should have the correct
     /// node_id passed to [`Connection::new`] directly.
-    pub(crate) fn set_node_id(&mut self, id: i32) {
+    pub(crate) fn set_node_id(&mut self, id: BrokerId) {
         self.node_id = id;
+    }
+
+    pub fn api_versions(&self) -> &IndexMap<i16, ApiVersionEntry> {
+        &self.api_versions
     }
 
     pub(crate) fn set_api_versions(&mut self, versions: IndexMap<i16, ApiVersionEntry>) {
@@ -146,6 +177,31 @@ impl Connection {
         self.stream
             .peer_addr()
             .expect("connected socket always has a peer address")
+    }
+
+    /// Remove and return the inflight entry for a given correlation ID.
+    /// Returns `None` if no such entry exists (e.g., stale response).
+    pub fn take_inflight(&mut self, corr_id: CorrelationId) -> Option<InflightRequest> {
+        self.inflight.remove(&corr_id)
+    }
+
+    /// Drain all inflight entries whose deadline has passed.
+    /// Returns `(correlation_id, InflightRequest)` for each expired request.
+    pub fn drain_expired_inflight(&mut self) -> Vec<(CorrelationId, InflightRequest)> {
+        let now = Instant::now();
+        let expired_keys: Vec<CorrelationId> = self
+            .inflight
+            .iter()
+            .filter(|(_, v)| v.deadline <= now)
+            .map(|(k, _)| *k)
+            .collect();
+        let mut expired = Vec::with_capacity(expired_keys.len());
+        for k in &expired_keys {
+            if let Some(entry) = self.inflight.remove(k) {
+                expired.push((*k, entry));
+            }
+        }
+        expired
     }
 
     /// Decode the response header from `body` and deserialize the payload as `ApiResponse`.
@@ -164,7 +220,7 @@ impl Connection {
     /// If `read_buffer` contains a complete response frame, split it off
     /// and return the correlation ID together with the raw body bytes
     /// (everything after the response header within the frame).
-    pub fn read_broker_response(&mut self) -> Option<(i32, Bytes)> {
+    pub fn read_broker_response(&mut self) -> Option<(CorrelationId, Bytes)> {
         if self.read_buffer.len() < 4 {
             return None;
         }
@@ -174,7 +230,8 @@ impl Connection {
         }
 
         self.read_buffer.advance(4); // consume frame_size
-        let corr_id = ResponseHeader::peek_correlation_id(&self.read_buffer[..]).ok()?;
+        let corr_id_raw = ResponseHeader::peek_correlation_id(&self.read_buffer[..]).ok()?;
+        let corr_id = CorrelationId::new(corr_id_raw);
         let body = self.read_buffer.split_to(frame_size);
         Some((corr_id, body.freeze()))
     }
@@ -252,7 +309,12 @@ mod tests {
     };
     use protocol::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
 
+    use crate::types::{ApiKey, BrokerId, CorrelationId, RequestHandlerId};
+
     use super::Connection;
+
+    const TEST_HANDLER: RequestHandlerId = RequestHandlerId(0);
+    const TEST_TIMEOUT: Duration = Duration::from_secs(30);
 
     /// Read the body of a single Kafka frame from the peer (frame length
     /// prefix consumed, not included in the returned bytes).
@@ -298,12 +360,12 @@ mod tests {
         #[test_log::test]
         fn test_send_single_request_basic() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, Some("test-client".into()), -1);
+            let mut conn = Connection::new(Token(1), stream, Some("test-client".into()), BrokerId(-1));
 
             let (corr_id, _ver) = conn
-                .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+                .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
-            assert_eq!(corr_id, 0);
+            assert_eq!(corr_id.0, 0);
 
             assert!(!conn.bytes_to_send.is_empty(), "expected frame bytes");
             let frame_len = conn.bytes_to_send.len();
@@ -334,13 +396,13 @@ mod tests {
         #[test_log::test]
         fn test_send_multiple_requests_correlation_ids() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             for expected_id in 0..5 {
                 let (corr_id, _ver) = conn
-                    .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+                    .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                     .unwrap();
-                assert_eq!(corr_id, expected_id, "correlation_id {}", expected_id);
+                assert_eq!(corr_id.0, expected_id, "correlation_id {}", expected_id);
             }
 
             let total = conn.bytes_to_send.len();
@@ -374,17 +436,17 @@ mod tests {
         #[test_log::test]
         fn test_send_request_before_api_versions() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             // ApiVersionsRequest is allowed before api_versions is populated
             let (corr_id, _ver) = conn
-                .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+                .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
-            assert_eq!(corr_id, 0);
+            assert_eq!(corr_id.0, 0);
 
             // MetadataRequest is rejected before api_versions is populated
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)))
+                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -396,7 +458,7 @@ mod tests {
         #[test_log::test]
         fn test_send_request_version_negotiation() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             // pin: update when supported version changes
             assert_eq!(MetadataRequest::get_max_supported_version().0, 13);
@@ -410,7 +472,7 @@ mod tests {
                     max_version: 8,
                 },
             )]));
-            conn.send_api_request(&MetadataRequest::default(), None)
+            conn.send_api_request(&MetadataRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
             assert_eq!(
                 i16::from_be_bytes(conn.bytes_to_send[6..8].try_into().unwrap()),
@@ -427,7 +489,7 @@ mod tests {
                     max_version: 20,
                 },
             )]));
-            conn.send_api_request(&MetadataRequest::default(), None)
+            conn.send_api_request(&MetadataRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
             assert_eq!(
                 i16::from_be_bytes(conn.bytes_to_send[6..8].try_into().unwrap()),
@@ -440,7 +502,7 @@ mod tests {
         #[test_log::test]
         fn test_send_request_unsupported_version() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             // broker only supports api 0 (Produce), not api 3 (Metadata)
             conn.set_api_versions(IndexMap::from([(
@@ -453,7 +515,7 @@ mod tests {
 
             // (a) Nonexistent key
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)))
+                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -463,7 +525,7 @@ mod tests {
 
             // (b) Version below min_version
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(1)))
+                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(1)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -473,7 +535,7 @@ mod tests {
 
             // (c) Version above max_version
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(9)))
+                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(9)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -485,14 +547,14 @@ mod tests {
         #[test_log::test]
         fn test_write_buffer_reused() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
             assert!(conn.write_buffer.is_empty());
             let first_send_len = conn.bytes_to_send.len();
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
             assert!(conn.write_buffer.is_empty());
             assert_eq!(conn.bytes_to_send.len(), first_send_len + 12);
@@ -514,7 +576,7 @@ mod tests {
         #[test_log::test]
         fn test_read_incomplete_frame_header() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             conn.read_buffer.extend_from_slice(&[0u8; 3]);
             assert!(conn.read_broker_response().is_none());
         }
@@ -522,7 +584,7 @@ mod tests {
         #[test_log::test]
         fn test_read_incomplete_frame_body() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             conn.read_buffer.extend_from_slice(&100_i32.to_be_bytes());
             conn.read_buffer.extend_from_slice(&[0u8; 50]);
             assert!(conn.read_broker_response().is_none());
@@ -531,19 +593,22 @@ mod tests {
         #[test_log::test]
         fn test_read_single_frame() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             let frame = make_frame(42, &[1, 2, 3]);
             conn.read_buffer.extend_from_slice(&frame);
             // body includes correlation_id bytes
             let expected_body = Bytes::from(vec![0, 0, 0, 42, 1, 2, 3]);
-            assert_eq!(conn.read_broker_response(), Some((42, expected_body)));
+            assert_eq!(
+                conn.read_broker_response(),
+                Some((CorrelationId(42), expected_body))
+            );
             assert!(conn.read_buffer.is_empty());
         }
 
         #[test_log::test]
         fn test_read_multiple_frames_queued() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             let frame1 = make_frame(10, &[0xaa]);
             let frame2 = make_frame(20, &[0xbb, 0xcc]);
             conn.read_buffer.extend_from_slice(&frame1);
@@ -551,33 +616,45 @@ mod tests {
 
             let expected_body1 = Bytes::from(vec![0, 0, 0, 10, 0xaa]);
             let expected_body2 = Bytes::from(vec![0, 0, 0, 20, 0xbb, 0xcc]);
-            assert_eq!(conn.read_broker_response(), Some((10, expected_body1)));
-            assert_eq!(conn.read_broker_response(), Some((20, expected_body2)));
+            assert_eq!(
+                conn.read_broker_response(),
+                Some((CorrelationId(10), expected_body1))
+            );
+            assert_eq!(
+                conn.read_broker_response(),
+                Some((CorrelationId(20), expected_body2))
+            );
             assert!(conn.read_broker_response().is_none());
         }
 
         #[test_log::test]
         fn test_read_exact_frame_boundary() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             let frame = make_frame(7, &[]);
             conn.read_buffer.extend_from_slice(&frame);
             let expected_body = Bytes::from(vec![0, 0, 0, 7]);
-            assert_eq!(conn.read_broker_response(), Some((7, expected_body)));
+            assert_eq!(
+                conn.read_broker_response(),
+                Some((CorrelationId(7), expected_body))
+            );
             assert!(conn.read_buffer.is_empty());
         }
 
         #[test_log::test]
         fn test_read_preserves_extra_bytes() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             let frame1 = make_frame(1, &[0xdd]);
             conn.read_buffer.extend_from_slice(&frame1);
             // partial next frame header
             conn.read_buffer.extend_from_slice(&[0x00, 0x00, 0x01]);
 
             let expected_body = Bytes::from(vec![0, 0, 0, 1, 0xdd]);
-            assert_eq!(conn.read_broker_response(), Some((1, expected_body)));
+            assert_eq!(
+                conn.read_broker_response(),
+                Some((CorrelationId(1), expected_body))
+            );
             assert_eq!(conn.read_buffer.len(), 3);
         }
     }
@@ -587,8 +664,6 @@ mod tests {
     fn connected_pair_small_bufs() -> (std::net::TcpStream, Connection) {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
-        // Connect and set tiny receive buffer on the reader BEFORE accept
-        // so the setting takes effect before any data exchange.
         let peer = std::net::TcpStream::connect(addr).unwrap();
         let rcvbuf: libc::c_int = 512;
         unsafe {
@@ -613,7 +688,7 @@ mod tests {
             );
         };
         let stream = TcpStream::from_std(accepted);
-        let conn = Connection::new(Token(1), stream, None, -1);
+        let conn = Connection::new(Token(1), stream, None, BrokerId(-1));
         (peer, conn)
     }
 
@@ -623,7 +698,7 @@ mod tests {
         #[test_log::test]
         fn test_writable_empty_buffer() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             assert!(conn.bytes_to_send.is_empty());
             conn.on_writable().unwrap();
         }
@@ -631,9 +706,9 @@ mod tests {
         #[test_log::test]
         fn test_writable_single_message() {
             let (mut peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
             assert!(conn.can_write());
 
@@ -658,10 +733,10 @@ mod tests {
         #[test_log::test]
         fn test_writable_multiple_messages() {
             let (mut peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             for _ in 0..3 {
-                conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+                conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                     .unwrap();
             }
             assert!(conn.can_write());
@@ -726,7 +801,7 @@ mod tests {
         #[test_log::test]
         fn test_writable_write_error() {
             let (peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             // Set SO_LINGER to 0 on the peer to force RST on close
             let linger: libc::linger = libc::linger {
@@ -744,7 +819,7 @@ mod tests {
             }
             drop(peer);
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
             let err = conn.on_writable().unwrap_err();
             assert!(!conn.bytes_to_send.is_empty());
@@ -764,7 +839,7 @@ mod tests {
         #[test_log::test]
         fn test_readable_exhausts_available_data() {
             let (mut peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             peer.write_all(&[0xbb; 50]).unwrap();
             // let kernel deliver the data
@@ -781,7 +856,7 @@ mod tests {
         #[test_log::test]
         fn test_readable_eof() {
             let (mut peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             peer.write_all(&[0xcc; 30]).unwrap();
             drop(peer);
@@ -796,7 +871,7 @@ mod tests {
         #[test_log::test]
         fn test_readable_large_data_loops() {
             let (mut peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             // more than the 4096-byte internal temp buffer
             let data = vec![0xdd; 10_000];
@@ -814,7 +889,7 @@ mod tests {
         #[test_log::test]
         fn test_multiple_sends_multiple_reads() {
             let (mut peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             conn.set_api_versions(IndexMap::from([(
                 ApiVersionsRequest::get_api_key().0,
@@ -825,7 +900,7 @@ mod tests {
             )]));
 
             for _ in 0..3 {
-                conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+                conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                     .unwrap();
             }
             conn.on_writable().unwrap();
@@ -855,7 +930,7 @@ mod tests {
             conn.on_readable().unwrap();
             for expected_id in 0..3 {
                 let (corr_id, mut body) = conn.read_broker_response().unwrap();
-                assert_eq!(corr_id, expected_id);
+                assert_eq!(corr_id.0, expected_id);
                 let response_header = ResponseHeader::decode(&mut body, false).unwrap();
                 assert_eq!(response_header.correlation_id, expected_id);
                 let response =
@@ -876,14 +951,14 @@ mod tests {
         #[test_log::test]
         fn test_can_write_empty() {
             let (_peer, stream) = connected_pair();
-            let conn = Connection::new(Token(1), stream, None, -1);
+            let conn = Connection::new(Token(1), stream, None, BrokerId(-1));
             assert!(!conn.can_write());
         }
 
         #[test_log::test]
         fn test_can_write_after_send() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, None, -1);
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             conn.set_api_versions(IndexMap::from([(
                 ApiVersionsRequest::get_api_key().0,
@@ -894,11 +969,96 @@ mod tests {
             )]));
 
             assert!(!conn.can_write());
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)))
+            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
                 .unwrap();
             assert!(conn.can_write());
             conn.on_writable().unwrap();
             assert!(!conn.can_write());
+        }
+    }
+
+    mod inflight_tests {
+        use std::time::{Duration, Instant};
+
+        use super::*;
+
+        #[test_log::test]
+        fn test_inflight_registered_after_send() {
+            let (_peer, stream) = connected_pair();
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
+
+            let (corr_id, _) = conn
+                .send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    RequestHandlerId(1),
+                    Duration::from_secs(10),
+                )
+                .unwrap();
+
+            let inflight = conn.take_inflight(corr_id).unwrap();
+            assert_eq!(inflight.api_key, ApiKey(18));
+            assert_eq!(inflight.version, ApiVersion::new(0));
+            assert_eq!(inflight.handler_id, RequestHandlerId(1));
+        }
+
+        #[test_log::test]
+        fn test_take_inflight_returns_none_for_unknown() {
+            let (_peer, stream) = connected_pair();
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
+
+            assert!(conn.take_inflight(CorrelationId(999)).is_none());
+        }
+
+        #[test_log::test]
+        fn test_take_inflight_consumes_entry() {
+            let (_peer, stream) = connected_pair();
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
+
+            let (corr_id, _) = conn
+                .send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    RequestHandlerId(0),
+                    Duration::from_secs(10),
+                )
+                .unwrap();
+
+            assert!(conn.take_inflight(corr_id).is_some());
+            assert!(conn.take_inflight(corr_id).is_none());
+        }
+
+        #[test_log::test]
+        fn test_drain_expired_inflight() {
+            let (_peer, stream) = connected_pair();
+            let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
+
+            // Send with a zero timeout so it expires immediately
+            let (corr_id, _) = conn
+                .send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    RequestHandlerId(0),
+                    Duration::from_secs(0),
+                )
+                .unwrap();
+
+            // Send another with a long timeout
+            let _ = conn
+                .send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    RequestHandlerId(0),
+                    Duration::from_secs(60),
+                )
+                .unwrap();
+
+            let expired = conn.drain_expired_inflight();
+            assert_eq!(expired.len(), 1);
+            assert_eq!(expired[0].0, corr_id);
+
+            // The non-expired one should still be there (60s timeout not yet passed)
+            assert_eq!(conn.drain_expired_inflight().len(), 0);
         }
     }
 }

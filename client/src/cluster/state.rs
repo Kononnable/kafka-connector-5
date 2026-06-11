@@ -1,4 +1,5 @@
 use std::net::ToSocketAddrs;
+use std::time::Duration;
 
 use mio::net::TcpStream;
 use mio::{Events, Interest, Token, Waker};
@@ -7,6 +8,7 @@ use protocol::traits::{ApiRequest, ApiVersion};
 use super::ClusterOptions;
 use crate::connection::{Connection, ConnectionPool};
 use crate::metadata::MetadataCache;
+use crate::types::{BrokerId, RequestHandlerId};
 
 /// Owns the connection pool, metadata cache, and the mio `Poll` instance.
 pub struct ClusterState {
@@ -31,7 +33,7 @@ impl ClusterState {
     /// Probe connections for errors and remove dead ones
     /// (read error, write error, or connection reset).
     /// Returns the list of broker ids whose connections were removed.
-    pub fn prune_dead_connections(&mut self, events: &Events) -> Vec<i32> {
+    pub fn prune_dead_connections(&mut self, events: &Events) -> Vec<BrokerId> {
         let mut broker_ids = Vec::new();
         for event in events {
             let token = event.token();
@@ -71,9 +73,11 @@ impl ClusterState {
     /// Serialization + sending happen later when the connection flushes.
     pub fn send<R: ApiRequest + Send + 'static>(
         &mut self,
-        broker_id: Option<i32>,
+        broker_id: Option<BrokerId>,
         request: R,
         version: Option<ApiVersion>,
+        handler_id: RequestHandlerId,
+        timeout: Duration,
     ) -> Result<(), String> {
         let broker_id = match broker_id {
             Some(id) => id,
@@ -83,13 +87,13 @@ impl ClusterState {
                 .ok_or_else(|| "no brokers in metadata cache".to_string())?,
         };
 
-        self.pool.enqueue(broker_id, request, version);
+        self.pool.enqueue(broker_id, request, version, handler_id, timeout);
         Ok(())
     }
 
     /// Connect to new brokers (lazy), reconnect to dead ones, and retry
     /// backoff-expired brokers from previous iterations.
-    pub fn connect_to_brokers(&mut self, dead_broker_ids: &[i32]) {
+    pub fn connect_to_brokers(&mut self, dead_broker_ids: &[BrokerId]) {
         let base = self.options.reconnect_backoff_ms;
         let max = self.options.reconnect_backoff_max_ms;
 
@@ -123,7 +127,7 @@ impl ClusterState {
         }
     }
 
-    fn try_connect(&mut self, broker_id: i32) -> Result<(), String> {
+    fn try_connect(&mut self, broker_id: BrokerId) -> Result<(), String> {
         let info = self
             .metadata
             .broker_info(broker_id)
@@ -157,7 +161,7 @@ impl ClusterState {
                     }
                 }
                 Err(e) => {
-                    tracing::warn!(broker_id, addr = ?addr, "connect failed: {e}");
+                    tracing::warn!(broker_id = %broker_id, addr = ?addr, "connect failed: {e}");
                 }
             }
         }

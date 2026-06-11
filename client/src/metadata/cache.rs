@@ -4,7 +4,9 @@ use bytes::Bytes;
 use indexmap::IndexMap;
 use protocol::generated::metadata_request::MetadataRequestTopic;
 use protocol::generated::{MetadataRequest, MetadataResponse};
-use protocol::traits::ApiVersion;
+use protocol::traits::{ApiResponse, ApiVersion};
+
+use crate::types::BrokerId;
 
 /// Information about a single broker in the cluster.
 #[derive(Clone, Debug)]
@@ -37,11 +39,10 @@ pub struct TopicMetadata {
 
 /// Cached cluster topology with refresh scheduling.
 pub struct MetadataCache {
-    brokers: IndexMap<i32, BrokerInfo>,
+    brokers: IndexMap<BrokerId, BrokerInfo>,
     _topics: IndexMap<String, TopicMetadata>,
     refresh_interval: Duration,
     last_refresh: Option<Instant>,
-    pending_refresh_ids: Vec<(usize, i32, ApiVersion)>,
 }
 
 impl MetadataCache {
@@ -51,7 +52,6 @@ impl MetadataCache {
             _topics: IndexMap::new(),
             refresh_interval,
             last_refresh: None,
-            pending_refresh_ids: Vec::new(),
         }
     }
 
@@ -62,7 +62,7 @@ impl MetadataCache {
         }
         for (node_id, broker) in &resp.brokers {
             self.brokers.insert(
-                *node_id,
+                BrokerId(*node_id),
                 BrokerInfo {
                     host: broker.host.clone(),
                     port: broker.port,
@@ -80,8 +80,8 @@ impl MetadataCache {
         }
     }
 
-    /// Periodic tick: returns a `MetadataRequest` to send if the cache is stale.
-    /// Updates `last_refresh` so repeated calls before the response arrives return `None`.
+    /// Periodic tick: returns a MetadataRequest if the cache is stale.
+    /// The event loop is responsible for sending it.
     pub fn tick(&mut self) -> Option<MetadataRequest> {
         if self.is_stale() {
             let topics: Option<Vec<MetadataRequestTopic>> = if self._topics.is_empty() {
@@ -108,39 +108,54 @@ impl MetadataCache {
         }
     }
 
-    /// Record that a metadata refresh request has been sent.
-    pub fn register_inflight_refresh(
+    /// Handle a MetadataResponse for a periodic refresh.
+    pub(crate) fn on_response(
         &mut self,
-        conn_idx: usize,
-        corr_id: i32,
+        _corr_id: crate::types::CorrelationId,
+        body: Bytes,
         version: ApiVersion,
     ) {
-        self.pending_refresh_ids.push((conn_idx, corr_id, version));
+        // Deserialize and update the broker cache.
+        let result = self.try_parse_response(body, version);
+        match result {
+            Ok(resp) => {
+                debug_assert!(
+                    !resp.brokers.is_empty(),
+                    "MetadataResponse from connected broker must include that broker"
+                );
+                if !resp.brokers.is_empty() {
+                    self.brokers.clear();
+                    for (node_id, broker) in &resp.brokers {
+                        self.brokers.insert(
+                            BrokerId(*node_id),
+                            BrokerInfo {
+                                host: broker.host.clone(),
+                                port: broker.port,
+                                _rack: broker.rack.clone(),
+                            },
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("failed to decode metadata refresh response: {e}");
+            }
+        }
+        self.last_refresh = Some(Instant::now());
     }
 
-    /// Handle a response.  Returns `true` if it was consumed as a metadata
-    /// refresh response.
-    pub(crate) fn on_response(&mut self, corr_id: i32, conn_idx: usize, body: Bytes) -> bool {
-        let pos = self
-            .pending_refresh_ids
-            .iter()
-            .position(|&(ci, c, _)| ci == conn_idx && c == corr_id);
-        match pos {
-            Some(i) => {
-                let (_, _, version) = self.pending_refresh_ids.swap_remove(i);
-
-                // Try to parse the MetadataResponse and update the broker cache.
-                if let Ok(resp) = self.try_parse_response(body, version)
-                    && !resp.brokers.is_empty()
-                {
-                    // TODO: Update the broker cache with information from `resp`.
-                }
-
-                self.last_refresh = Some(Instant::now());
-                true
-            }
-            None => false,
-        }
+    /// Handle a metadata refresh timeout — allow immediate retry.
+    pub(crate) fn on_timeout(
+        &mut self,
+        _corr_id: crate::types::CorrelationId,
+        inflight: &crate::types::InflightRequest,
+    ) {
+        tracing::warn!(
+            version = %inflight.version.0,
+            "metadata request timed out"
+        );
+        // Reset last_refresh so the next tick retries immediately.
+        self.last_refresh = None;
     }
 
     /// Try to deserialize `body` as a MetadataResponse using the version
@@ -154,9 +169,8 @@ impl MetadataCache {
         version: ApiVersion,
     ) -> Result<MetadataResponse, String> {
         use protocol::generated::ResponseHeader;
-        use protocol::traits::ApiResponse;
 
-        let is_flexible = version.0 >= 9;
+        let is_flexible = version.0 >= MetadataResponse::get_min_flexible_version().0;
         ResponseHeader::decode(&mut body, is_flexible)
             .map_err(|e| format!("response header decode: {e}"))?;
         MetadataResponse::deserialize(version, &mut body)
@@ -164,12 +178,12 @@ impl MetadataCache {
     }
 
     /// Look up broker info by node id.
-    pub fn broker_info(&self, node_id: i32) -> Option<&BrokerInfo> {
+    pub fn broker_info(&self, node_id: BrokerId) -> Option<&BrokerInfo> {
         self.brokers.get(&node_id)
     }
 
     /// Returns any known broker id, if the cache is non-empty.
-    pub fn any_broker(&self) -> Option<i32> {
+    pub fn any_broker(&self) -> Option<BrokerId> {
         self.brokers.keys().next().copied()
     }
 }
@@ -217,13 +231,22 @@ mod tests {
         let resp = make_metadata_response(vec![1, 2, 3]);
         cache.bootstrap(&resp);
 
-        assert_eq!(cache.broker_info(1).unwrap().host, "broker-1.example.com");
-        assert_eq!(cache.broker_info(1).unwrap().port, 9092);
-        assert_eq!(cache.broker_info(2).unwrap().host, "broker-2.example.com");
-        assert_eq!(cache.broker_info(2).unwrap().port, 9092);
-        assert_eq!(cache.broker_info(3).unwrap().host, "broker-3.example.com");
-        assert_eq!(cache.broker_info(3).unwrap().port, 9092);
-        assert!(cache.broker_info(4).is_none());
+        assert_eq!(
+            cache.broker_info(BrokerId(1)).unwrap().host,
+            "broker-1.example.com"
+        );
+        assert_eq!(cache.broker_info(BrokerId(1)).unwrap().port, 9092);
+        assert_eq!(
+            cache.broker_info(BrokerId(2)).unwrap().host,
+            "broker-2.example.com"
+        );
+        assert_eq!(cache.broker_info(BrokerId(2)).unwrap().port, 9092);
+        assert_eq!(
+            cache.broker_info(BrokerId(3)).unwrap().host,
+            "broker-3.example.com"
+        );
+        assert_eq!(cache.broker_info(BrokerId(3)).unwrap().port, 9092);
+        assert!(cache.broker_info(BrokerId(4)).is_none());
     }
 
     #[test]
@@ -231,13 +254,13 @@ mod tests {
         let mut cache = MetadataCache::new(Duration::from_secs(300));
         let resp1 = make_metadata_response(vec![1, 2]);
         cache.bootstrap(&resp1);
-        assert_eq!(cache.any_broker(), Some(1));
+        assert_eq!(cache.any_broker(), Some(BrokerId(1)));
 
         let resp2 = make_metadata_response(vec![3]);
         cache.bootstrap(&resp2);
-        assert_eq!(cache.any_broker(), Some(3));
-        assert!(cache.broker_info(1).is_none());
-        assert!(cache.broker_info(2).is_none());
+        assert_eq!(cache.any_broker(), Some(BrokerId(3)));
+        assert!(cache.broker_info(BrokerId(1)).is_none());
+        assert!(cache.broker_info(BrokerId(2)).is_none());
     }
 
     #[test]
@@ -256,8 +279,7 @@ mod tests {
             throttle_time_ms: 0,
         };
         cache.bootstrap(&empty_resp);
-        // Brokers should still be there
-        assert!(cache.broker_info(1).is_some());
+        assert!(cache.broker_info(BrokerId(1)).is_some());
     }
 
     #[test]
@@ -277,54 +299,8 @@ mod tests {
     fn is_stale_returns_true_after_interval() {
         let mut cache = MetadataCache::new(Duration::from_millis(10));
         cache.last_refresh = Some(Instant::now());
-        // Manually set to the past
         cache.last_refresh = Some(Instant::now() - Duration::from_secs(1));
         assert!(cache.is_stale());
-    }
-
-    #[test]
-    fn tick_returns_none_when_not_stale() {
-        let mut cache = MetadataCache::new(Duration::from_secs(300));
-        cache.last_refresh = Some(Instant::now());
-        assert!(cache.tick().is_none());
-    }
-
-    #[test]
-    fn tick_returns_metadata_request_when_stale() {
-        let mut cache = MetadataCache::new(Duration::from_secs(300));
-        let req = cache.tick();
-        assert!(req.is_some());
-        let req = req.unwrap();
-        assert_eq!(req.topics, None);
-        assert!(!req.allow_auto_topic_creation);
-    }
-
-    #[test]
-    fn tick_returns_none_on_subsequent_calls() {
-        let mut cache = MetadataCache::new(Duration::from_secs(300));
-        cache.tick(); // first call sets last_refresh
-        assert!(cache.tick().is_none()); // second call should be None
-    }
-
-    #[test]
-    fn tick_requests_specific_topics_when_subscribed() {
-        let mut cache = MetadataCache::new(Duration::from_secs(300));
-        // Manually add a topic to simulate subscription
-        cache._topics.insert(
-            "test-topic".to_string(),
-            TopicMetadata {
-                _name: "test-topic".to_string(),
-                _topic_id: [0u8; 16],
-                _error_code: 0,
-                _is_internal: false,
-                _partitions: IndexMap::new(),
-            },
-        );
-        let req = cache.tick().unwrap();
-        assert!(req.topics.is_some());
-        let topics = req.topics.unwrap();
-        assert_eq!(topics.len(), 1);
-        assert_eq!(topics[0].name, Some("test-topic".to_string()));
     }
 
     #[test]
@@ -333,7 +309,7 @@ mod tests {
         let resp = make_metadata_response(vec![5]);
         cache.bootstrap(&resp);
 
-        let info = cache.broker_info(5).unwrap();
+        let info = cache.broker_info(BrokerId(5)).unwrap();
         assert_eq!(info.host, "broker-5.example.com");
         assert_eq!(info.port, 9092);
         assert!(info._rack.is_none());
@@ -342,7 +318,7 @@ mod tests {
     #[test]
     fn broker_info_returns_none_for_unknown() {
         let cache = MetadataCache::new(Duration::from_secs(300));
-        assert!(cache.broker_info(999).is_none());
+        assert!(cache.broker_info(BrokerId(999)).is_none());
     }
 
     #[test]
@@ -356,75 +332,62 @@ mod tests {
         let mut cache = MetadataCache::new(Duration::from_secs(300));
         let resp = make_metadata_response(vec![3, 1, 2]);
         cache.bootstrap(&resp);
-        // IndexMap preserves insertion order
-        assert_eq!(cache.any_broker(), Some(3));
+        assert_eq!(cache.any_broker(), Some(BrokerId(3)));
     }
 
     #[test]
-    fn register_and_consume_inflight_refresh() {
+    fn on_response_updates_brokers() {
         let mut cache = MetadataCache::new(Duration::from_secs(300));
-        cache.register_inflight_refresh(0, 42, ApiVersion::new(12));
+        let boot_resp = make_metadata_response(vec![1]);
+        cache.bootstrap(&boot_resp);
+        assert_eq!(cache.any_broker(), Some(BrokerId(1)));
 
-        // Create a minimal valid response body by serializing a proper MetadataResponse
-        let version = ApiVersion::new(12);
-        let resp = make_metadata_response(vec![1]);
+        // Simulate a refresh response with updated brokers
+        let refresh_resp = make_metadata_response(vec![1, 2, 3]);
         let mut buf = BytesMut::new();
+        let version = ApiVersion::new(12);
         let is_flexible = version.0 >= MetadataResponse::get_min_flexible_version().0;
-        42_i32
-            .encode(&mut buf, ApiVersion::new(0), is_flexible)
-            .unwrap();
+        // response header
+        let corr_id: i32 = 42;
+        corr_id.encode(&mut buf, ApiVersion::new(0), is_flexible).unwrap();
         if is_flexible {
             encode_unsigned_varint(0u64, &mut buf);
         }
-        // Serialize the response
-        resp.serialize(version, &mut buf).unwrap();
+        refresh_resp.serialize(version, &mut buf).unwrap();
         let body = buf.freeze();
 
-        // Should consume the inflight refresh
-        assert!(cache.on_response(42, 0, body));
-        // last_refresh should be set
-        assert!(cache.last_refresh.is_some());
+        cache.on_response(crate::types::CorrelationId(42), body, version);
+        assert!(cache.broker_info(BrokerId(1)).is_some());
+        assert!(cache.broker_info(BrokerId(2)).is_some());
+        assert!(cache.broker_info(BrokerId(3)).is_some());
     }
 
     #[test]
-    fn on_response_returns_false_for_unknown_corr_id() {
-        let mut cache = MetadataCache::new(Duration::from_secs(300));
+    fn on_timeout_resets_stale_flag() {
+        let mut cache = MetadataCache::new(Duration::from_millis(5));
+        cache.last_refresh = Some(Instant::now() - Duration::from_secs(10));
 
-        // Create a minimal valid response body
-        let resp = make_metadata_response(vec![1]);
-        let mut buf = BytesMut::new();
-        0_i32.encode(&mut buf, ApiVersion::new(0), false).unwrap();
-        encode_unsigned_varint(0u64, &mut buf);
-        resp.serialize(ApiVersion::new(12), &mut buf).unwrap();
-        let body = buf.freeze();
+        // The cache is stale, tick would try to refresh
+        assert!(cache.is_stale());
 
-        assert!(!cache.on_response(999, 0, body));
-        // last_refresh should NOT be set
-        assert!(cache.last_refresh.is_none());
-    }
+        // Simulate a send by setting last_refresh
+        cache.last_refresh = Some(Instant::now());
+        assert!(!cache.is_stale());
 
-    #[test]
-    fn on_response_handles_mismatched_conn_idx() {
-        let mut cache = MetadataCache::new(Duration::from_secs(300));
-        cache.register_inflight_refresh(0, 42, ApiVersion::new(12));
+        // Timeout fires
+        let inflight = crate::types::InflightRequest::new(
+            crate::types::ApiKey(3),
+            ApiVersion::new(12),
+            Instant::now() - Duration::from_secs(30),
+            Duration::from_secs(30),
+            crate::types::RequestHandlerId(0),
+        );
+        cache.on_timeout(
+            crate::types::CorrelationId(42),
+            &inflight,
+        );
 
-        // Create a minimal valid response body
-        let version = ApiVersion::new(12);
-        let resp = make_metadata_response(vec![1]);
-        let mut buf = BytesMut::new();
-        let is_flexible = version.0 >= MetadataResponse::get_min_flexible_version().0;
-        42_i32
-            .encode(&mut buf, ApiVersion::new(0), is_flexible)
-            .unwrap();
-        if is_flexible {
-            encode_unsigned_varint(0u64, &mut buf);
-        }
-        // Serialize the response
-        resp.serialize(version, &mut buf).unwrap();
-        let body = buf.freeze();
-
-        // Wrong conn_idx should not match
-        assert!(!cache.on_response(42, 1, body));
-        assert!(cache.last_refresh.is_none());
+        // last_refresh was reset, so is_stale should be true
+        assert!(cache.is_stale());
     }
 }

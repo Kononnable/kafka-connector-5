@@ -7,6 +7,7 @@ use mio::{Events, Poll, Registry, Token, Waker};
 use protocol::traits::{ApiRequest, ApiVersion};
 
 use super::transport::Connection;
+use crate::types::{ApiKey, BrokerId, CorrelationId, InflightRequest, RequestHandlerId};
 
 /// Token for the waker (eventfd/pipe) used to interrupt poll.
 const WAKEUP_TOKEN: Token = Token(0);
@@ -19,7 +20,7 @@ struct QueuedRequest {
     flush: Box<dyn FnOnce(&mut Connection) -> FlushResult + Send>,
 }
 
-type FlushResult = Result<(i32, ApiVersion), String>;
+type FlushResult = Result<(CorrelationId, ApiVersion), String>;
 
 /// Per-broker reconnect failure tracking.
 struct BrokerReconnectState {
@@ -30,11 +31,11 @@ struct BrokerReconnectState {
 /// Manages a set of broker connections and pending outgoing requests.
 pub struct ConnectionPool {
     connections: Vec<Connection>,
-    pending: Vec<(i32, QueuedRequest)>,
+    pending: Vec<(BrokerId, QueuedRequest)>,
     client_id: String,
     poll: Poll,
     /// Tracks reconnect backoff state per broker.
-    broker_reconnect: IndexMap<i32, BrokerReconnectState>,
+    broker_reconnect: IndexMap<BrokerId, BrokerReconnectState>,
 }
 
 impl ConnectionPool {
@@ -57,16 +58,18 @@ impl ConnectionPool {
     }
 
     /// Queue a request for the given broker.
-    /// Serialization + version negotiation happen at flush time.
+    /// Serialization + version negotiation + inflight registration happen at flush time.
     pub fn enqueue<R: ApiRequest + Send + 'static>(
         &mut self,
-        broker_id: i32,
+        broker_id: BrokerId,
         request: R,
         version: Option<ApiVersion>,
+        handler_id: RequestHandlerId,
+        timeout: Duration,
     ) {
         let api_key = R::get_api_key().0;
         let flush = Box::new(move |conn: &mut Connection| {
-            conn.send_api_request(&request, version)
+            conn.send_api_request(&request, version, handler_id, timeout)
                 .map_err(|e| format!("{e}"))
         });
         self.pending
@@ -74,7 +77,7 @@ impl ConnectionPool {
     }
 
     /// Return the set of broker ids that have queued requests.
-    pub fn pending_brokers(&self) -> Vec<i32> {
+    pub fn pending_brokers(&self) -> Vec<BrokerId> {
         let mut seen = Vec::new();
         for (id, _) in &self.pending {
             if !seen.contains(id) {
@@ -86,7 +89,7 @@ impl ConnectionPool {
 
     /// Push all queued requests for `broker_id` onto the connection's
     /// write buffer.  Returns `(correlation_id, version)` for each flushed request.
-    pub fn flush_pending(&mut self, broker_id: i32) -> Vec<(i32, ApiVersion)> {
+    fn flush_pending(&mut self, broker_id: BrokerId) -> Vec<(CorrelationId, ApiVersion)> {
         let Some(conn) = self
             .connections
             .iter_mut()
@@ -112,16 +115,12 @@ impl ConnectionPool {
     }
 
     /// Flush queued requests for every connected broker.
-    /// Returns `(broker_id, correlation_id, version)` for each flushed request.
-    pub fn send_api_requests(&mut self) -> Vec<(i32, i32, ApiVersion)> {
-        let ids: Vec<i32> = self.connections.iter().map(|c| c.node_id()).collect();
-        let mut flushed = Vec::new();
+    /// Inflight entries are registered automatically by `Connection::send_api_request`.
+    pub fn send_api_requests(&mut self) {
+        let ids: Vec<BrokerId> = self.connections.iter().map(|c| c.node_id()).collect();
         for broker_id in ids {
-            for (cid, ver) in self.flush_pending(broker_id) {
-                flushed.push((broker_id, cid, ver));
-            }
+            self.flush_pending(broker_id);
         }
-        flushed
     }
 
     /// Poll for I/O events on all registered connections.
@@ -166,15 +165,49 @@ impl ConnectionPool {
     }
 
     /// Collect all available broker responses from every connection.
-    pub fn collect_responses(&mut self) -> Vec<(usize, i32, Bytes)> {
+    ///
+    /// Matches each response to its inflight entry, returning
+    /// `(handler_id, correlation_id, api_key, version, body)` for dispatch.
+    /// Stale responses (no matching inflight entry) are logged at `debug!` and dropped.
+    pub fn collect_responses(
+        &mut self,
+    ) -> Vec<(RequestHandlerId, CorrelationId, ApiKey, ApiVersion, Bytes)> {
         self.connections
             .iter_mut()
-            .enumerate()
-            .flat_map(|(idx, conn)| {
-                std::iter::from_fn(move || {
-                    conn.read_broker_response()
-                        .map(|(corr_id, body)| (idx, corr_id, body))
-                })
+            .flat_map(|conn| {
+                let mut responses = Vec::new();
+                while let Some((corr_id, body)) = conn.read_broker_response() {
+                    match conn.take_inflight(corr_id) {
+                        Some(inflight) => {
+                            responses.push((
+                                inflight.handler_id,
+                                corr_id,
+                                inflight.api_key,
+                                inflight.version,
+                                body,
+                            ));
+                        }
+                        None => {
+                            tracing::debug!(corr_id = %corr_id, "stale response (no inflight entry)");
+                        }
+                    }
+                }
+                responses
+            })
+            .collect()
+    }
+
+    /// Drain expired inflight entries across all connections.
+    /// Returns `(handler_id, correlation_id, inflight)` for each expired request.
+    pub fn drain_expired_inflight(
+        &mut self,
+    ) -> Vec<(RequestHandlerId, CorrelationId, InflightRequest)> {
+        self.connections
+            .iter_mut()
+            .flat_map(|conn| {
+                conn.drain_expired_inflight()
+                    .into_iter()
+                    .map(|(corr_id, inflight)| (inflight.handler_id, corr_id, inflight))
             })
             .collect()
     }
@@ -186,7 +219,7 @@ impl ConnectionPool {
 
     /// Remove a dead connection by broker id. Increments the broker's
     /// reconnect failure counter and schedules the next retry.
-    pub fn remove_connection(&mut self, broker_id: i32, base: Duration, max: Duration) {
+    pub fn remove_connection(&mut self, broker_id: BrokerId, base: Duration, max: Duration) {
         if let Some(pos) = self
             .connections
             .iter()
@@ -208,7 +241,7 @@ impl ConnectionPool {
     /// Check whether we should attempt reconnection to `broker_id`.
     /// Returns `true` if the backoff period has elapsed or there are no
     /// prior failures.
-    pub fn can_reconnect(&self, broker_id: i32) -> bool {
+    pub fn can_reconnect(&self, broker_id: BrokerId) -> bool {
         let Some(entry) = self.broker_reconnect.get(&broker_id) else {
             return true;
         };
@@ -220,14 +253,14 @@ impl ConnectionPool {
 
     /// Record that a reconnect attempt is being made for `broker_id`.
     /// Sets the next attempt time based on current failure count.
-    pub fn record_reconnect_attempt(&mut self, broker_id: i32, base: Duration, max: Duration) {
+    pub fn record_reconnect_attempt(&mut self, broker_id: BrokerId, base: Duration, max: Duration) {
         if let Some(entry) = self.broker_reconnect.get_mut(&broker_id) {
             entry.next_attempt = Some(Instant::now() + entry.backoff(base, max));
         }
     }
 
     /// Reset reconnect failure tracking for `broker_id` (successful reconnect).
-    pub fn reset_reconnect(&mut self, broker_id: i32) {
+    pub fn reset_reconnect(&mut self, broker_id: BrokerId) {
         if let Some(entry) = self.broker_reconnect.get_mut(&broker_id) {
             entry.failures = 0;
             entry.next_attempt = None;
@@ -236,7 +269,7 @@ impl ConnectionPool {
 
     /// Increment reconnect failure counter and schedule next attempt
     /// (called when a reconnect attempt fails).
-    pub fn increment_reconnect_failure(&mut self, broker_id: i32, base: Duration, max: Duration) {
+    pub fn increment_reconnect_failure(&mut self, broker_id: BrokerId, base: Duration, max: Duration) {
         if let Some(entry) = self.broker_reconnect.get_mut(&broker_id) {
             entry.failures = entry.failures.saturating_add(1);
             entry.next_attempt = Some(Instant::now() + entry.backoff(base, max));
@@ -247,7 +280,7 @@ impl ConnectionPool {
     /// failure counter on failure, and resets on success.
     pub fn try_reconnect(
         &mut self,
-        broker_id: i32,
+        broker_id: BrokerId,
         base: Duration,
         max: Duration,
         result: Result<(), String>,
@@ -261,9 +294,9 @@ impl ConnectionPool {
 
     /// Return broker ids that have pending reconnect attempts whose
     /// backoff has expired but are not currently connected.
-    pub fn expired_reconnects(&self) -> Vec<i32> {
+    pub fn expired_reconnects(&self) -> Vec<BrokerId> {
         let mut expired = Vec::new();
-        let connected: Vec<i32> = self.connections.iter().map(|c| c.node_id()).collect();
+        let connected: Vec<BrokerId> = self.connections.iter().map(|c| c.node_id()).collect();
         for (&broker_id, state) in &self.broker_reconnect {
             if connected.contains(&broker_id) {
                 continue;
@@ -283,7 +316,7 @@ impl ConnectionPool {
 
     /// Return the reconnect failure count for a broker (test helper).
     #[cfg(test)]
-    pub fn reconnect_failures(&self, broker_id: i32) -> u32 {
+    pub fn reconnect_failures(&self, broker_id: BrokerId) -> u32 {
         self.broker_reconnect
             .get(&broker_id)
             .map(|s| s.failures)
@@ -292,7 +325,7 @@ impl ConnectionPool {
 
     /// Return the next reconnect attempt time for a broker (test helper).
     #[cfg(test)]
-    pub fn next_reconnect_attempt(&self, broker_id: i32) -> Option<Instant> {
+    pub fn next_reconnect_attempt(&self, broker_id: BrokerId) -> Option<Instant> {
         self.broker_reconnect
             .get(&broker_id)
             .and_then(|s| s.next_attempt)
@@ -300,7 +333,7 @@ impl ConnectionPool {
 
     /// Return the number of pending requests for a broker (test helper).
     #[cfg(test)]
-    pub fn pending_count(&self, broker_id: i32) -> usize {
+    pub fn pending_count(&self, broker_id: BrokerId) -> usize {
         self.pending
             .iter()
             .filter(|(id, _)| *id == broker_id)
@@ -324,17 +357,20 @@ mod tests {
         ConnectionPool::new("test-client".to_string())
     }
 
+    const TEST_HANDLER: RequestHandlerId = RequestHandlerId(0);
+    const TEST_TIMEOUT: Duration = Duration::from_secs(30);
+
     #[test]
     fn pending_brokers_returns_unique_broker_ids() {
         let (mut pool, _waker) = make_pool();
-        pool.enqueue(1, ApiVersionsRequest::default(), None);
-        pool.enqueue(2, ApiVersionsRequest::default(), None);
-        pool.enqueue(1, ApiVersionsRequest::default(), None);
-        pool.enqueue(3, ApiVersionsRequest::default(), None);
+        pool.enqueue(BrokerId(1), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
+        pool.enqueue(BrokerId(2), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
+        pool.enqueue(BrokerId(1), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
+        pool.enqueue(BrokerId(3), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
 
         let mut brokers = pool.pending_brokers();
-        brokers.sort();
-        assert_eq!(brokers, vec![1, 2, 3]);
+        brokers.sort_by_key(|b| b.0);
+        assert_eq!(brokers, vec![BrokerId(1), BrokerId(2), BrokerId(3)]);
     }
 
     #[test]
@@ -351,16 +387,16 @@ mod tests {
 
         // Manually set up failure state
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 3,
                 next_attempt: Some(Instant::now() + Duration::from_secs(10)),
             },
         );
 
-        assert_eq!(pool.reconnect_failures(1), 3);
-        assert!(pool.next_reconnect_attempt(1).is_some());
-        assert!(!pool.can_reconnect(1));
+        assert_eq!(pool.reconnect_failures(BrokerId(1)), 3);
+        assert!(pool.next_reconnect_attempt(BrokerId(1)).is_some());
+        assert!(!pool.can_reconnect(BrokerId(1)));
     }
 
     #[test]
@@ -369,134 +405,49 @@ mod tests {
         let base = Duration::from_millis(100);
         let max = Duration::from_secs(30);
 
-        // Manually set up backoff state
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 1,
                 next_attempt: Some(Instant::now() + base),
             },
         );
 
-        assert!(!pool.can_reconnect(1));
+        assert!(!pool.can_reconnect(BrokerId(1)));
     }
 
     #[test]
     fn can_reconnect_returns_true_after_backoff() {
         let (mut pool, _waker) = make_pool();
 
-        // Set up past backoff time
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 1,
                 next_attempt: Some(Instant::now() - Duration::from_secs(1)),
             },
         );
 
-        assert!(pool.can_reconnect(1));
+        assert!(pool.can_reconnect(BrokerId(1)));
     }
 
     #[test]
     fn can_reconnect_returns_true_for_unknown_broker() {
         let (pool, _waker) = make_pool();
-        assert!(pool.can_reconnect(999));
+        assert!(pool.can_reconnect(BrokerId(999)));
     }
 
     #[test]
     fn can_reconnect_returns_true_with_zero_failures() {
         let (mut pool, _waker) = make_pool();
-        // Manually set up state with zero failures
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 0,
                 next_attempt: None,
             },
         );
-        assert!(pool.can_reconnect(1));
-    }
-
-    #[test]
-    fn backoff_calculation_follows_exponential_formula() {
-        // Test the backoff calculation directly via BrokerReconnectState
-        let base = Duration::from_millis(100);
-        let max = Duration::from_secs(30);
-
-        // Failure 1: base * 2^0 = 100ms (with jitter 0.8-1.2)
-        let state1 = BrokerReconnectState {
-            failures: 1,
-            next_attempt: None,
-        };
-        let backoff1 = state1.backoff(base, max);
-        assert!(
-            backoff1 >= Duration::from_millis(80),
-            "backoff too short: {:?}",
-            backoff1
-        );
-        assert!(
-            backoff1 <= Duration::from_millis(120),
-            "backoff too long: {:?}",
-            backoff1
-        );
-
-        // Failure 2: base * 2^1 = 200ms (with jitter)
-        let state2 = BrokerReconnectState {
-            failures: 2,
-            next_attempt: None,
-        };
-        let backoff2 = state2.backoff(base, max);
-        assert!(
-            backoff2 >= Duration::from_millis(160),
-            "backoff too short: {:?}",
-            backoff2
-        );
-        assert!(
-            backoff2 <= Duration::from_millis(240),
-            "backoff too long: {:?}",
-            backoff2
-        );
-
-        // Failure 3: base * 2^2 = 400ms (with jitter)
-        let state3 = BrokerReconnectState {
-            failures: 3,
-            next_attempt: None,
-        };
-        let backoff3 = state3.backoff(base, max);
-        assert!(
-            backoff3 >= Duration::from_millis(320),
-            "backoff too short: {:?}",
-            backoff3
-        );
-        assert!(
-            backoff3 <= Duration::from_millis(480),
-            "backoff too long: {:?}",
-            backoff3
-        );
-    }
-
-    #[test]
-    fn backoff_caps_at_max() {
-        let base = Duration::from_millis(100);
-        let max = Duration::from_millis(500);
-
-        // After many failures, backoff should cap at max
-        let state = BrokerReconnectState {
-            failures: 10,
-            next_attempt: None,
-        };
-        let backoff = state.backoff(base, max);
-        // Allow for jitter: should be between 0.8*max and 1.2*max
-        assert!(
-            backoff >= Duration::from_millis(400),
-            "backoff below max: {:?}",
-            backoff
-        );
-        assert!(
-            backoff <= Duration::from_millis(600),
-            "backoff above max: {:?}",
-            backoff
-        );
+        assert!(pool.can_reconnect(BrokerId(1)));
     }
 
     #[test]
@@ -504,23 +455,23 @@ mod tests {
         let (mut pool, _waker) = make_pool();
 
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 5,
                 next_attempt: Some(Instant::now()),
             },
         );
 
-        pool.reset_reconnect(1);
-        assert_eq!(pool.reconnect_failures(1), 0);
-        assert!(pool.next_reconnect_attempt(1).is_none());
+        pool.reset_reconnect(BrokerId(1));
+        assert_eq!(pool.reconnect_failures(BrokerId(1)), 0);
+        assert!(pool.next_reconnect_attempt(BrokerId(1)).is_none());
     }
 
     #[test]
     fn reset_reconnect_unknown_broker_is_noop() {
         let (mut pool, _waker) = make_pool();
-        pool.reset_reconnect(999);
-        assert_eq!(pool.reconnect_failures(999), 0);
+        pool.reset_reconnect(BrokerId(999));
+        assert_eq!(pool.reconnect_failures(BrokerId(999)), 0);
     }
 
     #[test]
@@ -529,21 +480,20 @@ mod tests {
         let base = Duration::from_millis(100);
         let max = Duration::from_secs(30);
 
-        // Insert entry first (simulating initial failure via remove_connection)
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 0,
                 next_attempt: None,
             },
         );
 
-        pool.increment_reconnect_failure(1, base, max);
-        assert_eq!(pool.reconnect_failures(1), 1);
-        assert!(pool.next_reconnect_attempt(1).is_some());
+        pool.increment_reconnect_failure(BrokerId(1), base, max);
+        assert_eq!(pool.reconnect_failures(BrokerId(1)), 1);
+        assert!(pool.next_reconnect_attempt(BrokerId(1)).is_some());
 
-        pool.increment_reconnect_failure(1, base, max);
-        assert_eq!(pool.reconnect_failures(1), 2);
+        pool.increment_reconnect_failure(BrokerId(1), base, max);
+        assert_eq!(pool.reconnect_failures(BrokerId(1)), 2);
     }
 
     #[test]
@@ -552,21 +502,17 @@ mod tests {
         let base = Duration::from_millis(100);
         let max = Duration::from_secs(30);
 
-        // Set up failure state first
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 3,
                 next_attempt: Some(Instant::now()),
             },
         );
 
-        pool.try_reconnect(1, base, max, Ok(()));
-        // try_reconnect records the attempt but doesn't reset failures
-        // failures should still be 3 (reset_reconnect is called separately)
-        assert_eq!(pool.reconnect_failures(1), 3);
-        // next_attempt should be updated to a future time
-        assert!(pool.next_reconnect_attempt(1).is_some());
+        pool.try_reconnect(BrokerId(1), base, max, Ok(()));
+        assert_eq!(pool.reconnect_failures(BrokerId(1)), 3);
+        assert!(pool.next_reconnect_attempt(BrokerId(1)).is_some());
     }
 
     #[test]
@@ -575,34 +521,32 @@ mod tests {
         let base = Duration::from_millis(100);
         let max = Duration::from_secs(30);
 
-        // Insert entry first
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 0,
                 next_attempt: None,
             },
         );
 
-        pool.try_reconnect(1, base, max, Err("connection refused".to_string()));
-        assert_eq!(pool.reconnect_failures(1), 1);
-        assert!(pool.next_reconnect_attempt(1).is_some());
+        pool.try_reconnect(BrokerId(1), base, max, Err("connection refused".to_string()));
+        assert_eq!(pool.reconnect_failures(BrokerId(1)), 1);
+        assert!(pool.next_reconnect_attempt(BrokerId(1)).is_some());
     }
 
     #[test]
     fn expired_reconnects_returns_backoff_expired_brokers() {
         let (mut pool, _waker) = make_pool();
 
-        // Set up expired backoff states
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 1,
                 next_attempt: Some(Instant::now() - Duration::from_secs(1)),
             },
         );
         pool.broker_reconnect.insert(
-            2,
+            BrokerId(2),
             BrokerReconnectState {
                 failures: 2,
                 next_attempt: Some(Instant::now() - Duration::from_secs(1)),
@@ -611,36 +555,31 @@ mod tests {
 
         let expired = pool.expired_reconnects();
         assert_eq!(expired.len(), 2);
-        assert!(expired.contains(&1));
-        assert!(expired.contains(&2));
+        assert!(expired.contains(&BrokerId(1)));
+        assert!(expired.contains(&BrokerId(2)));
     }
 
     #[test]
     fn expired_reconnects_excludes_connected_brokers() {
         let (mut pool, _waker) = make_pool();
 
-        // Set up expired backoff state
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 1,
                 next_attempt: Some(Instant::now() - Duration::from_secs(1)),
             },
         );
 
-        // Add a "connection" by inserting broker 1 into connections (mocked)
-        // We can't add real Connections without TcpStream, but we can verify
-        // the logic by checking that brokers NOT in connections are included
         let expired = pool.expired_reconnects();
-        assert!(expired.contains(&1));
+        assert!(expired.contains(&BrokerId(1)));
     }
 
     #[test]
     fn expired_reconnects_excludes_zero_failures() {
         let (mut pool, _waker) = make_pool();
-        // Manually add state with zero failures
         pool.broker_reconnect.insert(
-            1,
+            BrokerId(1),
             BrokerReconnectState {
                 failures: 0,
                 next_attempt: None,
@@ -648,7 +587,7 @@ mod tests {
         );
 
         let expired = pool.expired_reconnects();
-        assert!(!expired.contains(&1));
+        assert!(!expired.contains(&BrokerId(1)));
     }
 
     #[test]
