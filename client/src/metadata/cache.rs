@@ -6,7 +6,7 @@ use protocol::generated::metadata_request::MetadataRequestTopic;
 use protocol::generated::{MetadataRequest, MetadataResponse};
 use protocol::traits::{ApiResponse, ApiVersion};
 
-use crate::types::BrokerId;
+use crate::types::{ApiKey, BrokerId, CorrelationId, InflightRequest, RequestHandlerId};
 
 /// Information about a single broker in the cluster.
 #[derive(Clone, Debug)]
@@ -111,7 +111,7 @@ impl MetadataCache {
     /// Handle a MetadataResponse for a periodic refresh.
     pub(crate) fn on_response(
         &mut self,
-        _corr_id: crate::types::CorrelationId,
+        _corr_id: CorrelationId,
         body: Bytes,
         version: ApiVersion,
     ) {
@@ -145,11 +145,7 @@ impl MetadataCache {
     }
 
     /// Handle a metadata refresh timeout — allow immediate retry.
-    pub(crate) fn on_timeout(
-        &mut self,
-        _corr_id: crate::types::CorrelationId,
-        inflight: &crate::types::InflightRequest,
-    ) {
+    pub(crate) fn on_timeout(&mut self, _corr_id: CorrelationId, inflight: &InflightRequest) {
         tracing::warn!(
             version = %inflight.version.0,
             "metadata request timed out"
@@ -349,14 +345,16 @@ mod tests {
         let is_flexible = version.0 >= MetadataResponse::get_min_flexible_version().0;
         // response header
         let corr_id: i32 = 42;
-        corr_id.encode(&mut buf, ApiVersion::new(0), is_flexible).unwrap();
+        corr_id
+            .encode(&mut buf, ApiVersion::new(0), is_flexible)
+            .unwrap();
         if is_flexible {
             encode_unsigned_varint(0u64, &mut buf);
         }
         refresh_resp.serialize(version, &mut buf).unwrap();
         let body = buf.freeze();
 
-        cache.on_response(crate::types::CorrelationId(42), body, version);
+        cache.on_response(CorrelationId(42), body, version);
         assert!(cache.broker_info(BrokerId(1)).is_some());
         assert!(cache.broker_info(BrokerId(2)).is_some());
         assert!(cache.broker_info(BrokerId(3)).is_some());
@@ -375,17 +373,14 @@ mod tests {
         assert!(!cache.is_stale());
 
         // Timeout fires
-        let inflight = crate::types::InflightRequest::new(
-            crate::types::ApiKey(3),
+        let inflight = InflightRequest::new(
+            ApiKey(3),
             ApiVersion::new(12),
             Instant::now() - Duration::from_secs(30),
             Duration::from_secs(30),
-            crate::types::RequestHandlerId(0),
+            RequestHandlerId(0),
         );
-        cache.on_timeout(
-            crate::types::CorrelationId(42),
-            &inflight,
-        );
+        cache.on_timeout(CorrelationId(42), &inflight);
 
         // last_refresh was reset, so is_stale should be true
         assert!(cache.is_stale());

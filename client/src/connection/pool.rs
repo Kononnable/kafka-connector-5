@@ -127,7 +127,7 @@ impl ConnectionPool {
     /// When no connections are registered, uses a timeout based on the
     /// earliest backoff expiration to avoid blocking forever.
     pub fn poll_io(&mut self, events: &mut Events, timeout: Option<Duration>) -> io::Result<()> {
-        if self.connections.is_empty() {
+        if self.connections.is_empty() && timeout.is_none() {
             let mut earliest = None;
             for state in self.broker_reconnect.values() {
                 if state.failures == 0 {
@@ -269,7 +269,12 @@ impl ConnectionPool {
 
     /// Increment reconnect failure counter and schedule next attempt
     /// (called when a reconnect attempt fails).
-    pub fn increment_reconnect_failure(&mut self, broker_id: BrokerId, base: Duration, max: Duration) {
+    pub fn increment_reconnect_failure(
+        &mut self,
+        broker_id: BrokerId,
+        base: Duration,
+        max: Duration,
+    ) {
         if let Some(entry) = self.broker_reconnect.get_mut(&broker_id) {
             entry.failures = entry.failures.saturating_add(1);
             entry.next_attempt = Some(Instant::now() + entry.backoff(base, max));
@@ -363,10 +368,34 @@ mod tests {
     #[test]
     fn pending_brokers_returns_unique_broker_ids() {
         let (mut pool, _waker) = make_pool();
-        pool.enqueue(BrokerId(1), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
-        pool.enqueue(BrokerId(2), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
-        pool.enqueue(BrokerId(1), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
-        pool.enqueue(BrokerId(3), ApiVersionsRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT);
+        pool.enqueue(
+            BrokerId(1),
+            ApiVersionsRequest::default(),
+            None,
+            TEST_HANDLER,
+            TEST_TIMEOUT,
+        );
+        pool.enqueue(
+            BrokerId(2),
+            ApiVersionsRequest::default(),
+            None,
+            TEST_HANDLER,
+            TEST_TIMEOUT,
+        );
+        pool.enqueue(
+            BrokerId(1),
+            ApiVersionsRequest::default(),
+            None,
+            TEST_HANDLER,
+            TEST_TIMEOUT,
+        );
+        pool.enqueue(
+            BrokerId(3),
+            ApiVersionsRequest::default(),
+            None,
+            TEST_HANDLER,
+            TEST_TIMEOUT,
+        );
 
         let mut brokers = pool.pending_brokers();
         brokers.sort_by_key(|b| b.0);
@@ -529,7 +558,12 @@ mod tests {
             },
         );
 
-        pool.try_reconnect(BrokerId(1), base, max, Err("connection refused".to_string()));
+        pool.try_reconnect(
+            BrokerId(1),
+            base,
+            max,
+            Err("connection refused".to_string()),
+        );
         assert_eq!(pool.reconnect_failures(BrokerId(1)), 1);
         assert!(pool.next_reconnect_attempt(BrokerId(1)).is_some());
     }

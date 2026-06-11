@@ -10,15 +10,17 @@ use super::lifecycle_state::{LifecycleState, State};
 use super::sender::CommandSender;
 use crate::cluster::ClusterOptions;
 use crate::cluster::state::ClusterState;
-use crate::types::{CorrelationId, InflightRequest, RequestHandlerId};
+use crate::types::{BrokerId, CorrelationId, InflightRequest, RequestHandlerId};
 
 pub(crate) const METADATA_HANDLER_ID: RequestHandlerId = RequestHandlerId(0);
 
 pub enum Command {
     Shutdown,
     GetApiVersions {
-        broker_id: Option<crate::types::BrokerId>,
-        reply: futures::channel::oneshot::Sender<Option<indexmap::IndexMap<i16, protocol::generated::api_versions_response::ApiVersion>>>,
+        broker_id: Option<BrokerId>,
+        reply: futures::channel::oneshot::Sender<
+            Option<indexmap::IndexMap<i16, protocol::generated::api_versions_response::ApiVersion>>,
+        >,
     },
 }
 
@@ -132,9 +134,7 @@ impl EventLoop {
     }
 
     fn process_api_responses(&mut self) {
-        for (handler_id, corr_id, _api_key, version, body) in
-            self.state.pool.collect_responses()
-        {
+        for (handler_id, corr_id, _api_key, version, body) in self.state.pool.collect_responses() {
             if handler_id == METADATA_HANDLER_ID {
                 self.state.metadata.on_response(corr_id, body, version);
             } else if let Some(handler) = self.handlers.get_mut(&handler_id) {

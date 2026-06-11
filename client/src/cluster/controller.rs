@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use futures_timer::Delay;
 use indexmap::IndexMap;
+use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
 
 use super::ClusterOptions;
 use super::error::ClusterOptionsValidationError;
@@ -12,9 +13,6 @@ use crate::consumer::{ConsumerController, ConsumerOptions, ConsumerOptionsValida
 use crate::io_loop::{Command, CommandSender, EventLoop, LifecycleState, State};
 use crate::producer::{ProducerController, ProducerOptions, ProducerOptionsValidationError};
 use crate::types::BrokerId;
-use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
-
-
 
 pub struct ClusterController {
     event_loop: Option<JoinHandle<()>>,

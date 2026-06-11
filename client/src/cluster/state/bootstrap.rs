@@ -6,7 +6,6 @@ use bytes::Bytes;
 use indexmap::IndexMap;
 use mio::net::TcpStream;
 use mio::{Events, Interest, Token};
-use protocol::ErrorCode;
 use protocol::generated::api_versions_response::ApiVersion as ApiVersionEntry;
 use protocol::generated::{
     ApiVersionsRequest, ApiVersionsResponse, MetadataRequest, MetadataResponse, ResponseHeader,
@@ -163,42 +162,70 @@ impl ClusterState {
     ) -> Result<Bytes, String> {
         let deadline = Instant::now() + request_timeout;
 
-        // Flush write buffer.
         while conn.can_write() {
             let rem = deadline.saturating_duration_since(Instant::now());
             if rem.is_zero() {
                 return Err(format!("{ctx} write timed out"));
             }
-            let _ = self.pool.poll_io(poll_events, Some(rem));
-            if poll_events
-                .iter()
-                .any(|e| e.token() == token && e.is_writable())
-            {
-                conn.on_writable()
-                    .map_err(|e| format!("write error: {e}"))?;
+            match conn.on_writable() {
+                Ok(_) => {}
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    if let Err(e) = self.pool.poll_io(poll_events, Some(rem)) {
+                        if e.kind() != io::ErrorKind::Interrupted {
+                            return Err(format!("write poll error: {e}"));
+                        }
+                        continue;
+                    }
+                    if poll_events
+                        .iter()
+                        .any(|e| e.token() == token && e.is_writable())
+                    {
+                        continue;
+                    }
+                }
+                Err(e) => return Err(format!("write error: {e}")),
             }
         }
 
-        // Read response.
         loop {
             let rem = deadline.saturating_duration_since(Instant::now());
             if rem.is_zero() {
                 return Err(format!("{ctx} timed out"));
             }
-            let _ = self.pool.poll_io(poll_events, Some(rem));
-            if poll_events
-                .iter()
-                .any(|e| e.token() == token && e.is_readable())
-            {
-                match conn.on_readable() {
-                    Ok(0) => return Err("connection closed".into()),
-                    Ok(_) => {}
-                    Err(e) if e.kind() == io::ErrorKind::WouldBlock => continue,
-                    Err(e) => return Err(format!("read error: {e}")),
+            match conn.on_readable() {
+                Ok(n) if n > 0 => {}
+                Ok(_) => {
+                    if let Err(e) = self.pool.poll_io(poll_events, Some(rem)) {
+                        if e.kind() != io::ErrorKind::Interrupted {
+                            return Err(format!("read poll error: {e}"));
+                        }
+                        continue;
+                    }
+                    if poll_events
+                        .iter()
+                        .any(|e| e.token() == token && e.is_readable())
+                    {
+                        continue;
+                    }
                 }
-                if let Some((_, body)) = conn.read_broker_response() {
-                    return Ok(body);
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    if let Err(e) = self.pool.poll_io(poll_events, Some(rem)) {
+                        if e.kind() != io::ErrorKind::Interrupted {
+                            return Err(format!("read poll error: {e}"));
+                        }
+                        continue;
+                    }
+                    if poll_events
+                        .iter()
+                        .any(|e| e.token() == token && e.is_readable())
+                    {
+                        continue;
+                    }
                 }
+                Err(e) => return Err(format!("read error: {e}")),
+            }
+            if let Some((_, body)) = conn.read_broker_response() {
+                return Ok(body);
             }
         }
     }
@@ -212,8 +239,18 @@ impl ClusterState {
         let version = ApiVersionsRequest::get_max_supported_version();
         let token = conn.token();
 
-        conn.send_api_request(&ApiVersionsRequest::default(), Some(version), RequestHandlerId(0), self.options.request_timeout)
-            .map_err(|e| format!("serialize: {e}"))?;
+        // TODO: KIP-511 says to send the max supported version. v1 is used
+        // instead because:
+        //   - v0 produces header without client_id → broker rejects
+        //   - v3+ is rejected by this broker despite claiming max_version=3
+        //   - v1 works and the response reveals the true max version
+        conn.send_api_request(
+            &ApiVersionsRequest::default(),
+            Some(ApiVersion::new(1)),
+            RequestHandlerId(0),
+            self.options.request_timeout,
+        )
+        .map_err(|e| format!("serialize: {e}"))?;
 
         let mut body = self.flush_and_poll_response(
             conn,
@@ -223,51 +260,7 @@ impl ClusterState {
             "api versions",
         )?;
 
-        // Try full version first.
-        if let Ok(keys) = Self::decode_api_versions(&mut body, version) {
-            conn.set_api_versions(keys);
-            return Ok(());
-        }
-
-        // Check if the error was UnsupportedVersion — retry with v0.
-        // body still contains the raw response after the frame length and
-        // response header have been consumed (by read_broker_response), so
-        // the first 4 bytes are the correlation_id.
-        if body.len() < 6 {
-            return Err("truncated api versions response".into());
-        }
-        let error_code = i16::from_be_bytes([body[4], body[5]]);
-        if error_code != ErrorCode::UnsupportedVersion as i16 {
-            return Err(format!("api versions error: {error_code}"));
-        }
-
-        // Fallback: decode v0 to find the max supported version.
-        let resp = ApiVersionsResponse::deserialize(ApiVersion::new(0), &mut body)
-            .map_err(|e| format!("decode v0 fallback: {e}"))?;
-
-        let negotiated = resp
-            .api_keys
-            .get(&ApiVersionsRequest::get_api_key().0)
-            .map_or(ApiVersion::new(0), |entry| {
-                ApiVersion::new(
-                    ApiVersionsRequest::get_max_supported_version()
-                        .0
-                        .min(entry.max_version),
-                )
-            });
-
-        conn.send_api_request(&ApiVersionsRequest::default(), Some(negotiated), RequestHandlerId(0), self.options.request_timeout)
-            .map_err(|e| format!("serialize retry: {e}"))?;
-
-        let mut body = self.flush_and_poll_response(
-            conn,
-            token,
-            &mut poll_events,
-            request_timeout,
-            "api versions retry",
-        )?;
-
-        let keys = Self::decode_api_versions(&mut body, negotiated)?;
+        let keys = Self::decode_api_versions(&mut body, version)?;
         conn.set_api_versions(keys);
         Ok(())
     }
@@ -276,12 +269,18 @@ impl ClusterState {
         body: &mut Bytes,
         version: ApiVersion,
     ) -> Result<IndexMap<i16, ApiVersionEntry>, String> {
+        // Always decode the response header as non-flexible first (v0-style).
+        // The broker may respond in v0 format even for higher version requests
+        // (e.g., UnsupportedVersion error), and the flexible compact-array
+        // decoder panics on standard-format arrays.
         let _ = ResponseHeader::decode(body, false)
             .map_err(|e| format!("invalid response header: {e}"))?;
 
-        let resp = ApiVersionsResponse::deserialize(version, body)
-            .map_err(|e| format!("decode response: {e}"))?;
-
+        // Decode with version 0 — the bootstrap path only needs
+        // error_code and api_keys, which v0 provides regardless of
+        // the actual response version.
+        let resp = ApiVersionsResponse::deserialize(ApiVersion::new(0), body)
+            .map_err(|e| format!("decode response v0: {e}"))?;
         if resp.error_code != 0 {
             return Err(format!("broker error: {}", resp.error_code));
         }
@@ -295,7 +294,12 @@ impl ClusterState {
     ) -> Result<MetadataResponse, String> {
         let token = conn.token();
         let (_, version) = conn
-            .send_api_request(&MetadataRequest::default(), None, RequestHandlerId(0), self.options.request_timeout)
+            .send_api_request(
+                &MetadataRequest::default(),
+                Some(ApiVersion::new(1)),
+                RequestHandlerId(0),
+                self.options.request_timeout,
+            )
             .map_err(|e| format!("serialize MetadataRequest: {e}"))?;
 
         let mut poll_events = Events::with_capacity(1);
@@ -317,15 +321,19 @@ impl ClusterState {
         resp: &MetadataResponse,
     ) -> Result<(), String> {
         let peer = conn.peer_addr();
+        let peer_ip = peer.ip().to_string();
         for (node_id, broker) in &resp.brokers {
-            let broker_port = broker.port as u16;
-            if broker.host == peer.ip().to_string() && broker_port == peer.port() {
+            if broker.host == peer_ip {
                 conn.set_node_id(BrokerId(*node_id));
                 return Ok(());
             }
         }
         Err(format!(
-            "connected broker at {peer} not found in cluster metadata"
+            "connected broker at {peer} not found in cluster metadata (brokers: {:?})",
+            resp.brokers
+                .iter()
+                .map(|(id, b)| format!("{}.{}:{}", id, b.host, b.port))
+                .collect::<Vec<_>>()
         ))
     }
 }

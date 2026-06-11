@@ -112,7 +112,8 @@ mod tests {
 
         // Both should trigger the waker
         let mut events = mio::Events::with_capacity(1);
-        poll.poll(&mut events, Some(Duration::from_millis(100))).unwrap();
+        poll.poll(&mut events, Some(Duration::from_millis(100)))
+            .unwrap();
         assert!(!events.is_empty());
 
         // Both commands should be in the channel
@@ -134,7 +135,8 @@ mod tests {
         let msg = err.to_string();
         assert!(
             msg.contains("closed") || msg.contains("channel"),
-            "error should indicate channel is closed, got: {}", msg
+            "error should indicate channel is closed, got: {}",
+            msg
         );
     }
 }

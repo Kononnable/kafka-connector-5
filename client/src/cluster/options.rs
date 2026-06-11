@@ -62,9 +62,10 @@ impl ClusterOptions {
 }
 
 fn validate_bootstrap_addr(addr: &str) -> Result<(), String> {
-    let port_str = addr.rsplit(':').next().ok_or_else(|| {
-        format!("missing port in bootstrap address \"{addr}\"")
-    })?;
+    let port_str = addr
+        .rsplit(':')
+        .next()
+        .ok_or_else(|| format!("missing port in bootstrap address \"{addr}\""))?;
     port_str
         .parse::<u16>()
         .map_err(|_| format!("invalid port in bootstrap address \"{addr}\""))?;
@@ -168,7 +169,10 @@ mod tests {
         let err = opts.validate().unwrap_err();
         assert_eq!(err.len(), 3);
         for e in &err {
-            assert!(matches!(e, ClusterOptionsValidationError::InvalidAddress { .. }));
+            assert!(matches!(
+                e,
+                ClusterOptionsValidationError::InvalidAddress { .. }
+            ));
         }
     }
 }

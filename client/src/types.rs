@@ -1,9 +1,8 @@
 use std::fmt;
 use std::time::{Duration, Instant};
 
-use protocol::traits::ApiVersion;
-
 pub(crate) use protocol::traits::ApiKey;
+use protocol::traits::ApiVersion;
 
 /// A correlation ID for matching requests to responses within a connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -35,7 +34,7 @@ impl From<CorrelationId> for i32 {
 
 /// A Kafka broker node ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct BrokerId(pub i32);
+pub struct BrokerId(pub i32);
 
 impl BrokerId {
     pub const fn new(v: i32) -> Self {

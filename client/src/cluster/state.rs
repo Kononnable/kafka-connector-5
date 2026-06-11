@@ -87,7 +87,8 @@ impl ClusterState {
                 .ok_or_else(|| "no brokers in metadata cache".to_string())?,
         };
 
-        self.pool.enqueue(broker_id, request, version, handler_id, timeout);
+        self.pool
+            .enqueue(broker_id, request, version, handler_id, timeout);
         Ok(())
     }
 
@@ -141,6 +142,7 @@ impl ClusterState {
         for addr in &addrs {
             match TcpStream::connect(*addr) {
                 Ok(mut stream) => {
+                    let _ = stream.set_nodelay(true);
                     let token = Token(self.next_connection_token);
                     self.next_connection_token += 1;
                     if self

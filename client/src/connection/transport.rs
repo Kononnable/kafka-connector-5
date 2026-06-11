@@ -309,9 +309,8 @@ mod tests {
     };
     use protocol::traits::{ApiRequest, ApiResponse, ApiVersion, SerializationError};
 
-    use crate::types::{ApiKey, BrokerId, CorrelationId, RequestHandlerId};
-
     use super::Connection;
+    use crate::types::{ApiKey, BrokerId, CorrelationId, RequestHandlerId};
 
     const TEST_HANDLER: RequestHandlerId = RequestHandlerId(0);
     const TEST_TIMEOUT: Duration = Duration::from_secs(30);
@@ -360,10 +359,16 @@ mod tests {
         #[test_log::test]
         fn test_send_single_request_basic() {
             let (_peer, stream) = connected_pair();
-            let mut conn = Connection::new(Token(1), stream, Some("test-client".into()), BrokerId(-1));
+            let mut conn =
+                Connection::new(Token(1), stream, Some("test-client".into()), BrokerId(-1));
 
             let (corr_id, _ver) = conn
-                .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
+                .send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
                 .unwrap();
             assert_eq!(corr_id.0, 0);
 
@@ -400,7 +405,12 @@ mod tests {
 
             for expected_id in 0..5 {
                 let (corr_id, _ver) = conn
-                    .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
+                    .send_api_request(
+                        &ApiVersionsRequest::default(),
+                        Some(ApiVersion::new(0)),
+                        TEST_HANDLER,
+                        TEST_TIMEOUT,
+                    )
                     .unwrap();
                 assert_eq!(corr_id.0, expected_id, "correlation_id {}", expected_id);
             }
@@ -440,13 +450,23 @@ mod tests {
 
             // ApiVersionsRequest is allowed before api_versions is populated
             let (corr_id, _ver) = conn
-                .send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
+                .send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
                 .unwrap();
             assert_eq!(corr_id.0, 0);
 
             // MetadataRequest is rejected before api_versions is populated
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
+                .send_api_request(
+                    &MetadataRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -472,8 +492,13 @@ mod tests {
                     max_version: 8,
                 },
             )]));
-            conn.send_api_request(&MetadataRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT)
-                .unwrap();
+            conn.send_api_request(
+                &MetadataRequest::default(),
+                None,
+                TEST_HANDLER,
+                TEST_TIMEOUT,
+            )
+            .unwrap();
             assert_eq!(
                 i16::from_be_bytes(conn.bytes_to_send[6..8].try_into().unwrap()),
                 8,
@@ -489,8 +514,13 @@ mod tests {
                     max_version: 20,
                 },
             )]));
-            conn.send_api_request(&MetadataRequest::default(), None, TEST_HANDLER, TEST_TIMEOUT)
-                .unwrap();
+            conn.send_api_request(
+                &MetadataRequest::default(),
+                None,
+                TEST_HANDLER,
+                TEST_TIMEOUT,
+            )
+            .unwrap();
             assert_eq!(
                 i16::from_be_bytes(conn.bytes_to_send[6..8].try_into().unwrap()),
                 MetadataRequest::get_max_supported_version().0,
@@ -515,7 +545,12 @@ mod tests {
 
             // (a) Nonexistent key
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
+                .send_api_request(
+                    &MetadataRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -525,7 +560,12 @@ mod tests {
 
             // (b) Version below min_version
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(1)), TEST_HANDLER, TEST_TIMEOUT)
+                .send_api_request(
+                    &MetadataRequest::default(),
+                    Some(ApiVersion::new(1)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -535,7 +575,12 @@ mod tests {
 
             // (c) Version above max_version
             let err = conn
-                .send_api_request(&MetadataRequest::default(), Some(ApiVersion::new(9)), TEST_HANDLER, TEST_TIMEOUT)
+                .send_api_request(
+                    &MetadataRequest::default(),
+                    Some(ApiVersion::new(9)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
                 .unwrap_err();
             assert!(
                 matches!(err, SerializationError::UnsupportedVersion { .. }),
@@ -549,13 +594,23 @@ mod tests {
             let (_peer, stream) = connected_pair();
             let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
-                .unwrap();
+            conn.send_api_request(
+                &ApiVersionsRequest::default(),
+                Some(ApiVersion::new(0)),
+                TEST_HANDLER,
+                TEST_TIMEOUT,
+            )
+            .unwrap();
             assert!(conn.write_buffer.is_empty());
             let first_send_len = conn.bytes_to_send.len();
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
-                .unwrap();
+            conn.send_api_request(
+                &ApiVersionsRequest::default(),
+                Some(ApiVersion::new(0)),
+                TEST_HANDLER,
+                TEST_TIMEOUT,
+            )
+            .unwrap();
             assert!(conn.write_buffer.is_empty());
             assert_eq!(conn.bytes_to_send.len(), first_send_len + 12);
         }
@@ -708,8 +763,13 @@ mod tests {
             let (mut peer, stream) = connected_pair();
             let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
-                .unwrap();
+            conn.send_api_request(
+                &ApiVersionsRequest::default(),
+                Some(ApiVersion::new(0)),
+                TEST_HANDLER,
+                TEST_TIMEOUT,
+            )
+            .unwrap();
             assert!(conn.can_write());
 
             conn.on_writable().unwrap();
@@ -736,8 +796,13 @@ mod tests {
             let mut conn = Connection::new(Token(1), stream, None, BrokerId(-1));
 
             for _ in 0..3 {
-                conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
-                    .unwrap();
+                conn.send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
+                .unwrap();
             }
             assert!(conn.can_write());
 
@@ -819,8 +884,13 @@ mod tests {
             }
             drop(peer);
 
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
-                .unwrap();
+            conn.send_api_request(
+                &ApiVersionsRequest::default(),
+                Some(ApiVersion::new(0)),
+                TEST_HANDLER,
+                TEST_TIMEOUT,
+            )
+            .unwrap();
             let err = conn.on_writable().unwrap_err();
             assert!(!conn.bytes_to_send.is_empty());
             assert!(
@@ -900,8 +970,13 @@ mod tests {
             )]));
 
             for _ in 0..3 {
-                conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
-                    .unwrap();
+                conn.send_api_request(
+                    &ApiVersionsRequest::default(),
+                    Some(ApiVersion::new(0)),
+                    TEST_HANDLER,
+                    TEST_TIMEOUT,
+                )
+                .unwrap();
             }
             conn.on_writable().unwrap();
 
@@ -969,8 +1044,13 @@ mod tests {
             )]));
 
             assert!(!conn.can_write());
-            conn.send_api_request(&ApiVersionsRequest::default(), Some(ApiVersion::new(0)), TEST_HANDLER, TEST_TIMEOUT)
-                .unwrap();
+            conn.send_api_request(
+                &ApiVersionsRequest::default(),
+                Some(ApiVersion::new(0)),
+                TEST_HANDLER,
+                TEST_TIMEOUT,
+            )
+            .unwrap();
             assert!(conn.can_write());
             conn.on_writable().unwrap();
             assert!(!conn.can_write());

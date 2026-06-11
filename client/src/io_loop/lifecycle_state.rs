@@ -167,7 +167,9 @@ mod tests {
 
         // Final state should be valid (one of the four states)
         match state.state() {
-            State::Initializing | State::Active | State::ShutdownTriggered
+            State::Initializing
+            | State::Active
+            | State::ShutdownTriggered
             | State::ShutdownComplete => {}
         }
     }
