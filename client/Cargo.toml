@@ -8,7 +8,7 @@ mio = { version = "1.0", features = ["os-poll", "net"] }
 protocol = { path = "../protocol" }
 bytes = { workspace = true }
 derivative = "2.2"
-futures = { version = "0.3", default-features = false, features = ["std"] }
+futures = { version = "0.3", default-features = false, features = ["std", "executor"] }
 indexmap = { version = "2", features = ["serde"] }
 futures-timer = "3.0"
 thiserror = "2"
